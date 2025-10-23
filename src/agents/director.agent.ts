@@ -1,16 +1,35 @@
-import { Agent, Memory, createTool } from "@voltagent/core";
+import { Agent, Memory, createTool, VoltAgentObservability, AiSdkEmbeddingAdapter } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
 import { writerAgent } from "./writer.agent.js";
 import { assistantAgent } from "./assistant.agent.js";
-import { LibSQLMemoryAdapter } from "@voltagent/libsql";
+import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
 import { createSubagent } from "@voltagent/core";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import z from "zod";
 // Local SQLite for director
 const directorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/director-memory.db", // or ":memory:" for ephemeral
   }),
+  workingMemory: {
+    enabled: true,
+    scope: "user", // persist across conversations
+    schema: z.object({
+      profile: z
+        .object({
+          name: z.string().optional(),
+          role: z.string().optional(),
+          timezone: z.string().optional(),
+        })
+        .optional(),
+      preferences: z.array(z.string()).optional(),
+      goals: z.array(z.string()).optional(),
+    }),
+  },
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
+  enableCache: true, // optional embedding cache
 });
 
 export const directorAgent = new Agent({

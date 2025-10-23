@@ -1,4 +1,4 @@
-import { VoltAgent, createWorkflowChain } from "@voltagent/core";
+import { VoltAgent, VoltAgentObservability, VoltOpsClient, createWorkflowChain } from "@voltagent/core";
 import { voltlogger } from "./config/logger.js";
 import { assistantAgent } from "./agents/assistant.agent.js";
 import { writerAgent } from "./agents/writer.agent.js";
@@ -7,9 +7,36 @@ import { NodeSDK } from "@opentelemetry/sdk-node";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { honoServer } from "@voltagent/server-hono";
 import { z } from "zod";
-
+import { LibSQLObservabilityAdapter } from "@voltagent/libsql";
 
 voltlogger.info("Volt Initilizing");
+
+const voltOpsClient = new VoltOpsClient({
+  publicKey: process.env.VOLTAGENT_PUBLIC_KEY,
+  secretKey: process.env.VOLTAGENT_SECRET_KEY,
+});
+
+const observability = new VoltAgentObservability({
+  serviceName: "VoltMaster", // Optional service metadata
+  storage: new LibSQLObservabilityAdapter({
+      url: "file:./.voltagent/observability.db", // or ":memory:" for ephemeral
+      // Local file (default): creates ./.voltagent/observability.db if not present
+      // url: "file:./.voltagent/observability.db",
+      // Remote Turso example:
+      // url: "libsql://<your-db>.turso.io",
+      // authToken: process.env.TURSO_AUTH_TOKEN,
+    }),
+  logger: voltlogger,
+  voltOpsSync: {
+    // Sampling strategies: "always" | "never" | "ratio" | "parent"
+    sampling: { strategy: "ratio", ratio: 0.5 },
+    // Batching controls
+    maxQueueSize: 4096,
+    maxExportBatchSize: 512,
+    scheduledDelayMillis: 4000,
+    exportTimeoutMillis: 30000,
+  },
+});
 
 // Define the workflow's shape: its inputs and final output
 const workflow = createWorkflowChain({
@@ -62,6 +89,8 @@ new VoltAgent({
   server: honoServer(),
   logger: voltlogger,
   enableSwaggerUI: true, // Enable Swagger UI for API documentation
+  observability,
+  voltOpsClient, // enables automatic forwarding
   // mcpServers: {},
   // a2aServers: {},
 });

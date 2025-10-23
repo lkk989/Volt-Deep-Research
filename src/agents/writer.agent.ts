@@ -1,13 +1,32 @@
 import { google } from "@ai-sdk/google";
-import { Agent, Memory } from "@voltagent/core";
-import { LibSQLMemoryAdapter } from "@voltagent/libsql";
+import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
+import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
+import z from "zod";
 
 // Local SQLite
 const writerMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/writer-memory.db", // or ":memory:" for ephemeral
   }),
+  workingMemory: {
+    enabled: true,
+    scope: "user", // persist across conversations
+    schema: z.object({
+      profile: z
+        .object({
+          name: z.string().optional(),
+          role: z.string().optional(),
+          timezone: z.string().optional(),
+        })
+        .optional(),
+      preferences: z.array(z.string()).optional(),
+      goals: z.array(z.string()).optional(),
+    }),
+  },
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
+  enableCache: true, // optional embedding cache
 });
 
 export const writerAgent = new Agent({
