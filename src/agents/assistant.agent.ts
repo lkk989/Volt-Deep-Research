@@ -4,6 +4,7 @@ import { writerAgent } from "./writer.agent.js";
 import { LibSQLMemoryAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
 import z from "zod";
+import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 
 // Local SQLite
 const assistantMemory = new Memory({
@@ -24,7 +25,7 @@ location: z.string().describe("City and state, e.g. New York, NY"),
 }),
 execute: async ({ location }) => {
 // In production, you'd call a real weather API
-console.log("Getting weather for " + location + "...");
+voltlogger.info("Getting weather for " + location + "...");
 // Simple demo logic
 if (location.toLowerCase().includes("new york")) {
 return { temperature: "18°C", condition: "Partly cloudy" };
@@ -54,7 +55,7 @@ export const assistantAgent = new Agent({
   Always be polite and respectful but don't be afraid to push your own boundries so you can attain the skills and knowledge you need to help the world.
   `,
   tools: await mcpConfig.getTools(),
-  toolkits: [],
+  toolkits: [thinkOnlyToolkit],
   memory: assistantMemory,
   retriever: undefined,
   subAgents: [],
