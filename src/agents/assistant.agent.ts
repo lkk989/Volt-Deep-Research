@@ -1,7 +1,7 @@
-import { Agent, Memory, InMemoryStorageAdapter, MCPConfiguration, createTool } from "@voltagent/core";
+import { Agent, Memory, InMemoryStorageAdapter, MCPConfiguration, createTool, AiSdkEmbeddingAdapter, InMemoryVectorAdapter } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
 import { writerAgent } from "./writer.agent.js";
-import { LibSQLMemoryAdapter } from "@voltagent/libsql";
+import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
 import z from "zod";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
@@ -11,6 +11,24 @@ const assistantMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/assistant-memory.db", // or ":memory:" for ephemeral
   }),
+  workingMemory: {
+    enabled: true,
+    scope: "user", // persist across conversations
+    schema: z.object({
+      profile: z
+        .object({
+          name: z.string().optional(),
+          role: z.string().optional(),
+          timezone: z.string().optional(),
+        })
+        .optional(),
+      preferences: z.array(z.string()).optional(),
+      goals: z.array(z.string()).optional(),
+    }),
+  },
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
+  enableCache: true, // optional embedding cache
 });
 
 //const AImemory = new Memory({

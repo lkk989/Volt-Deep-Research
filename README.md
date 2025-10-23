@@ -25,12 +25,12 @@ Escape the limitations of no-code builders and the complexity of starting from s
 </div>
 
 <div align="center">
-    
+
 [![npm version](https://img.shields.io/npm/v/@voltagent/core.svg)](https://www.npmjs.com/package/@voltagent/core)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
 [![Discord](https://img.shields.io/discord/1361559153780195478.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://s.voltagent.dev/discord)
 [![Twitter Follow](https://img.shields.io/twitter/follow/voltagent_dev?style=social)](https://twitter.com/voltagent_dev)
-    
+
 </div>
 
 <br/>
@@ -132,9 +132,52 @@ The research workflow follows these steps:
 1. **Research Phase:** The assistant agent takes your topic and generates distinct search queries to gather comprehensive information
 2. **Writing Phase:** The writer agent analyzes the research materials and composes a structured two-paragraph analysis
 
-The workflow demonstrates:
+```mermaid
+graph TD
 
-- Sequential data flow between agents
-- Type-safe input/output handling
-- Integration with external tools via MCP
-- Different LLM models for different tasks (GPT-4o-mini for research, GPT-4o for writing)
+    user["User<br>[External]"]
+    voltOpsPlatform["VoltAgent VoltOps Platform<br>/https://console.voltagent.dev"]
+    exaMcp["Exa MCP<br>/https://exa.ai/"]
+    llmProviders["LLM Providers<br>[External]"]
+    subgraph mastervolt["Mastervolt (VoltAgent System)<br>[External]"]
+        applicationServices["Application Services<br>/src/services"]
+        workflowEngine["Workflow Engine<br>/src/workflows"]
+        subgraph a2aModule["A2A Module<br>/src/a2a"]
+            a2aServer["A2A Server<br>/src/a2a/server.ts"]
+            a2aStore["A2A Store<br>/src/a2a/store.ts"]
+        end
+        subgraph agentCore["Agent Core<br>/src/agents"]
+            assistantAgent["Assistant Agent<br>/src/agents/assistant.agent.ts"]
+            directorAgent["Director Agent<br>/src/agents/director.agent.ts"]
+            prompts["Prompts<br>/src/agents/prompts.ts"]
+            writerAgent["Writer Agent<br>/src/agents/writer.agent.ts"]
+            %% Edges at this level (grouped by source)
+            assistantAgent["Assistant Agent<br>/src/agents/assistant.agent.ts"] -->|"Uses | Internal API"| prompts["Prompts<br>/src/agents/prompts.ts"]
+            directorAgent["Director Agent<br>/src/agents/director.agent.ts"] -->|"Uses | Internal API"| prompts["Prompts<br>/src/agents/prompts.ts"]
+            writerAgent["Writer Agent<br>/src/agents/writer.agent.ts"] -->|"Uses | Internal API"| prompts["Prompts<br>/src/agents/prompts.ts"]
+        end
+        subgraph tooling["Tooling<br>/src/tools"]
+            debugTool["Debug Tool<br>/src/tools/debug-tool.ts"]
+            reasoningTool["Reasoning Tool<br>/src/tools/reasoning-tool.ts"]
+        end
+        %% Edges at this level (grouped by source)
+        agentCore["Agent Core<br>/src/agents"] -->|"Uses | Internal API"| a2aModule["A2A Module<br>/src/a2a"]
+        agentCore["Agent Core<br>/src/agents"] -->|"Uses | Internal API"| applicationServices["Application Services<br>/src/services"]
+        agentCore["Agent Core<br>/src/agents"] -->|"Uses | Internal API"| tooling["Tooling<br>/src/tools"]
+        agentCore["Agent Core<br>/src/agents"] -->|"Orchestrates | Internal API"| workflowEngine["Workflow Engine<br>/src/workflows"]
+        assistantAgent["Assistant Agent<br>/src/agents/assistant.agent.ts"] -->|"Uses | Internal API"| tooling["Tooling<br>/src/tools"]
+        directorAgent["Director Agent<br>/src/agents/director.agent.ts"] -->|"Uses | Internal API"| tooling["Tooling<br>/src/tools"]
+        writerAgent["Writer Agent<br>/src/agents/writer.agent.ts"] -->|"Uses | Internal API"| tooling["Tooling<br>/src/tools"]
+    end
+    %% Edges at this level (grouped by source)
+    user["User<br>[External]"] -->|"Interacts with | CLI/API"| assistantAgent["Assistant Agent<br>/src/agents/assistant.agent.ts"]
+    user["User<br>[External]"] -->|"Interacts with | Web Browser"| voltOpsPlatform["VoltAgent VoltOps Platform<br>/https://console.voltagent.dev"]
+    mastervolt["Mastervolt (VoltAgent System)<br>[External]"] -->|"Communicates with | API"| voltOpsPlatform["VoltAgent VoltOps Platform<br>/https://console.voltagent.dev"]
+    applicationServices["Application Services<br>/src/services"] -->|"Uses for search | API"| exaMcp["Exa MCP<br>/https://exa.ai/"]
+    agentCore["Agent Core<br>/src/agents"] -->|"Uses for AI models | API"| llmProviders["LLM Providers<br>[External]"]
+
+```
+
+## Conclusion
+
+VoltMaster provides a powerful framework for building AI agents that can perform complex tasks like research and report generation. By leveraging modular components, multi-agent workflows, and integrations with LLMs and MCPs, developers can create sophisticated AI systems quickly and efficiently.
