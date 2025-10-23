@@ -5,6 +5,7 @@ import { assistantAgent } from "./assistant.agent.js";
 import { LibSQLMemoryAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
 import { createSubagent } from "@voltagent/core";
+import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 // Local SQLite for director
 const directorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
@@ -23,7 +24,7 @@ export const directorAgent = new Agent({
   Always be polite and respectful but don't be afraid to push your own boundries so you can attain the skills and knowledge you need to help the world.
   `,
   tools: [],
-  toolkits: [],
+  toolkits: [thinkOnlyToolkit],
   memory: directorMemory,
   retriever: undefined,
   subAgents: [writerAgent, assistantAgent],
