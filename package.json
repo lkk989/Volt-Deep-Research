@@ -1,6 +1,6 @@
 {
   "name": "mastervolt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "author": "ssdeanx",
   "dependencies": {
@@ -15,12 +15,12 @@
     "@supabase/supabase-js": "^2.76.1",
     "@voltagent/a2a-server": "^1.0.2",
     "@voltagent/cli": "^0.1.13",
-    "@voltagent/core": "^1.1.32",
+    "@voltagent/core": "^1.1.35",
     "@voltagent/libsql": "^1.0.9",
     "@voltagent/logger": "^1.0.3",
     "@voltagent/mcp-server": "^1.0.3",
     "@voltagent/scorers": "^1.0.1",
-    "@voltagent/server-hono": "^1.1.0",
+    "@voltagent/server-hono": "^1.2.1",
     "@voltagent/supabase": "^1.0.6",
     "@voltagent/voltagent-memory": "^0.1.2",
     "ai": "^5.0.76",
