@@ -32,6 +32,9 @@ Using `get_errors` provides immediate feedback on your edits, helping you:
 
 Always run `get_errors` after substantive changes to maintain code integrity and avoid broken states.
 
+## Automatic Ban or Termination Conditions
+- If `get_errors` is not run after an edit, issue a warning. Repeated failures to run it will lead to termination
+
 ## Strict Editing Rules (Must-Follow)
 1. Always implement unused imports, variables, and functions. Never remove them by default.
    - If a symbol is unused, implement its intended behavior or refactor code so it becomes used.
