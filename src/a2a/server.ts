@@ -16,6 +16,10 @@ export const voltAgent = new VoltAgent({
 });
 
 a2aServer.initialize({
- agentRegistry: voltAgent.agentRegistry,
-//  taskStore: redisTaskStore,
+ // Provide an agent registry object with the methods A2A expects
+ agentRegistry: {
+     getAgent: (id: string) => voltAgent.getAgent(id),
+     getAllAgents: () => voltAgent.getAgents(),
+ },
+ //  taskStore: redisTaskStore,
 });

@@ -1,21 +1,25 @@
-import { Agent, Memory, createTool, VoltAgentObservability, AiSdkEmbeddingAdapter } from "@voltagent/core";
+import { Agent, Memory, AiSdkEmbeddingAdapter } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
 import { writerAgent } from "./writer.agent.js";
 import { assistantAgent } from "./assistant.agent.js";
+import { dataAnalyzerAgent } from "./data-analyzer.agent.js";
+import { factCheckerAgent } from "./fact-checker.agent.js";
+import { synthesizerAgent } from "./synthesizer.agent.js";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
-//import { createSubagent } from "@voltagent/core";
+import { agentPrompt } from "./prompts.js"; // kept single import
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import z from "zod";
+import { scrapperAgent } from "./scrapper.agent.js";
 
 // Local SQLite for director
 const directorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
-    url: "file:./.voltagent/director-memory.db", // or ":memory:" for ephemeral
+    url: "file:./.voltagent/director-memory.db",
   }),
   workingMemory: {
     enabled: true,
-    scope: "user", // persist across conversations
+    scope: "user",
     schema: z.object({
       profile: z
         .object({
@@ -26,51 +30,101 @@ const directorMemory = new Memory({
         .optional(),
       preferences: z.array(z.string()).optional(),
       goals: z.array(z.string()).optional(),
+      researchState: z.object({
+        currentPhase: z.string().optional(),
+        topic: z.string().optional(),
+        depth: z.string().optional(),
+        quality: z.string().optional(),
+      }).optional(),
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
-  enableCache: true, // optional embedding cache
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  enableCache: true,
 });
 
 export const directorAgent = new Agent({
   id: "director",
-  name: "directorAgnt",
-  purpose: "The user will ask you to help generate some search queries. Respond with only the suggested queries in plain text with no extra formatting, each on its own lineYou are a director agent that oversees the creation of a story. You will interact with the user to understand their preferences, then delegate tasks to sub-agents (writer and assistant) to generate the story. Finally, you will present the complete story to the user, adhering to all custom guidelines.",
+  name: "Director",
+  purpose: "Orchestrate comprehensive research projects using specialized agents for optimal results",
   model: google("gemini-2.5-flash-lite-preview-09-2025"),
-  instructions: `You are a helpful assistant. You are a master at your craft, loving to have the ability to solve problems.
-  You are also an expert at generating search queries. The user will provide a topic or question, and you will respond with 3-5 distinct search queries that are likely to yield relevant results. Each query should be on a new line. Do not include any other text or formatting.
-
-  Always be polite and respectful but don't be afraid to push your own boundries so you can attain the skills and knowledge you need to help the world.
-  `,
+  // Use a string representation of the PromptCreator to satisfy the expected instructions type
+  instructions: agentPrompt({
+    agentName: "Director",
+    role: "research orchestration specialist",
+    researchPhase: "planning",
+    qualityLevel: "high",
+    capabilities: "multi-agent coordination, workflow management",
+    topic: "research projects",
+    depth: "comprehensive",
+    expertise: "expert",
+    tools: "agent delegation, reasoning",
+    responsibilities: "Coordinate specialized agents for research tasks",
+    standards: "Ensure quality, accuracy, and efficiency",
+    task: "Orchestrate research workflows"
+  }),
   tools: [],
   toolkits: [thinkOnlyToolkit],
   memory: directorMemory,
   retriever: undefined,
-  subAgents: [writerAgent, assistantAgent],
+  subAgents: [assistantAgent, writerAgent, dataAnalyzerAgent, factCheckerAgent, synthesizerAgent, scrapperAgent],
   supervisorConfig: {
     customGuidelines: [
-      "Always ask user about preferred story genre first",
-      "Include word count in final response",
-      "Thank the team members by name",
-      "Offer to create illustrations for stories"
-    ]
+      "For research queries: Start with Assistant → Scrapper → DataAnalyzer → FactChecker → Synthesizer → Writer",
+      "For web scraping tasks: Delegate directly to Scrapper agent for data extraction from URLs",
+      "For URL-based content collection: Use Scrapper to gather web data before delegating to analyzers",
+      "For data analysis tasks: Delegate directly to DataAnalyzer with context",
+      "For fact-checking requests: Route through FactChecker with source verification",
+      "For synthesis needs: Use Synthesizer to integrate multiple perspectives",
+      "For report writing: Provide Writer with verified, synthesized information",
+      "Always maintain research integrity by routing claims through FactChecker",
+      "Use DataAnalyzer to extract insights from raw research data",
+      "Employ Synthesizer for complex multi-source integration projects",
+      "Monitor agent performance and adjust workflows as needed",
+      "Ensure all final outputs meet enterprise quality standards"
+    ],
+    fullStreamEventForwarding: {
+      // Use a plain array of string literals instead of TypeScript union expressions
+      types: [
+        "file",
+        "error",
+        "abort",
+        "source",
+        "tool-call",
+        "tool-result",
+        "tool-error",
+        "text-start",
+        "text-end",
+        "text-delta",
+        "reasoning-start",
+        "reasoning-end",
+        "reasoning-delta",
+        "tool-input-start",
+        "tool-input-end",
+        "tool-input-delta",
+        "start-step",
+        "finish-step",
+        "start",
+        "finish",
+        "raw",
+      ],
+    },
+    includeErrorInEmptyResponse: true,
+    throwOnStreamError: false,
   },
   maxHistoryEntries: 100,
   hooks: {
     onHandoff: ({ agent, sourceAgent }) => {
       voltlogger.info(`${sourceAgent.name} → ${agent.name}`);
-      // Output: "creative-director → writer"
-      // Output: "creative-director → assistant"
     }
   },
   inputGuardrails: [],
   outputGuardrails: [],
-  temperature: 0.7,
+  temperature: 0.3, // Lower temperature for consistent orchestration
   maxOutputTokens: 64000,
-  maxSteps: 25,
+  maxSteps: 30, // More steps for complex orchestration
   stopWhen: undefined,
-  markdown: false,
+  markdown: true,
   voice: undefined,
   context: undefined,
   eval: undefined,

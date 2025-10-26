@@ -3,12 +3,17 @@ import { voltlogger } from "./config/logger.js";
 import { assistantAgent } from "./agents/assistant.agent.js";
 import { writerAgent } from "./agents/writer.agent.js";
 import { directorAgent } from "./agents/director.agent.js";
+import { dataAnalyzerAgent } from "./agents/data-analyzer.agent.js";
+import { factCheckerAgent } from "./agents/fact-checker.agent.js";
+import { synthesizerAgent } from "./agents/synthesizer.agent.js";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { honoServer } from "@voltagent/server-hono";
 import { z } from "zod";
 import { LibSQLObservabilityAdapter } from "@voltagent/libsql";
 import { mcpServer } from "./config/mcpserver.js";
+import { scrapperAgent } from "./agents/scrapper.agent.js";
+import { a2aServer } from "./a2a/server.js";
 
 voltlogger.info("Volt Initilizing");
 
@@ -85,7 +90,15 @@ sdk.start();
 
 // Register with VoltOps
 new VoltAgent({
-  agents: { assistant: assistantAgent, writer: writerAgent, director: directorAgent },
+  agents: {
+    assistant: assistantAgent,
+    writer: writerAgent,
+    director: directorAgent,
+    dataAnalyzer: dataAnalyzerAgent,
+    factChecker: factCheckerAgent,
+    synthesizer: synthesizerAgent,
+    scrapper: scrapperAgent,
+  },
   workflows: { assistant: workflow, },
   server: honoServer(),
   logger: voltlogger,
@@ -93,5 +106,5 @@ new VoltAgent({
   observability,
   voltOpsClient, // enables automatic forwarding
   mcpServers: {mcpServer},
-  // a2aServers: {},
+  a2aServers: {a2aServer},
 });
