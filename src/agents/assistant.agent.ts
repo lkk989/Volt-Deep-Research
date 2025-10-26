@@ -26,9 +26,11 @@ const assistantMemory = new Memory({
       goals: z.array(z.string()).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
   enableCache: true, // optional embedding cache
+  cacheSize: 1000, // optional cache size
+  cacheTTL: 3600000, // optional cache TTL in seconds
 });
 
 //const AImemory = new Memory({

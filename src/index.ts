@@ -8,6 +8,7 @@ import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentation
 import { honoServer } from "@voltagent/server-hono";
 import { z } from "zod";
 import { LibSQLObservabilityAdapter } from "@voltagent/libsql";
+import { mcpServer } from "./config/mcpserver.js";
 
 voltlogger.info("Volt Initilizing");
 
@@ -91,6 +92,6 @@ new VoltAgent({
   enableSwaggerUI: true, // Enable Swagger UI for API documentation
   observability,
   voltOpsClient, // enables automatic forwarding
-  // mcpServers: {},
+  mcpServers: {mcpServer},
   // a2aServers: {},
 });

@@ -19,7 +19,7 @@ yarn-error.log*
 /.parcel-cache
 /.next
 .voltagent
-.github
+/.cache
 .cache
 *.iml
 logs/

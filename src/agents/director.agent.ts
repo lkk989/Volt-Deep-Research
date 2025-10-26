@@ -4,9 +4,10 @@ import { writerAgent } from "./writer.agent.js";
 import { assistantAgent } from "./assistant.agent.js";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
-import { createSubagent } from "@voltagent/core";
+//import { createSubagent } from "@voltagent/core";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import z from "zod";
+
 // Local SQLite for director
 const directorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
@@ -27,7 +28,7 @@ const directorMemory = new Memory({
       goals: z.array(z.string()).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
   enableCache: true, // optional embedding cache
 });
