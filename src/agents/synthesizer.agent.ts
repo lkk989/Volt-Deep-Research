@@ -320,6 +320,34 @@ export const synthesizerAgent = new Agent({
   subAgents: [],
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
+  hooks: {
+    onStart: async ({ context }) => {
+      const opId = crypto.randomUUID();
+      context.context.set('opId', opId);
+      voltlogger.info(`[${opId}] Synthesizer starting`);
+    },
+    onEnd: async ({ output, error, context }) => {
+      const opId = context.context.get('opId');
+      if (error) {
+        voltlogger.error(`[${opId}] Synthesizer error: ${error.message}`);
+      } else if (output) {
+        voltlogger.info(`[${opId}] Synthesizer completed`);
+      }
+    },
+    onToolStart: async ({ tool, context }) => {
+      const opId = context.context.get('opId');
+      voltlogger.info(`[${opId}] tool: ${tool.name}`);
+    },
+    onToolEnd: async ({ tool, error, context }) => {
+      const opId = context.context.get('opId');
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onPrepareMessages: async ({ messages }) => {
+      return { messages };
+    },
+  },
   temperature: 0.4, // Moderate temperature for creative synthesis
   maxOutputTokens: 64000,
   maxSteps: 25,

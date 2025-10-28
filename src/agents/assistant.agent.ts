@@ -69,7 +69,34 @@ export const assistantAgent = new Agent({
   subAgents: [],
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
-  hooks: {},
+  hooks: {
+    onStart: async ({ context }) => {
+      const opId = crypto.randomUUID();
+      context.context.set('opId', opId);
+      voltlogger.info(`[${opId}] Assistant starting`);
+    },
+    onEnd: async ({ output, error, context }) => {
+      const opId = context.context.get('opId');
+      if (error) {
+        voltlogger.error(`[${opId}] Assistant error: ${error.message}`);
+      } else if (output) {
+        voltlogger.info(`[${opId}] Assistant completed`);
+      }
+    },
+    onToolStart: async ({ tool, context }) => {
+      const opId = context.context.get('opId');
+      voltlogger.info(`[${opId}] tool: ${tool.name}`);
+    },
+    onToolEnd: async ({ tool, error, context }) => {
+      const opId = context.context.get('opId');
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onPrepareMessages: async ({ messages }) => {
+      return { messages };
+    },
+  },
   inputGuardrails: [],
   outputGuardrails: [],
   temperature: 0.7,

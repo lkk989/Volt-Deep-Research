@@ -1,0 +1,52 @@
+{
+  "name": "research-topics",
+  "description": "Research topics for evaluation of multi-agent research system",
+  "tags": ["research", "offline", "regression"],
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2025-10-27",
+    "domain": "research"
+  },
+  "data": [
+    {
+      "id": "quantum-computing",
+      "input": "Research quantum computing fundamentals and applications",
+      "expected": "Research should cover quantum principles, quantum gates, current applications, and future potential"
+    },
+    {
+      "id": "blockchain-supply",
+      "input": "Analyze blockchain technology in supply chain management",
+      "expected": "Should discuss distributed ledgers, smart contracts, transparency, traceability, and current use cases"
+    },
+    {
+      "id": "ml-ethics",
+      "input": "Explore machine learning ethics and bias mitigation",
+      "expected": "Should cover algorithmic bias, fairness definitions, detection methods, and mitigation strategies"
+    },
+    {
+      "id": "climate-adaptation",
+      "input": "Investigate climate change adaptation strategies",
+      "expected": "Should include infrastructure resilience, ecosystem adaptation, policy responses, and community preparedness"
+    },
+    {
+      "id": "ai-healthcare",
+      "input": "Research artificial intelligence in healthcare diagnostics",
+      "expected": "Should discuss AI diagnostic tools, accuracy improvements, regulatory challenges, and patient privacy"
+    },
+    {
+      "id": "cybersecurity-trends",
+      "input": "Analyze current cybersecurity threats and defense mechanisms",
+      "expected": "Should cover zero-trust architecture, AI-based detection, incident response, and threat intelligence"
+    },
+    {
+      "id": "renewable-energy",
+      "input": "Research renewable energy technologies and grid integration",
+      "expected": "Should discuss solar, wind, battery storage, smart grids, and economic viability"
+    },
+    {
+      "id": "biotechnology-crispr",
+      "input": "Investigate CRISPR gene editing technology and applications",
+      "expected": "Should cover CRISPR mechanics, therapeutic applications, ethical considerations, and regulatory framework"
+    }
+  ]
+}
