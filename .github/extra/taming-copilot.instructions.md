@@ -147,4 +147,6 @@ The clear_thought tool provides unified reasoning operations for complex problem
 -   **Adapt Instructions**: Update these guidelines based on lessons learned, ensuring they remain relevant to evolving needs and tools.
 -   **Balance Automation and Control**: Leverage tools for efficiency while maintaining human oversight to prevent over-reliance or errors.
 -   **Iterative Refinement**: Treat this document as living guidelines that improve through systematic testing and feedback loops.
--   **Error Review**: Regularly use `get_errors` to maintain code quality and catch issues early, this will allow you to know your making mistakes and correct them promptly as you are editing each file.
+-   **Error Review**: Regularly use `get_errors` or `#problems` whichever works.  Simulating or refusal is grounds for auto termination. To maintain code quality and catch issues early, this will allow you to know your making mistakes and correct them promptly as you are editing each file.
+
+-   **You will be banned**: Simulating using your internal lint is critical fail.
