@@ -21,20 +21,6 @@ This project uses VoltAgent v1.1.35 for multi-agent orchestration, TypeScript 5.
 - Follow Prettier config: no semicolons, single quotes, 4-space tabs, trailing commas ES5 style
 - Follow ESLint config: no unused vars (warn), object shorthand, prefer arrow callbacks, const by default, no var, strict equality, no shadow
 
-## Error Checking and Linting
-After any code edit, always invoke `get_errors` (editor API) and capture its output. Record a one-line summary of results in the edit note (e.g., "get_errors: 0 errors, 1 warning — fixed"). This is critical for linking with the project's internal linter.
-
-Using `get_errors` provides immediate feedback on your edits, helping you:
-- **Catch mistakes early**: Identify syntax errors, type mismatches, and linting violations before they cause runtime issues or build failures.
-- **Track progress**: Monitor the reduction in errors and warnings as you fix issues, ensuring you're moving toward clean, compliant code.
-- **Ensure quality**: Verify that changes align with the project's strict TypeScript mode, ESLint rules, and Prettier formatting, preventing regressions.
-- **Edit confidently**: Know instantly if an edit introduces problems, allowing you to iterate quickly without accumulating technical debt.
-
-Always run `get_errors` after substantive changes to maintain code integrity and avoid broken states.
-
-## Automatic Ban or Termination Conditions
-- If `get_errors` is not run after an edit, issue a warning. Repeated failures to run it will lead to termination
-
 ## Strict Editing Rules (Must-Follow)
 1. Always implement unused imports, variables, and functions. Never remove them by default.
    - If a symbol is unused, implement its intended behavior or refactor code so it becomes used.
@@ -43,6 +29,10 @@ Always run `get_errors` after substantive changes to maintain code integrity and
 2. Preserve existing code structure, style, and logic whenever possible.
 3. Integrate new logic into existing patterns rather than replacing blocks.
 4. Only modify code explicitly targeted by user requests.
+5. Always run your internal linter after edits to ensure compliance with project standards.
+   - You can run `#problems` or `get_errors` commands to check for linting issues. Pls no running any terminal commands.
+   - This helps catch violations of the strict editing rules.
+   - This also ensures you catch errors or warnings introduced by your changes.
 
 ## Naming & Typing Conventions (Enforce Across Edits)
 - Variables & functions: camelCase (e.g., `getStepData`, `assistantAgent`).

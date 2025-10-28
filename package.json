@@ -6,7 +6,7 @@
   "dependencies": {
     "@ai-sdk/google": "^2.0.24",
     "@ai-sdk/google-vertex": "^3.0.54",
-    "@ai-sdk/openai": "^2.0.53",
+    "@ai-sdk/openai": "^2.0.56",
     "@ai-sdk/react": "^2.0.81",
     "@dotenvx/dotenvx": "^1.51.0",
     "@openrouter/ai-sdk-provider": "^1.2.0",
@@ -16,9 +16,11 @@
     "@voltagent/a2a-server": "^1.0.2",
     "@voltagent/cli": "^0.1.14",
     "@voltagent/core": "^1.1.37",
+    "@voltagent/langfuse-exporter": "^1.1.3",
     "@voltagent/libsql": "^1.0.10",
     "@voltagent/logger": "^1.0.4",
     "@voltagent/mcp-server": "^1.0.3",
+    "@voltagent/postgres": "^1.0.11",
     "@voltagent/scorers": "^1.0.1",
     "@voltagent/server-hono": "^1.2.2",
     "@voltagent/supabase": "^1.0.7",
@@ -53,7 +55,7 @@
     "@types/turndown": "^5.0.6",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
-    "@vitest/coverage-v8": "^4.0.3",
+    "@vitest/coverage-v8": "^4.0.4",
     "concurrently": "^9.2.1",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
@@ -61,7 +63,7 @@
     "prettier": "^3.6.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.3",
+    "vitest": "^4.0.4",
     "viteval": "^0.5.6"
   },
   "overrides": {
