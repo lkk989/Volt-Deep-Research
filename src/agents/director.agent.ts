@@ -11,6 +11,7 @@ import { agentPrompt } from "./prompts.js"; // kept single import
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import z from "zod";
 import { scrapperAgent } from "./scrapper.agent.js";
+import { voltObservability } from "../config/observability.js";
 
 // Local SQLite for director
 const directorMemory = new Memory({
@@ -156,5 +157,5 @@ export const directorAgent = new Agent({
   eval: undefined,
   logger: voltlogger,
   voltOpsClient: undefined,
-  observability: undefined,
+  observability: voltObservability,
 });

@@ -5,6 +5,7 @@ import { voltlogger } from "../config/logger.js";
 import z from "zod";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt } from "./prompts.js";
+import { voltObservability } from "../config/observability.js";
 
 // Local SQLite for data analyzer
 const dataAnalyzerMemory = new Memory({
@@ -232,4 +233,5 @@ export const dataAnalyzerAgent = new Agent({
   maxSteps: 25,
   markdown: true,
   logger: voltlogger,
+  observability: voltObservability,
 });

@@ -3,6 +3,7 @@ import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import { voltlogger } from "../config/logger.js";
 import z from "zod";
+import { voltObservability } from "../config/observability.js";
 
 // Local SQLite
 const writerMemory = new Memory({
@@ -180,4 +181,5 @@ export const writerAgent = new Agent({
     markdown: true,
     maxSteps: 50,
     logger: voltlogger,
+    observability: voltObservability,
 });
