@@ -5,6 +5,7 @@ import { voltlogger } from "../config/logger.js";
 import { assistantPrompt } from "./prompts.js";
 import z from "zod";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import { voltObservability } from "../config/observability.js";
 
 // Local SQLite
 const assistantMemory = new Memory({
@@ -109,6 +110,6 @@ export const assistantAgent = new Agent({
   eval: undefined,
   logger: voltlogger,
   voltOpsClient: undefined,
-  observability: undefined,
+  observability: voltObservability,
 });
 

@@ -30,3 +30,4 @@ pids/
 *.orig
 *.rej
 .kilocode
+.aider*

@@ -5,6 +5,7 @@ import { voltlogger } from "../config/logger.js";
 import z from "zod";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { factCheckerPrompt } from "./prompts.js";
+import { voltObservability } from "../config/observability.js";
 
 // Local SQLite for fact checker
 const factCheckerMemory = new Memory({
@@ -334,4 +335,5 @@ export const factCheckerAgent = new Agent({
   maxSteps: 25,
   markdown: true,
   logger: voltlogger,
+  observability: voltObservability,
 });

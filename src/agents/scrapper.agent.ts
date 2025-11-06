@@ -5,6 +5,7 @@ import { voltlogger } from "../config/logger.js";
 import { webScraperToolkit } from "../tools/web-scraper-toolkit.js";
 import z from "zod";
 import { scrapperPrompt } from "./prompts.js";
+import { voltObservability } from "../config/observability.js";
 
 // Local SQLite for scrapper
 const scrapperMemory = new Memory({
@@ -85,4 +86,5 @@ export const scrapperAgent = new Agent({
   maxSteps: 25,
   markdown: false,
   logger: voltlogger,
+  observability: voltObservability,
 });

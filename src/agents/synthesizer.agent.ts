@@ -5,6 +5,7 @@ import { voltlogger } from "../config/logger.js";
 import z from "zod";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt, synthesizerPrompt } from "./prompts.js";
+import { voltObservability } from "../config/observability.js";
 
 // Local SQLite for synthesizer
 const synthesizerMemory = new Memory({
@@ -353,4 +354,5 @@ export const synthesizerAgent = new Agent({
   maxSteps: 25,
   markdown: true,
   logger: voltlogger,
+  observability: voltObservability,
 });
