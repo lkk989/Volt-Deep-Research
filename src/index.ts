@@ -87,4 +87,5 @@ new VoltAgent({
   voltOpsClient, // enables automatic forwarding
   mcpServers: {mcpServer},
   a2aServers: {a2aServer},
+
 });
