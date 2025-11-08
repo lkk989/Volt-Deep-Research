@@ -17,6 +17,8 @@ import { a2aServer } from "./a2a/server.js";
 import { voltObservability } from "./config/observability.js";
 import { comprehensiveResearchWorkflow } from "./workflows/comprehensive-research.workflow.js";
 import { comprehensiveResearchDirectorWorkflow } from "./workflows/ai-agent.workflow.js";
+import { dataPatternAnalyzerWorkflow } from "./workflows/data-pattern-analyzer.workflow.js";
+import { factCheckSynthesisWorkflow } from "./workflows/fact-check-synthesis.workflow.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
@@ -85,6 +87,8 @@ new VoltAgent({
     "research-assistant-demo": workflow,
     "comprehensive-research": comprehensiveResearchWorkflow,
     "comprehensive-research-director": comprehensiveResearchDirectorWorkflow,
+    "data-pattern-analyzer": dataPatternAnalyzerWorkflow,
+    "fact-check-synthesis": factCheckSynthesisWorkflow,
   },
   server: honoServer(),
   logger: voltlogger,
