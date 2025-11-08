@@ -15,6 +15,8 @@ import { mcpServer } from "./config/mcpserver.js";
 import { scrapperAgent } from "./agents/scrapper.agent.js";
 import { a2aServer } from "./a2a/server.js";
 import { voltObservability } from "./config/observability.js";
+import { comprehensiveResearchWorkflow } from "./workflows/comprehensive-research.workflow.js";
+import { comprehensiveResearchDirectorWorkflow } from "./workflows/ai-agent.workflow.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
@@ -24,15 +26,15 @@ const voltOpsClient = new VoltOpsClient({
   secretKey: process.env.VOLTAGENT_SECRET_KEY,
 });
 
-// Define the workflow's shape: its inputs and final output
+ // Define the demo workflow's shape: its inputs and final output
 const workflow = createWorkflowChain({
   id: "research-assistant",
   name: "Research Assistant Workflow",
-    // A detailed description for VoltOps or team clarity
+  // A detailed description for VoltOps or team clarity
   purpose: "A simple workflow to assist with research on a given topic.",
   input: z.object({ topic: z.string() }),
   result: z.object({ text: z.string() }),
-  })
+})
   .andThen({
     id: "research",
     execute: async ({ data }) => {
@@ -79,7 +81,11 @@ new VoltAgent({
     synthesizer: synthesizerAgent,
     scrapper: scrapperAgent,
   },
-  workflows: { assistant: workflow, },
+  workflows: {
+    "research-assistant-demo": workflow,
+    "comprehensive-research": comprehensiveResearchWorkflow,
+    "comprehensive-research-director": comprehensiveResearchDirectorWorkflow,
+  },
   server: honoServer(),
   logger: voltlogger,
   enableSwaggerUI: true, // Enable Swagger UI for API documentation

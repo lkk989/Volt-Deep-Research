@@ -13,15 +13,13 @@ import { voltlogger } from "../config/logger.js"
  * Sequential Workflow - andThen only
  * Basic sequential steps using all agents
  */
-export const sequentialWorkflow = createWorkflowChain({
+export const comprehensiveResearchWorkflow = createWorkflowChain({
     id: "comprehensive-research",
     name: "Comprehensive Research Workflow",
     purpose: "Complete research pipeline using all agents: query generation, web scraping, data analysis, fact-checking, synthesis, and report writing",
-    
     input: z.object({
         topic: z.string().min(1).describe("Research topic"),
     }),
-    
     result: z.object({
         topic: z.string(),
         queries: z.string(),
