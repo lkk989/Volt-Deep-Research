@@ -59,6 +59,7 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
       const result = await factCheckerAgent.generateText(prompt);
 
       return {
+        topic: data.topic,
         factCheckReport: result.text,
       };
     },
@@ -68,11 +69,13 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
     execute: async ({ data, getStepData }) => {
       const factCheckReport =
         getStepData("fact-check")?.output?.factCheckReport?.toString() ?? "";
+      const topic =
+        getStepData("fact-check")?.output?.topic?.toString() ?? data.topic;
 
       const prompt = [
         "You are a synthesis specialist.",
         "",
-        `Topic: ${data.topic}`,
+        `Topic: ${topic}`,
         "",
         "Given the following fact-check report, craft a concise, coherent narrative that:",
         "- Emphasizes what is reliably supported by evidence.",
@@ -86,6 +89,7 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
       const result = await synthesizerAgent.generateText(prompt);
 
       return {
+        topic,
         synthesis: result.text,
       };
     },
@@ -93,7 +97,8 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
   .andThen({
     id: "finalize",
     execute: async ({ data, getStepData }) => {
-      const topic = data.topic;
+      const topic =
+        getStepData("synthesize")?.output?.topic?.toString() ?? data.topic;
 
       const factCheckReport =
         getStepData("fact-check")?.output?.factCheckReport?.toString() ?? "";

@@ -58,8 +58,8 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
   })
   .andThen({
     id: "finalize",
-    execute: async ({ data, getStepData }) => {
-      const inputText = data.text;
+    execute: async ({ state, getStepData }) => {
+      const inputText = state.input?.text ?? "";
       const agentOutput =
         getStepData("agent-analysis")?.output?.agentRaw?.toString() ?? "";
 
@@ -75,15 +75,15 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
 
       const sentences = inputText
         .split(/[.!?]+/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0).length;
+        .map((s: string) => s.trim())
+        .filter((s: string | any[]) => s.length > 0).length;
 
       // Derive summary and findings from agent output using simple parsing,
       // without depending on strict formats.
       const linesOut = agentOutput
         .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
+        .map((l: string) => l.trim())
+        .filter((l: string | any[]) => l.length > 0);
 
       let summary = "";
       const findings: string[] = [];
@@ -118,4 +118,5 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
         findings,
       };
     },
-  });
+});
+
