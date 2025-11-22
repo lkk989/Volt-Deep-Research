@@ -36,7 +36,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             voltlogger.info(`=== Starting comprehensive research on: ${data.topic} ===`)
         },
     })
-    
+
     // Step 1: Generate search queries
     .andThen({
         id: "generate-queries",
@@ -48,7 +48,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             return { queries: result.text }
         },
     })
-    
+
     // Step 2: Scrape web data
     .andThen({
         id: "scrape-data",
@@ -60,7 +60,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             return { scrapedData: result.text }
         },
     })
-    
+
     // Step 3: Analyze data
     .andThen({
         id: "analyze-data",
@@ -72,7 +72,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             return { analysis: result.text }
         },
     })
-    
+
     // Step 4: Fact-check findings
     .andThen({
         id: "fact-check",
@@ -84,7 +84,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             return { factCheck: result.text }
         },
     })
-    
+
     // Step 5: Synthesize information
     .andThen({
         id: "synthesize",
@@ -96,7 +96,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             return { synthesis: result.text }
         },
     })
-    
+
     // Step 6: Write final report
     .andThen({
         id: "write-report",
@@ -108,7 +108,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             return { finalReport: result.text }
         },
     })
-    
+
     // Step 7: Assemble final result
     .andThen({
         id: "finalize",
@@ -119,9 +119,9 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             const analysis = getStepData("analyze-data")?.output?.analysis || ""
             const factCheck = getStepData("fact-check")?.output?.factCheck || ""
             const synthesis = getStepData("synthesize")?.output?.synthesis || ""
-            
+
             voltlogger.info("=== Research workflow complete ===")
-            
+
             return {
                 topic,
                 queries,
