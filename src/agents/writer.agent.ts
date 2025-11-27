@@ -1,8 +1,8 @@
 import { google } from "@ai-sdk/google";
 import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { voltlogger } from "../config/logger.js";
 import z from "zod";
+import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 
 // Local SQLite
@@ -43,13 +43,13 @@ export const writerAgent = new Agent({
     - Do not include any introductory or concluding remarks.
     - Your output should be the report itself, nothing else. Do not add any conversational filler.
     - If you are asked to write a report, write a report. Do not ask for more information.
-    
+
     <rules>
 
     - Do not include any conversational filler.
     - Do not ask for more information.
     - Your output should be the report itself, nothing else.
-    
+
     ## Example
 
     ### Report Title
@@ -75,10 +75,10 @@ export const writerAgent = new Agent({
     ## Conclusion
 
     This is the conclusion for the example.
-    
+
     This is a final paragraph for the conclusion.
     </rules>
-    
+
     <patterns>
     - Use markdown for formatting.
     - Do not include any introductory or concluding remarks.
