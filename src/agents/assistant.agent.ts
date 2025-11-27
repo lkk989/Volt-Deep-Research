@@ -183,4 +183,3 @@ export const assistantAgent = new Agent({
   voltOpsClient: undefined,
   observability: voltObservability,
 });
-

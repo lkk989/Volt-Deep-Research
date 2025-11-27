@@ -1,17 +1,18 @@
-import { Agent, Memory, AiSdkEmbeddingAdapter } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
-import { writerAgent } from "./writer.agent.js";
+import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
+import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
+import z from "zod";
+
+import { voltlogger } from "../config/logger.js";
+import { voltObservability } from "../config/observability.js";
+import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { assistantAgent } from "./assistant.agent.js";
 import { dataAnalyzerAgent } from "./data-analyzer.agent.js";
 import { factCheckerAgent } from "./fact-checker.agent.js";
-import { synthesizerAgent } from "./synthesizer.agent.js";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { voltlogger } from "../config/logger.js";
 import { agentPrompt } from "./prompts.js"; // kept single import
-import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import z from "zod";
 import { scrapperAgent } from "./scrapper.agent.js";
-import { voltObservability } from "../config/observability.js";
+import { synthesizerAgent } from "./synthesizer.agent.js";
+import { writerAgent } from "./writer.agent.js";
 
 // Local SQLite for director
 const directorMemory = new Memory({

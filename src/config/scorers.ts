@@ -1,10 +1,10 @@
+import { google } from "@ai-sdk/google";
 import { buildScorer } from "@voltagent/core";
+import { createAnswerCorrectnessScorer } from "@voltagent/scorers";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { google } from "@ai-sdk/google";
-import { createAnswerCorrectnessScorer } from "@voltagent/scorers";
 
-const scorer = createAnswerCorrectnessScorer({
+export const scorer = createAnswerCorrectnessScorer({
   buildPayload: (context) => ({
     input: context.payload.input as string,
     output: context.payload.output as string,

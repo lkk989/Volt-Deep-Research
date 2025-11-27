@@ -1,11 +1,11 @@
-import { Agent, Memory, AiSdkEmbeddingAdapter, createTool } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
+import { Agent, AiSdkEmbeddingAdapter, createTool, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { voltlogger } from "../config/logger.js";
 import z from "zod";
+import { voltlogger } from "../config/logger.js";
+import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt } from "./prompts.js";
-import { voltObservability } from "../config/observability.js";
 
 // Local SQLite for data analyzer
 const dataAnalyzerMemory = new Memory({
