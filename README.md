@@ -7,7 +7,7 @@
 <br/>
 <br/>
 
-# Mastervolt Deep Research
+# Volt Deep Research
 
 ### 🧠 Enterprise-grade multi-agent research platform powered by VoltAgent
 
@@ -32,10 +32,9 @@ Built for deep research, analysis, synthesis, reporting, workspace-assisted exec
 
 ## ✨ Overview
 
-Mastervolt Deep Research is a production-style research system that combines a VoltAgent backend, a Next.js dashboard frontend, a typed VoltAgent client layer, a rich AI rendering system, and a local workspace runtime with skills.
+Volt Deep Research is a production-style research system that combines a VoltAgent backend, a Next.js dashboard frontend, a typed VoltAgent client layer, a rich AI rendering system, and a local workspace runtime with skills.
 
 It is designed to support:
-
 - 📚 deep research and source gathering
 - 📊 financial and quantitative analysis
 - ✅ verification and fact checking
@@ -566,7 +565,7 @@ npm test
 ## 🧭 Repository Structure
 
 ```bash
-Mastervolt-Deep-Research/
+Volt-Deep-Research/
 ├── app/                          # Next.js App Router frontend
 │   ├── api/                      # compatibility / local API helpers still in repo
 │   └── dashboard/                # dashboard UI surfaces and chat experience
@@ -600,8 +599,8 @@ Mastervolt-Deep-Research/
 ### Install
 
 ```bash
-git clone https://github.com/ssdeanx/Mastervolt-Deep-Research.git
-cd Mastervolt-Deep-Research
+git clone https://github.com/lkk989/Volt-Deep-Research.git
+cd Volt-Deep-Research
 npm install
 cp .env.example .env
 ```
