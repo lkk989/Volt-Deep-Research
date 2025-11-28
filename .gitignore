@@ -39,3 +39,7 @@ pids/
 .kiro/steering/byterover-rules.md
 .qoder/rules/byterover-rules.md
 .augment/rules/byterover-rules.md
+.github/prompts/architecture-blueprint-generator.prompt.md
+.github/prompts/breakdown-epic-arch.prompt.md
+.github/prompts/breakdown-epic-pm.prompt.md
+.github/==/nodejs-typescript-vitest.instructions.md

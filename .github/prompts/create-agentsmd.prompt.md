@@ -1,6 +1,5 @@
 ---
 description: "Prompt for generating an AGENTS.md file for a repository"
-
 ---
 
 # Create high‑quality AGENTS.md file
