@@ -1,5 +1,5 @@
 import { createTool, createToolkit, type Toolkit } from "@voltagent/core"
-import type { OperationContext } from "@voltagent/core"
+import type { ToolExecuteOptions } from "@voltagent/core"
 import { z } from "zod"
 import { JSDOM } from "jsdom"
 import * as cheerio from "cheerio"
@@ -57,7 +57,7 @@ Tips:
 					.optional()
 					.describe("Maximum length of content in characters. If exceeded, content will be truncated."),
 			}),
-			execute: async (args, context?: OperationContext) => {
+			execute: async (args, context?: ToolExecuteOptions) => {
 				if (!context?.isActive) {
 					throw new Error("Operation has been cancelled")
 				}
@@ -143,7 +143,7 @@ Tips:
 					.default(3)
 					.describe("Number of lines before and after each code block to include as context"),
 			}),
-			execute: async (args, context?: OperationContext) => {
+			execute: async (args, context?: ToolExecuteOptions) => {
 				if (!context?.isActive) {
 					throw new Error("Operation has been cancelled")
 				}
@@ -307,7 +307,7 @@ Tips:
 					.default(true)
 					.describe("Extract table data in structured format (default: true)"),
 			}),
-			execute: async (args, context?: OperationContext) => {
+			execute: async (args, context?: ToolExecuteOptions) => {
 				if (!context?.isActive) {
 					throw new Error("Operation has been cancelled")
 				}
@@ -560,7 +560,7 @@ Tips:
 					.default(true)
 					.describe("Clean excessive whitespace and newlines (default: true)"),
 			}),
-			execute: async (args, context?: OperationContext) => {
+			execute: async (args, context?: ToolExecuteOptions) => {
 				if (!context?.isActive) {
 					throw new Error("Operation has been cancelled")
 				}
@@ -668,7 +668,7 @@ Tips:
 					.optional()
 					.describe("Regex patterns for URLs to exclude from scraping"),
 			}),
-			execute: async (args, context?: OperationContext) => {
+			execute: async (args, context?: ToolExecuteOptions) => {
 				if (!context?.isActive) {
 					throw new Error("Operation has been cancelled")
 				}

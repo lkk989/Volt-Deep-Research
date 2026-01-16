@@ -9,6 +9,6 @@
     "outDir": "dist",
     "skipLibCheck": true
   },
-  "include": ["src", "vitest.config.ts", "eslint.config.cjs", "viteval.config.ts"],
+  "include": ["src", "vitest.config.ts", "eslint.config.cjs"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "tests", "**/__tests__", ".vscode", ".idea", ".git", ".github"]
 }

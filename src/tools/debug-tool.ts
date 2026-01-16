@@ -18,7 +18,7 @@ export const debugTool = createTool({
     voltlogger.info(`Original input: ${context?.input}`);
 
     // Access custom context values
-    const customValue = context?.context.get("customKey");
+    const customValue = context?.context?.get("customKey");
     voltlogger.info(`Custom context value: ${customValue}`);
     // Check if operation is still active
     if (!context?.isActive) {

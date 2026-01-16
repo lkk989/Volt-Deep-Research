@@ -3,8 +3,8 @@ import { google } from "@ai-sdk/google"
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
 import { voltlogger } from "../config/logger.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
-import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
-import { sentimentBiasToolkit } from "../tools/sentiment-bias-toolkit.js"
+//import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
+//import { sentimentBiasToolkit } from "../tools/sentiment-bias-toolkit.js"
 import z from "zod"
 
 const contentCuratorMemory = new Memory({
@@ -114,7 +114,7 @@ Curation Methodology:
     }
     return baseTools
   },
-  toolkits: [thinkOnlyToolkit, contentAnalysisToolkit, sentimentBiasToolkit],
+  toolkits: [thinkOnlyToolkit],
   memory: contentCuratorMemory,
   maxHistoryEntries: 100,
   temperature: 0.4,
