@@ -20,7 +20,7 @@ const researchCoordinatorMemory = new Memory({
       currentProject: z.object({ topic: z.string(), status: z.string(), subtasks: z.array(z.string()) }).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true,
   cacheSize: 1000,
@@ -66,7 +66,7 @@ export const researchCoordinatorAgent = new Agent({
   instructions: ({ context }) => {
     const role = context?.get("role") || "researcher"
     const tier = context?.get("tier") || "standard"
-    
+
     let baseInstructions = `You are a Research Coordinator agent specialized in managing complex research projects.
 
 Your responsibilities:
@@ -90,7 +90,7 @@ Research Methodology:
     if (tier === "premium") {
       baseInstructions += "\n\nPremium tier: You can conduct deeper research with more sources and longer reports."
     }
-    
+
     return baseInstructions
   },
   tools: [],

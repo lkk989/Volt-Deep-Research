@@ -27,7 +27,7 @@ const scrapperMemory = new Memory({
       goals: z.array(z.string()).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true,
 });

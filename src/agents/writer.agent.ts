@@ -25,7 +25,7 @@ const writerMemory = new Memory({
       goals: z.array(z.string()).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
   enableCache: true, // optional embedding cache
 });
