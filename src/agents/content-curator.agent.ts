@@ -23,7 +23,7 @@ const contentCuratorMemory = new Memory({
       curationHistory: z.array(z.object({ contentId: z.string(), action: z.string(), timestamp: z.string() })).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true,
   cacheSize: 1000,

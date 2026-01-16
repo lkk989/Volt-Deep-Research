@@ -29,7 +29,7 @@ const reviewerMemory = new Memory({
       })).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
 });
 
