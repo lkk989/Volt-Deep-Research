@@ -13,6 +13,8 @@ import { z } from "zod";
 
 import { mcpServer } from "./config/mcpserver.js";
 import { scrapperAgent } from "./agents/scrapper.agent.js";
+import { codingAgent } from "./agents/coding.agent.js";
+import { codeReviewerAgent } from "./agents/code-reviewer.agent.js";
 import { a2aServer } from "./a2a/server.js";
 import { voltObservability } from "./config/observability.js";
 import { comprehensiveResearchWorkflow } from "./workflows/comprehensive-research.workflow.js";
@@ -82,6 +84,8 @@ new VoltAgent({
     factChecker: factCheckerAgent,
     synthesizer: synthesizerAgent,
     scrapper: scrapperAgent,
+    coding: codingAgent,
+    codeReviewer: codeReviewerAgent,
   },
   workflows: {
     "research-assistant-demo": workflow,

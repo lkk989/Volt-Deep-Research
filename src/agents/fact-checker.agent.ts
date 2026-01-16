@@ -337,4 +337,3 @@ export const factCheckerAgent = new Agent({
   logger: voltlogger,
   observability: voltObservability,
 });
-sql

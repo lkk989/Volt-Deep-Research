@@ -3,9 +3,9 @@ import { google } from "@ai-sdk/google"
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
 import { voltlogger } from "../config/logger.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
-import { searchDiscoveryToolkit } from "../tools/search-discovery-toolkit.js"
-import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
-import { reportGenerationToolkit } from "../tools/report-generation-toolkit.js"
+//import { searchDiscoveryToolkit } from "../tools/search-discovery-toolkit.js"
+//import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
+//import { reportGenerationToolkit } from "../tools/report-generation-toolkit.js"
 import z from "zod"
 
 const researchCoordinatorMemory = new Memory({
@@ -94,7 +94,7 @@ Research Methodology:
     return baseInstructions
   },
   tools: [],
-  toolkits: [thinkOnlyToolkit, searchDiscoveryToolkit, contentAnalysisToolkit, reportGenerationToolkit],
+  toolkits: [thinkOnlyToolkit],
   memory: researchCoordinatorMemory,
   maxHistoryEntries: 100,
   temperature: 0.3,

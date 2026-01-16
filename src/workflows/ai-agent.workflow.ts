@@ -63,13 +63,14 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                     : ["assistant", "scrapper", "dataAnalyzer", "factChecker", "synthesizer", "writer"]
 
             const usedAgents: string[] = []
-            let contextText = `Topic: ${data.topic}\n`
+            const topic = (getStepData("log-start")?.input as { topic?: string })?.topic ?? (data as any)?.topic ?? "Unknown topic"
+            let contextText = `Topic: ${topic}\n`
 
             for (const step of steps) {
                 switch (step) {
                     case "assistant": {
                         const result = await assistantAgent.generateText(
-                            `Generate 5 diverse, high-quality research queries for: ${data.topic}. ` +
+                            `Generate 5 diverse, high-quality research queries for: ${topic}. ` +
                             `Return plain text without markdown.`
                         )
                         contextText += `\n[Assistant Queries]\n${result.text}\n`
@@ -78,7 +79,7 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                     }
                     case "scrapper": {
                         const result = await scrapperAgent.generateText(
-                            `Using these queries, conceptually gather and summarize key information from high-quality web sources about "${data.topic}". ` +
+                            `Using these queries, conceptually gather and summarize key information from high-quality web sources about "${topic}". ` +
                             `You may use your tools if available. Input:\n${contextText}`
                         )
                         contextText += `\n[Scrapper Data]\n${result.text}\n`
@@ -103,7 +104,7 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                     }
                     case "synthesizer": {
                         const result = await synthesizerAgent.generateText(
-                            `Synthesize the verified insights into a coherent structured outline for a comprehensive report on "${data.topic}".\n${contextText}`
+                            `Synthesize the verified insights into a coherent structured outline for a comprehensive report on "${topic}".\n${contextText}`
                         )
                         contextText += `\n[Synthesis]\n${result.text}\n`
                         usedAgents.push("synthesizer")
@@ -111,7 +112,7 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                     }
                     case "writer": {
                         const result = await writerAgent.generateText(
-                            `Using all prior context, write a polished, fully-referenced comprehensive research report on "${data.topic}". ` +
+                            `Using all prior context, write a polished, fully-referenced comprehensive research report on "${topic}". ` +
                             `Include clear sections, deep analysis, and inline citation markers [#]. ` +
                             `End with a "References" section listing all sources used. Context:\n${contextText}`
                         )
@@ -134,7 +135,7 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                     : contextText.trim()
 
             voltlogger.info(
-                `=== [Director] Completed comprehensive research on: ${data.topic} using agents: ${usedAgents.join(
+                `=== [Director] Completed comprehensive research on: ${topic} using agents: ${usedAgents.join(
                     ", "
                 )} ===`
             )
