@@ -34,8 +34,8 @@ export const filesystemGlobTool = createTool({
         caseSensitiveMatch: boolean
         absolute: boolean
       } = {
-        cwd: args.cwd || process.cwd(),
-        ignore: args.ignore || [],
+        cwd: args.cwd ?? process.cwd(),
+        ignore: args.ignore ?? [],
         onlyFiles: args.onlyFiles,
         onlyDirectories: args.onlyDirectories,
         deep: args.deep,
@@ -59,8 +59,9 @@ export const filesystemGlobTool = createTool({
         },
       }
     } catch (error) {
-      voltlogger.error(`Filesystem glob failed: ${error}`)
-      throw new Error(`Failed to glob files: ${error}`)
+      const errMsg = error instanceof Error ? error.message : String(error)
+      voltlogger.error(`Filesystem glob failed: ${errMsg}`)
+      throw new Error(`Failed to glob files: ${errMsg}`)
     }
   },
 })
@@ -122,8 +123,9 @@ export const filesystemReadMultipleTool = createTool({
         failed: errors.length,
       }
     } catch (error) {
-      voltlogger.error(`Batch file read failed: ${error}`)
-      throw new Error(`Failed to read files: ${error}`)
+      const errMsg = error instanceof Error ? error.message : String(error)
+      voltlogger.error(`Batch file read failed: ${errMsg}`)
+      throw new Error(`Failed to read files: ${errMsg}`)
     }
   },
 })
@@ -188,8 +190,9 @@ export const filesystemStatsTool = createTool({
         failed: errors.length,
       }
     } catch (error) {
-      voltlogger.error(`Filesystem stats failed: ${error}`)
-      throw new Error(`Failed to get file stats: ${error}`)
+      const errMsg = error instanceof Error ? error.message : String(error)
+      voltlogger.error(`Filesystem stats failed: ${errMsg}`)
+      throw new Error(`Failed to get file stats: ${errMsg}`)
     }
   },
 })

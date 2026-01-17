@@ -7,6 +7,12 @@ import {
   reportStructureScorer
 } from './scorers/research-scorers.js'
 
+interface ResearchItem {
+  id: string;
+  input: string;
+  expected: string;
+}
+
 export default createExperiment({
   id: 'research-regression',
   label: 'Research System Regression',
@@ -42,13 +48,13 @@ export default createExperiment({
     ]
   },
 
-  runner: async ({ item }) => {
+  runner: async ({ item }: { item: ResearchItem }) => {
     try {
       const result = await directorAgent.generateText(item.input)
       return {
         output: result.text || 'No output generated',
         metadata: {
-          tokens: result.usage?.totalTokens || 0,
+          tokens: result.usage?.totalTokens ?? 0,
           duration: Date.now()
         }
       }

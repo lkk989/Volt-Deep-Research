@@ -21,7 +21,7 @@ export const researchComprehensiveScorer = buildScorer({
   description: 'Evaluates depth and breadth of research output',
 })
   .prepare(({ payload }) => {
-    const output = String(payload.output || '')
+    const output = String(payload.output)
     const sections = output.split(/\n#+\s/).length
     const wordCount = output.split(/\s+/).length
     const hasReferences = output.toLowerCase().includes('reference') ||
@@ -30,7 +30,7 @@ export const researchComprehensiveScorer = buildScorer({
     return { output, sections, wordCount, hasReferences }
   })
   .analyze(({ results }) => {
-    const prepared = results.prepare as unknown as PreparedResearch
+    const prepared = results.prepare as PreparedResearch
     const minSections = 3
     const minWords = 500
     const hasSufficientStructure = prepared.sections >= minSections
@@ -46,7 +46,7 @@ export const researchComprehensiveScorer = buildScorer({
     }
   })
   .score(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedResearch
+    const analysis = results.analyze as AnalyzedResearch
     let score = 0
     if (analysis.structure) {
       score += 0.4
@@ -68,7 +68,7 @@ export const researchComprehensiveScorer = buildScorer({
     }
   })
   .reason(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedResearch
+    const analysis = results.analyze as AnalyzedResearch
     const reasons = []
     if (analysis.structure) {
       reasons.push(`Research has ${analysis.sections} sections`)
@@ -105,12 +105,12 @@ export const dataAccuracyScorer = buildScorer({
   description: 'Validates data extraction and analysis'
 })
   .prepare(({ payload }) => {
-    const output = String(payload.output || '')
-    const expected = String(payload.expected || '')
+    const output = String(payload.output)
+    const expected = String(payload.expected)
     return { output, expected }
   })
   .analyze(({ results }) => {
-    const prepared = results.prepare as unknown as PreparedData
+    const prepared = results.prepare as PreparedData
     const outputLines = prepared.output.split('\n')
     const expectedPatterns = prepared.expected.split('\n')
 
@@ -129,7 +129,7 @@ export const dataAccuracyScorer = buildScorer({
     }
   })
   .score(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedData
+    const analysis = results.analyze as AnalyzedData
     return {
       score: analysis.accuracy,
       metadata: {
@@ -139,7 +139,7 @@ export const dataAccuracyScorer = buildScorer({
     }
   })
   .reason(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedData
+    const analysis = results.analyze as AnalyzedData
     const percent = Math.round(analysis.accuracy * 100)
     return {
       reason: `Data accuracy: ${analysis.matched}/${analysis.total} patterns matched (${percent}%)`
@@ -167,7 +167,7 @@ export const synthesisQualityScorer = buildScorer({
   description: 'Evaluates quality of information synthesis'
 })
   .prepare(({ payload }) => {
-    const output = String(payload.output || '')
+    const output = String(payload.output)
     return {
       output,
       hasTransitionPhrases: /\b(however|therefore|furthermore|in addition|conversely|notably|significantly)\b/i.test(output),
@@ -176,7 +176,7 @@ export const synthesisQualityScorer = buildScorer({
     }
   })
   .analyze(({ results }) => {
-    const prepared = results.prepare as unknown as PreparedSynthesis
+    const prepared = results.prepare as PreparedSynthesis
     const qualityScore = [
       prepared.hasTransitionPhrases ? 1 : 0,
       prepared.hasConnections ? 1 : 0,
@@ -191,7 +191,7 @@ export const synthesisQualityScorer = buildScorer({
     }
   })
   .score(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedSynthesis
+    const analysis = results.analyze as AnalyzedSynthesis
     return {
       score: analysis.qualityScore,
       metadata: {
@@ -202,7 +202,7 @@ export const synthesisQualityScorer = buildScorer({
     }
   })
   .reason(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedSynthesis
+    const analysis = results.analyze as AnalyzedSynthesis
     const components = []
     if (analysis.transitions) {
       components.push('clear transitions')
@@ -239,7 +239,7 @@ export const factCheckingScorer = buildScorer({
   description: 'Verifies factual claims in output'
 })
   .prepare(({ payload }) => {
-    const output = String(payload.output || '')
+    const output = String(payload.output)
     const expected = payload.expected as Record<string, unknown> || {}
 
     return {
@@ -249,7 +249,7 @@ export const factCheckingScorer = buildScorer({
     }
   })
   .analyze(({ results }) => {
-    const prepared = results.prepare as unknown as PreparedFact
+    const prepared = results.prepare as PreparedFact
     const expectedClaims = Object.keys(prepared.expected).length
     const foundClaims = prepared.claimCount > 0 ? prepared.claimCount : 1
 
@@ -259,7 +259,7 @@ export const factCheckingScorer = buildScorer({
     }
   })
   .score(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedFact
+    const analysis = results.analyze as AnalyzedFact
     return {
       score: analysis.claimDensity,
       metadata: {
@@ -268,7 +268,7 @@ export const factCheckingScorer = buildScorer({
     }
   })
   .reason(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedFact
+    const analysis = results.analyze as AnalyzedFact
     const confidence = Math.round(analysis.claimDensity * 100)
     return {
       reason: `Fact-checked ${analysis.claimCount} claims (confidence: ${confidence}%)`
@@ -296,9 +296,9 @@ export const reportStructureScorer = buildScorer({
   description: 'Validates report formatting and organization'
 })
   .prepare(({ payload }) => {
-    const output = String(payload.output || '')
+    const output = String(payload.output)
     const hasTitle = /^#+\s.+/m.test(output)
-    const hasHeadings = (output.match(/^#+\s/gm) || []).length
+    const hasHeadings = (output.match(/^#+\s/gm) ?? []).length
     const hasList = /^[-*+]\s/m.test(output)
     const hasCodeBlocks = /```[\s\S]*?```/.test(output)
     const hasMarkdown = /[*_~`[\]()#]/g.test(output)
@@ -313,7 +313,7 @@ export const reportStructureScorer = buildScorer({
     }
   })
   .analyze(({ results }) => {
-    const prepared = results.prepare as unknown as PreparedStructure
+    const prepared = results.prepare as PreparedStructure
     const structureElements = [
       prepared.hasTitle ? 1 : 0,
       prepared.headingCount >= 3 ? 1 : 0,
@@ -327,7 +327,7 @@ export const reportStructureScorer = buildScorer({
     }
   })
   .score(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedStructure
+    const analysis = results.analyze as AnalyzedStructure
     return {
       score: analysis.structureScore,
       metadata: {
@@ -336,7 +336,7 @@ export const reportStructureScorer = buildScorer({
     }
   })
   .reason(({ results }) => {
-    const analysis = results.analyze as unknown as AnalyzedStructure
+    const analysis = results.analyze as AnalyzedStructure
     return {
       reason: `Report has ${analysis.elements}/4 structural quality elements`
     }

@@ -76,7 +76,7 @@ Use these tools to analyze codebases:
       parameters: z.object({
         projectPath: z.string().describe("Absolute path to the TypeScript project root"),
       }),
-      execute: async ({ projectPath }, context?: ToolExecuteOptions) => {
+      execute: ({ projectPath }, context?: ToolExecuteOptions) => {
         try {
           voltlogger.info(`Analyzing TS project at ${projectPath}`, { operationId: context?.operationId });
 
@@ -105,7 +105,7 @@ Use these tools to analyze codebases:
         filePath: z.string().describe("Absolute path to the TypeScript file"),
         projectPath: z.string().optional().describe("Root path of the project (optional, will try to infer or use file dir)"),
       }),
-      execute: async ({ filePath, projectPath }, context?: ToolExecuteOptions) => {
+      execute: ({ filePath, projectPath }, context?: ToolExecuteOptions) => {
         try {
           const rootDir = projectPath || path.dirname(filePath);
           const project = ProjectCache.getInstance().getOrCreate(rootDir);

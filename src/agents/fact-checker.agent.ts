@@ -1,11 +1,11 @@
-import { Agent, Memory, AiSdkEmbeddingAdapter, createTool } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
+import { Agent, AiSdkEmbeddingAdapter, createTool, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { voltlogger } from "../config/logger.js";
 import z from "zod";
+import { voltlogger } from "../config/logger.js";
+import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { factCheckerPrompt } from "./prompts.js";
-import { voltObservability } from "../config/observability.js";
 
 // Local SQLite for fact checker
 const factCheckerMemory = new Memory({
@@ -27,7 +27,7 @@ const factCheckerMemory = new Memory({
       goals: z.array(z.string()).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true,
 });
@@ -40,7 +40,7 @@ const verifyClaimTool = createTool({
     claim: z.string().describe("The claim to verify"),
     context: z.string().optional().describe("Additional context about the claim"),
   }),
-  execute: async ({ claim, context }, operationContext) => {
+  execute: ({ claim, context }, operationContext) => {
     if (!operationContext?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -99,7 +99,7 @@ const crossReferenceSourcesTool = createTool({
     sources: z.array(z.string()).describe("Array of source texts to cross-reference"),
     topic: z.string().describe("The topic being cross-referenced"),
   }),
-  execute: async ({ sources, topic }, operationContext) => {
+  execute: ({ sources, topic }, operationContext) => {
     if (!operationContext?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -174,7 +174,7 @@ const detectBiasTool = createTool({
     content: z.string().describe("The content to analyze for bias"),
     contentType: z.enum(["article", "report", "social_media", "academic"]).describe("Type of content being analyzed"),
   }),
-  execute: async ({ content, contentType }, operationContext) => {
+  execute: ({ content, contentType }, operationContext) => {
     if (!operationContext?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -201,7 +201,7 @@ const detectBiasTool = createTool({
           analysis.biasIndicators.push("Sensationalist language (breaking/exclusive)");
           analysis.credibilityScore -= 15;
         }
-        if ((contentLower.match(/\b(always|never|everyone|nobody)\b/g) || []).length > 3) {
+        if ((contentLower.match(/\b(always|never|everyone|nobody)\b/g) ?? []).length > 3) {
           analysis.biasIndicators.push("Absolute language overuse");
           analysis.credibilityScore -= 10;
         }
@@ -303,30 +303,31 @@ export const factCheckerAgent = new Agent({
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: async ({ context }) => {
+    onStart: ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] FactChecker starting`);
     },
-    onEnd: async ({ output, error, context }) => {
-      const opId = context.context.get('opId');
+    onEnd: ({ output, error, context }) => {
+      const opId = context.context.get('opId') as string;
       if (error) {
-        voltlogger.error(`[${opId}] FactChecker error: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        voltlogger.error(`[${opId}] FactChecker error: ${errorMessage}`);
       } else if (output) {
         voltlogger.info(`[${opId}] FactChecker completed`);
       }
     },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId = context.context.get('opId') as string;
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
     },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] tool ${tool.name} failed`);
       }
     },
-    onPrepareMessages: async ({ messages }) => {
+    onPrepareMessages: ({ messages }) => {
       return { messages };
     },
   },

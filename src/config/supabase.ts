@@ -24,9 +24,11 @@ export const supaMemory = new Memory({
 -
 `,
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
   vector: new InMemoryVectorAdapter(),
   enableCache: true, // optional embedding cache
+  cacheSize: 1000, // optional cache size
+  cacheTTL: 3600000, // optional cache time-to-live in seconds
 });
 
 

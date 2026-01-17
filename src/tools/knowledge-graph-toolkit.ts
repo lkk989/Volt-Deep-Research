@@ -1,7 +1,7 @@
 import { createTool, createToolkit, type Toolkit } from "@voltagent/core"
+import { randomUUID } from "crypto"
 import { z } from "zod"
 import { voltlogger } from "../config/logger.js"
-import { randomUUID } from "crypto"
 
 // --- Interfaces ---
 
@@ -40,11 +40,19 @@ export interface GraphStorage {
   list(): Promise<string[]>
 }
 
+export interface EntityInput {
+  id: string
+  label: string
+  type: string
+  properties?: Record<string, unknown>
+}
+
 // --- Implementations ---
 
 export class InMemoryGraphStorage implements GraphStorage {
   private graphs = new Map<string, KnowledgeGraph>()
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async get(id: string): Promise<KnowledgeGraph | undefined> {
     return this.graphs.get(id)
   }
@@ -63,7 +71,7 @@ export class InMemoryGraphStorage implements GraphStorage {
 }
 
 export class KnowledgeGraphService {
-  constructor(private storage: GraphStorage = new InMemoryGraphStorage()) {}
+  constructor(private storage: GraphStorage = new InMemoryGraphStorage()) { }
 
   private createGraphId(): string {
     return `graph_${randomUUID()}`
@@ -73,7 +81,7 @@ export class KnowledgeGraphService {
     return `edge_${randomUUID()}`
   }
 
-  async createGraph(args: { name: string; entities?: any[] }, context?: any) {
+  async createGraph(args: { name: string; entities?: EntityInput[] }, context?: any) {
     voltlogger.info(`Creating knowledge graph: ${args.name}`, { operationId: context?.operationId })
 
     const graphId = this.createGraphId()
@@ -95,7 +103,7 @@ export class KnowledgeGraphService {
           id: entity.id,
           label: entity.label,
           type: entity.type,
-          properties: entity.properties || {},
+          properties: entity.properties ?? {},
           createdAt: now,
         }
         graph.nodes.set(entity.id, node)
@@ -118,10 +126,10 @@ export class KnowledgeGraphService {
 
   async addRelationship(args: {
     graphId: string
-    source: any
-    target: any
+    source: EntityInput
+    target: EntityInput
     relationship: string
-    properties?: any
+    properties?: Record<string, unknown>
     weight: number
     bidirectional: boolean
   }, context?: any) {
@@ -140,7 +148,7 @@ export class KnowledgeGraphService {
         id: args.source.id,
         label: args.source.label,
         type: args.source.type,
-        properties: args.source.properties || {},
+        properties: args.source.properties ?? {},
         createdAt: now,
       })
       graph.adjacencyList.set(args.source.id, new Set())
@@ -152,7 +160,7 @@ export class KnowledgeGraphService {
         id: args.target.id,
         label: args.target.label,
         type: args.target.type,
-        properties: args.target.properties || {},
+        properties: args.target.properties ?? {},
         createdAt: now,
       })
       graph.adjacencyList.set(args.target.id, new Set())
@@ -165,7 +173,7 @@ export class KnowledgeGraphService {
       source: args.source.id,
       target: args.target.id,
       relationship: args.relationship,
-      properties: args.properties || {},
+      properties: args.properties ?? {},
       weight: args.weight,
       createdAt: now,
     }
@@ -202,7 +210,7 @@ export class KnowledgeGraphService {
       throw new Error(`Graph not found: ${args.graphId}`)
     }
 
-    voltlogger.info(`Querying graph: ${args.queryType} from ${args.startNode}`, { operationId: context?.operationId })
+    voltlogger.info(`Querying graph: ${args.queryType} from ${args.startNode}`, { })
 
     if (args.queryType === "path") {
       if (!args.endNode) {
@@ -233,7 +241,7 @@ export class KnowledgeGraphService {
 
     // cluster query
     const communities = this.detectCommunities(graph)
-    const cluster = communities.find(c => c.includes(args.startNode)) || []
+    const cluster = communities.find(c => c.includes(args.startNode)) ?? []
     return {
       queryType: "cluster",
       startNode: args.startNode,
@@ -255,7 +263,7 @@ export class KnowledgeGraphService {
       throw new Error(`Graph not found: ${args.graphId}`)
     }
 
-    voltlogger.info(`Analyzing graph: ${args.analysisType}`, { operationId: context?.operationId })
+    voltlogger.info(`Analyzing graph: ${args.analysisType}`, )
 
     if (args.analysisType === "centrality") {
       const centrality = this.calculateCentrality(graph)
@@ -298,7 +306,7 @@ export class KnowledgeGraphService {
       const avgDegree = graph.edges.size * 2 / Math.max(graph.nodes.size, 1)
 
       for (const [nodeId, node] of graph.nodes) {
-        const degree = graph.adjacencyList.get(nodeId)?.size || 0
+        const degree = graph.adjacencyList.get(nodeId)?.size ?? 0
         if (degree === 0) {
           isolated.push(node)
         } else if (degree > avgDegree * 2) {
@@ -323,12 +331,12 @@ export class KnowledgeGraphService {
     // statistics
     const nodeTypes = new Map<string, number>()
     for (const [, node] of graph.nodes) {
-      nodeTypes.set(node.type, (nodeTypes.get(node.type) || 0) + 1)
+      nodeTypes.set(node.type, (nodeTypes.get(node.type) ?? 0) + 1)
     }
 
     const relationshipTypes = new Map<string, number>()
     for (const [, edge] of graph.edges) {
-      relationshipTypes.set(edge.relationship, (relationshipTypes.get(edge.relationship) || 0) + 1)
+      relationshipTypes.set(edge.relationship, (relationshipTypes.get(edge.relationship) ?? 0) + 1)
     }
 
     return {
@@ -353,7 +361,7 @@ export class KnowledgeGraphService {
       throw new Error(`Graph not found: ${args.graphId}`)
     }
 
-    voltlogger.info(`Exporting graph as ${args.format}`, { operationId: context?.operationId })
+    voltlogger.info(`Exporting graph as ${args.format}`, )
 
     const nodes = Array.from(graph.nodes.values())
     const edges = Array.from(graph.edges.values())
@@ -416,13 +424,13 @@ export class KnowledgeGraphService {
     newName?: string
     conflictResolution: "keep_first" | "keep_last" | "merge_properties"
   }, context?: any) {
-    voltlogger.info(`Merging ${args.graphIds.length} graphs`, { operationId: context?.operationId })
+    voltlogger.info(`Merging ${args.graphIds.length} graphs`, {  })
 
     const now = new Date().toISOString()
     const mergedId = this.createGraphId()
     const merged: KnowledgeGraph = {
       id: mergedId,
-      name: args.newName || `Merged_${mergedId}`,
+      name: args.newName ?? `Merged_${mergedId}`,
       nodes: new Map(),
       edges: new Map(),
       adjacencyList: new Map(),
@@ -493,14 +501,14 @@ export class KnowledgeGraphService {
     while (queue.length > 0) {
       const { id, path } = queue.shift()!
 
-      if (path.length > maxDepth + 1) {continue}
+      if (path.length > maxDepth + 1) { continue }
 
       if (id === endNodeId) {
         paths.push(path.map(nodeId => graph.nodes.get(nodeId)!))
         continue
       }
 
-      const neighbors = graph.adjacencyList.get(id) || new Set()
+      const neighbors = graph.adjacencyList.get(id) ?? new Set()
       for (const neighborId of neighbors) {
         if (!path.includes(neighborId)) {
           queue.push({ id: neighborId, path: [...path, neighborId] })
@@ -525,7 +533,7 @@ export class KnowledgeGraphService {
 
       if (id !== nodeId) { result.add(id) }
 
-      const neighbors = graph.adjacencyList.get(id) || new Set()
+      const neighbors = graph.adjacencyList.get(id) ?? new Set()
       for (const nid of neighbors) {
         if (!visited.has(nid)) {
           queue.push({ id: nid, d: d + 1 })
@@ -541,7 +549,7 @@ export class KnowledgeGraphService {
     const nodeCount = graph.nodes.size
 
     for (const [nodeId] of graph.nodes) {
-      const degree = graph.adjacencyList.get(nodeId)?.size || 0
+      const degree = graph.adjacencyList.get(nodeId)?.size ?? 0
       centrality.set(nodeId, nodeCount > 1 ? degree / (nodeCount - 1) : 0)
     }
 
@@ -564,7 +572,7 @@ export class KnowledgeGraphService {
         visited.add(current)
         community.push(current)
 
-        const neighbors = graph.adjacencyList.get(current) || new Set()
+        const neighbors = graph.adjacencyList.get(current) ?? new Set()
         for (const nid of neighbors) {
           if (!visited.has(nid)) { stack.push(nid) }
         }

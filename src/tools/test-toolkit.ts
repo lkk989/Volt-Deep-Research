@@ -29,23 +29,36 @@ Use these tools to verify code changes:
           voltlogger.info(`Running tests${pattern ? ` matching "${pattern}"` : ""}`, { operationId: context?.operationId });
 
           let cmd = "npx vitest run";
-          if (pattern) cmd += ` ${pattern}`;
-          if (updateSnapshots) cmd += " -u";
+          if (pattern) {cmd += ` ${pattern}`;}
+          if (updateSnapshots) {cmd += " -u";}
           // Add reporter for machine-readable output if needed, but text is fine for LLMs
-          
+
           const { stdout, stderr } = await execAsync(cmd);
-          
+
           return {
             success: true,
             output: stdout,
             errorOutput: stderr
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Vitest returns exit code 1 on failure, which throws in execAsync
+          // Safely extract stdout/stderr from the error if present
+          const isExecError = (e: unknown): e is { stdout?: string; stderr?: string } =>
+            typeof e === "object" && e !== null && ("stdout" in e || "stderr" in e);
+
+          if (isExecError(error)) {
+            return {
+              success: false,
+              output: error.stdout ?? "",
+              errorOutput: error.stderr ?? "",
+              message: "Tests failed"
+            };
+          }
+
           return {
             success: false,
-            output: error.stdout,
-            errorOutput: error.stderr,
+            output: "",
+            errorOutput: String(error),
             message: "Tests failed"
           };
         }

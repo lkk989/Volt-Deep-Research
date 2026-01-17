@@ -26,7 +26,7 @@ Use these tools to interact with Git repositories:
         try {
           const { stdout } = await execAsync("git status --porcelain");
           const { stdout: branchInfo } = await execAsync("git branch --show-current");
-          
+
           const files = stdout.split("\n").filter(Boolean).map(line => {
             const status = line.substring(0, 2);
             const file = line.substring(3);
@@ -53,8 +53,8 @@ Use these tools to interact with Git repositories:
       execute: async ({ files, staged }, context) => {
         try {
           const args = ["diff"];
-          if (staged) args.push("--cached");
-          if (files && files.length > 0) args.push("--", ...files);
+          if (staged) {args.push("--cached");}
+          if (files && files.length > 0) {args.push("--", ...files);}
 
           const { stdout } = await execAsync(`git ${args.join(" ")}`);
           return { diff: stdout || "No changes" };
@@ -73,12 +73,12 @@ Use these tools to interact with Git repositories:
       execute: async ({ maxCount, author }, context) => {
         try {
           let cmd = `git log -n ${maxCount} --pretty=format:"%h|%an|%ad|%s"`;
-          if (author) cmd += ` --author="${author}"`;
+          if (author) {cmd += ` --author="${author}"`;}
 
           const { stdout } = await execAsync(cmd);
           const commits = stdout.split("\n").filter(Boolean).map(line => {
-            const [hash, author, date, message] = line.split("|");
-            return { hash, author, date, message };
+            const [hash, commitAuthor, date, message] = line.split("|");
+            return { hash, author: commitAuthor, date, message };
           });
 
           return { commits };
@@ -98,12 +98,12 @@ Use these tools to interact with Git repositories:
         try {
           // 1. Stage files
           await execAsync(`git add ${files.join(" ")}`);
-          
+
           // 2. Commit
           // Escape quotes in message
           const safeMessage = message.replace(/"/g, '\\"');
           const { stdout } = await execAsync(`git commit -m "${safeMessage}"`);
-          
+
           return { success: true, output: stdout };
         } catch (error) {
           throw new Error(`Git commit failed: ${error instanceof Error ? error.message : String(error)}`);

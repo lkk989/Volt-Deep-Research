@@ -2,6 +2,7 @@ import { createTool, createToolkit } from "@voltagent/core"
 import { z } from "zod"
 import { voltlogger } from "../config/logger.js"
 import { XMLParser } from "fast-xml-parser"
+import type { TextItem } from "pdfjs-dist/types/src/display/api.js"
 
 // Types for arXiv API response
 interface ArxivEntry {
@@ -48,9 +49,8 @@ interface PdfParseResult {
     Subject?: string
     Creator?: string
   }
+  hasEOL?: boolean
 }
-
-// PDF parsing uses dynamic import of PDFParse class
 
 export const arxivSearchTool = createTool({
   name: "arxiv_search",
@@ -168,8 +168,8 @@ export const arxivSearchTool = createTool({
         papers,
       }
     } catch (error) {
-      voltlogger.error(`arXiv search failed: ${error}`)
-      throw new Error(`Failed to search arXiv: ${error}`)
+      voltlogger.error(`arXiv search failed: ${String(error)}`)
+      throw new Error(`Failed to search arXiv: ${String(error)}`)
     }
   },
 })
@@ -202,31 +202,49 @@ export const arxivPdfExtractTool = createTool({
 
       const pdfBuffer = await response.arrayBuffer()
 
-      // Use pdf-parse with dynamic import
-      const { PDFParse } = await import("pdf-parse")
-      const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) })
+      // Use pdfjs-dist with dynamic import
+      const { getDocument } = await import('pdfjs-dist')
 
-      const textResult = await parser.getText()
-      const infoResult = await parser.getInfo()
+      const pdf = await getDocument({ data: new Uint8Array(pdfBuffer) }).promise
+
+      let text = ''
+      const maxPagesToExtract = Math.min(pdf.numPages, args.maxPages)
+
+      for (let i = 1; i <= maxPagesToExtract; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .filter((item): item is TextItem => 'str' in item)
+          .map((item) => item.str)
+          .join(' ');
+        text += pageText + '\n\n';
+      }
+
+      const metadata = await pdf.getMetadata()
+
+      // Guard the unknown shape returned by the PDF library and ensure string|undefined values
+      const metaInfo = metadata.info as Record<string, unknown> | undefined
+      const toStringOrUndefined = (v: unknown): string | undefined => {
+        if (typeof v === 'string') {return v}
+        if (v === null) {return undefined}
+        return safeStringify(v)
+      }
 
       const data: PdfParseResult = {
-        numpages: textResult.pages.length,
-        text: textResult.text,
+        numpages: pdf.numPages,
+        text,
         info: {
-          Title: infoResult.info?.Title,
-          Author: infoResult.info?.Author,
-          Subject: infoResult.info?.Subject,
-          Creator: infoResult.info?.Creator,
+          Title: toStringOrUndefined(metaInfo?.Title),
+          Author: toStringOrUndefined(metaInfo?.Author),
+          Subject: toStringOrUndefined(metaInfo?.Subject),
+          Creator: toStringOrUndefined(metaInfo?.Creator),
         }
       }
 
-      await parser.destroy()
-
       // Extract text from specified number of pages
-      const pages = data.text.split('\n\n').slice(0, args.maxPages)
-      const extractedText = pages.join('\n\n')
+      const extractedText = text
 
-      voltlogger.info(`Extracted ${pages.length} pages from PDF`)
+      voltlogger.info(`Extracted ${maxPagesToExtract} pages from PDF`)
 
       return {
         pdfUrl: args.pdfUrl,
@@ -241,8 +259,8 @@ export const arxivPdfExtractTool = createTool({
         },
       }
     } catch (error) {
-      voltlogger.error(`PDF extraction failed: ${error}`)
-      throw new Error(`Failed to extract PDF content: ${error}`)
+      voltlogger.error(`PDF extraction failed: ${String(error)}`)
+      throw new Error(`Failed to extract PDF content: ${String(error)}`)
     }
   },
 })
@@ -254,3 +272,22 @@ export const arxivToolkit = createToolkit({
   addInstructions: true,
   tools: [arxivSearchTool, arxivPdfExtractTool],
 })
+
+// Use JSON.stringify with circular detection to avoid default "[object Object]" output
+const safeStringify = (value: unknown): string => {
+    const seen = new WeakSet<object>()
+    try {
+        return JSON.stringify(value, (_k, v) => {
+            if ((Boolean(v)) && typeof v === 'object') {
+                const objVal = v as object
+                if (seen.has(objVal)) {return '[Circular]'}
+                seen.add(objVal)
+            }
+            if (typeof v === 'function' || typeof v === 'symbol') {return String(v)}
+            return v as unknown
+        }) ?? Object.prototype.toString.call(value)
+    } catch {
+        // Fallback to a stable, informative descriptor
+        return Object.prototype.toString.call(value)
+    }
+}

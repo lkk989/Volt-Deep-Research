@@ -15,7 +15,7 @@ export const csvToJsonTool = createTool({
     headers: z.array(z.string()).optional().describe("Custom headers to use instead of first row"),
     trim: z.boolean().default(true).describe("Trim whitespace from fields"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -27,12 +27,26 @@ export const csvToJsonTool = createTool({
 
       if (args.delimiter === ",") {
         // Use convert-csv-to-json for comma-separated
-        result = ConvertCsvToJson.csvStringToJson(args.csvData)
+        const raw = ConvertCsvToJson.csvStringToJson(args.csvData) as unknown
+        if (!Array.isArray(raw)) {
+          throw new Error("CSV parsing did not return an array")
+        }
+
+        result = raw.map((item) => {
+          if (item && typeof item === "object" && !Array.isArray(item)) {
+            const obj: Record<string, unknown> = {}
+            for (const [k, v] of Object.entries(item as Record<string, unknown>)) {
+              obj[k] = v
+            }
+            return obj
+          }
+          return {}
+        })
       } else {
         // For other delimiters, split manually
         const lines = args.csvData.trim().split("\n")
         const dataLines = args.skipHeader ? lines.slice(1) : lines
-        const headers = args.headers || (args.skipHeader ? [] : lines[0]?.split(args.delimiter).map(h => h.trim()))
+        const headers = args.headers ?? (args.skipHeader ? [] : lines[0]?.split(args.delimiter).map(h => h.trim()))
 
         result = dataLines.map(line => {
           const values = line.split(args.delimiter)
@@ -55,12 +69,12 @@ export const csvToJsonTool = createTool({
       return {
         data: result,
         rowCount: result.length,
-        headers: args.headers || (result[0] ? Object.keys(result[0]) : []),
+        headers: args.headers ?? (result[0] ? Object.keys(result[0]) : []),
         delimiter: args.delimiter,
       }
     } catch (error) {
-      voltlogger.error(`CSV to JSON conversion failed: ${error}`)
-      throw new Error(`Failed to convert CSV to JSON: ${error}`)
+      voltlogger.error(`CSV to JSON conversion failed: ${String(error)}`)
+      throw new Error(`Failed to convert CSV to JSON: ${String(error)}`)
     }
   },
 })
@@ -69,12 +83,12 @@ export const jsonToCsvTool = createTool({
   name: "json_to_csv",
   description: "Convert JSON data to CSV format. Supports custom delimiters and field selection.",
   parameters: z.object({
-    jsonData: z.array(z.record(z.string(), z.any())).describe("Array of JSON objects to convert"),
+    jsonData: z.array(z.record(z.string(), z.unknown())).describe("Array of JSON objects to convert"),
     delimiter: z.string().default(",").describe("CSV delimiter character"),
     headers: z.array(z.string()).optional().describe("Custom headers (uses object keys if not provided)"),
     includeHeaders: z.boolean().default(true).describe("Include headers in output"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -86,19 +100,22 @@ export const jsonToCsvTool = createTool({
         return {
           csv: args.includeHeaders && args.headers ? args.headers.join(args.delimiter) : "",
           rowCount: 0,
-          headers: args.headers || [],
+          headers: args.headers ?? [],
         }
       }
 
       // Determine headers
-      const headers = args.headers || Object.keys(args.jsonData[0])
+      const headers = args.headers ?? Object.keys(args.jsonData[0])
 
       // Create CSV rows
       const rows = args.jsonData.map(obj => {
         return headers.map(header => {
-          const value = obj[header]
-          // Escape commas and quotes in values
-          const stringValue = String(value || "")
+          const rawValue: unknown = obj[header]
+          // Convert values to safe strings for CSV output (avoid '[object Object]')
+          let stringValue: string
+          stringValue = safeStringify(rawValue)
+
+          // Escape delimiters and quotes in values
           if (stringValue.includes(args.delimiter) || stringValue.includes('"')) {
             return `"${stringValue.replace(/"/g, '""')}"`
           }
@@ -123,8 +140,8 @@ export const jsonToCsvTool = createTool({
         delimiter: args.delimiter,
       }
     } catch (error) {
-      voltlogger.error(`JSON to CSV conversion failed: ${error}`)
-      throw new Error(`Failed to convert JSON to CSV: ${error}`)
+      voltlogger.error(`JSON to CSV conversion failed: ${String(error)}`)
+      throw new Error(`Failed to convert JSON to CSV: ${String(error)}`)
     }
   },
 })
@@ -142,7 +159,7 @@ export const xmlParseTool = createTool({
     parseNodeValue: z.boolean().default(true).describe("Parse node values"),
     parseAttributeValue: z.boolean().default(true).describe("Parse attribute values"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -158,7 +175,7 @@ export const xmlParseTool = createTool({
         parseAttributeValue: args.parseAttributeValue,
       })
 
-      const result = parser.parse(args.xmlData)
+      const result: unknown = parser.parse(args.xmlData)
 
       voltlogger.info(`Successfully parsed XML`)
 
@@ -171,8 +188,8 @@ export const xmlParseTool = createTool({
         },
       }
     } catch (error) {
-      voltlogger.error(`XML parsing failed: ${error}`)
-      throw new Error(`Failed to parse XML: ${error}`)
+      voltlogger.error(`XML parsing failed: ${String(error)}`)
+      throw new Error(`Failed to parse XML: ${String(error)}`)
     }
   },
 })
@@ -189,7 +206,7 @@ export const xmlBuildTool = createTool({
     ignoreAttributes: z.boolean().default(false).describe("Ignore attributes during building"),
     attributeNamePrefix: z.string().default("@_").describe("Prefix for attribute names"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -218,8 +235,8 @@ export const xmlBuildTool = createTool({
         },
       }
     } catch (error) {
-      voltlogger.error(`XML building failed: ${error}`)
-      throw new Error(`Failed to build XML: ${error}`)
+      voltlogger.error(`XML building failed: ${String(error)}`)
+      throw new Error(`Failed to build XML: ${String(error)}`)
     }
   },
 })
@@ -231,3 +248,34 @@ export const dataConversionToolkit = createToolkit({
   addInstructions: true,
   tools: [csvToJsonTool, jsonToCsvTool, xmlParseTool, xmlBuildTool],
 })
+
+// Extracted to module scope to avoid recreating per-iteration and to avoid shadowing outer `obj`
+// Avoid default '[object Object]' from String(obj): use robust JSON stringify with circular handling
+const safeStringify = (value: unknown): string => {
+  const seen = new WeakSet<object>()
+  try {
+    return JSON.stringify(value, (_k: string, v: unknown) => {
+      if (v && typeof v === "object") {
+        const objVal = v // Avoid shadowing outer `obj` (ESLint no-shadow)
+        if (seen.has(objVal)) {return "[Circular]"}
+        seen.add(objVal)
+      }
+      if (typeof v === "function" || typeof v === "symbol") {return String(v)}
+      return v
+    }) ?? String(value)
+  } catch {
+    try {
+      const seen2 = new WeakSet<object>()
+      return JSON.stringify(value, (_k, v: unknown) => {
+        if (v && typeof v === "object") {
+          const objVal = v // Avoid shadowing outer `obj`
+          if (seen2.has(objVal)) {return "[Circular]"}
+          seen2.add(objVal)
+        }
+        return v
+      }) ?? String(value)
+    } catch {
+      return Object.prototype.toString.call(value)
+    }
+  }
+}

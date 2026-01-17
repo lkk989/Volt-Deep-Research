@@ -259,7 +259,19 @@ export function convertFormat(
         const headers = Object.keys(jsObject[0] as Record<string, unknown>)
         const rows = jsObject.map(item => {
           const record = item as Record<string, unknown>
-          return headers.map(h => String(record[h] ?? "")).join(",")
+          return headers.map(h => {
+            const value = record[h] ?? ""
+            if (typeof value === "object" && value !== null) {
+              return JSON.stringify(value)
+            }
+            if (typeof value === "string") {
+              return value
+            }
+            if (typeof value === "number" || typeof value === "boolean") {
+              return value.toString()
+            }
+            return "" // fallback for undefined, null, symbols, etc.
+          }).join(",")
         })
         result = [headers.join(","), ...rows].join("\n")
       } else {
@@ -294,7 +306,7 @@ export const normalizeDataTool = createTool({
     preserveArrays: z.boolean().default(true).describe("Whether to preserve arrays as-is or flatten them"),
     generateSchema: z.boolean().default(true).describe("Whether to generate a schema of the normalized data"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -338,7 +350,7 @@ export const detectFormatTool = createTool({
   parameters: z.object({
     data: z.string().describe("The data string to analyze for format detection"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -368,7 +380,7 @@ export const convertFormatTool = createTool({
     toFormat: z.enum(["json", "csv", "xml", "yaml", "unknown"]).describe("The target format"),
     validate: z.boolean().default(true).describe("Whether to validate the conversion result"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -417,7 +429,7 @@ export const validateSchemaTool = createTool({
     })).describe("Schema definition with field rules"),
     strict: z.boolean().default(false).describe("Whether to fail on unknown fields"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -509,7 +521,7 @@ export const aggregateDataTool = createTool({
     aggregateField: z.string().optional().describe("Numeric field to compute statistics on"),
     computeStats: z.array(z.enum(["count", "sum", "average", "min", "max"])).default(["count"]).describe("Statistics to compute"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -574,7 +586,7 @@ export const cleanDataTool = createTool({
     removeDuplicates: z.boolean().default(false).describe("Remove duplicate records"),
     duplicateKey: z.string().optional().describe("Field to use for duplicate detection"),
   }),
-  execute: async (args, context) => {
+  execute: (args, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled")
     }
@@ -605,7 +617,16 @@ export const cleanDataTool = createTool({
           for (const [key, defaultValue] of Object.entries(args.fillMissing)) {
             if (newItem[key] === undefined || newItem[key] === null || newItem[key] === "") {
               changes.push({ index, field: key, action: "filled", oldValue: newItem[key], newValue: defaultValue })
-              newItem[key] = defaultValue
+              // Type-safe assignment: only assign if defaultValue is a valid JSON-serializable type
+              if (defaultValue === null ||
+                  typeof defaultValue === "string" ||
+                  typeof defaultValue === "number" ||
+                  typeof defaultValue === "boolean" ||
+                  Array.isArray(defaultValue) ||
+                  (typeof defaultValue === "object" && defaultValue !== null)) {
+                // Explicit type assertion since we've validated the type above
+                newItem[key] = defaultValue as string | number | boolean | null | unknown[] | Record<string, unknown>
+              }
             }
           }
         }

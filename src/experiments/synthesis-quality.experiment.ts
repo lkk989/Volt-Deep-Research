@@ -54,11 +54,12 @@ export default createExperiment({
 
   runner: async ({ item }) => {
     try {
-      const result = await synthesizerAgent.generateText(item.input)
+      const input = (item as { input: string }).input;
+      const result = await synthesizerAgent.generateText(input)
       return {
         output: result.text || 'No synthesis generated',
         metadata: {
-          tokens: result.usage?.totalTokens || 0
+          tokens: result.usage?.totalTokens ?? 0
         }
       }
     } catch (error) {
