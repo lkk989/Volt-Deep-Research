@@ -45,27 +45,27 @@ export const codeReviewerAgent = new Agent({
   toolkits: [codeAnalysisToolkit, filesystemToolkit, gitToolkit, testToolkit, thinkOnlyToolkit],
   memory: reviewerMemory,
   hooks: {
-    onStart: async ({ context }) => {
+    onStart: ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Code Reviewer starting`);
     },
-    onEnd: async ({ output, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId = String(context.context.get('opId'));
+      voltlogger.info(`[${opId}] tool: ${String(tool.name)}`);
+    },
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = String(context.context.get('opId'));
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onEnd: ({ output, error, context }) => {
+      const opId = String(context.context.get('opId'));
       if (error) {
         voltlogger.error(`[${opId}] Code Reviewer error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Code Reviewer completed`);
-      }
-    },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
-    },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
-      if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
       }
     },
   },
@@ -74,4 +74,7 @@ export const codeReviewerAgent = new Agent({
   maxSteps: 20,
   observability: voltObservability,
   logger: voltlogger,
+  eval: {
+    scorers: {},
+  },
 });

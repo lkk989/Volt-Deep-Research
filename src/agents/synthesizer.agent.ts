@@ -40,7 +40,7 @@ const synthesizeInformationTool = createTool({
     sources: z.array(z.string()).describe("Array of information sources to synthesize"),
     synthesisGoal: z.string().describe("The goal or focus of the synthesis"),
   }),
-  execute: async ({ sources, synthesisGoal }, operationContext) => {
+  execute: ({ sources, synthesisGoal }, operationContext) => {
     if (!operationContext?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -130,7 +130,7 @@ const resolveContradictionsTool = createTool({
     conflictingInfo: z.array(z.string()).describe("Array of conflicting information pieces"),
     resolutionCriteria: z.string().describe("Criteria for resolving contradictions"),
   }),
-  execute: async ({ conflictingInfo, resolutionCriteria }, operationContext) => {
+  execute: ({ conflictingInfo, resolutionCriteria }, operationContext) => {
     if (!operationContext?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -210,7 +210,7 @@ const createUnifiedNarrativeTool = createTool({
     information: z.array(z.string()).describe("Array of information pieces to unify"),
     narrativeFocus: z.string().describe("The central focus or theme of the narrative"),
   }),
-  execute: async ({ information, narrativeFocus }, operationContext) => {
+  execute: ({ information, narrativeFocus }, operationContext) => {
     if (!operationContext?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -322,30 +322,30 @@ export const synthesizerAgent = new Agent({
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: async ({ context }) => {
+    onStart: ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Synthesizer starting`);
     },
-    onEnd: async ({ output, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId = context.context.get('opId') as string;
+      voltlogger.info(`[${opId}] tool: ${tool.name}`);
+    },
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = context.context.get('opId') as string;
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onEnd: ({ output, error, context }) => {
+      const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] Synthesizer error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Synthesizer completed`);
       }
     },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
-    },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
-      if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
-      }
-    },
-    onPrepareMessages: async ({ messages }) => {
+    onPrepareMessages: ({ messages }) => {
       return { messages };
     },
   },

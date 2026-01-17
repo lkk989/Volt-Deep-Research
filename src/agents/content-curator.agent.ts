@@ -31,30 +31,30 @@ const contentCuratorMemory = new Memory({
 })
 
 const contentCuratorHooks = createHooks({
-  onStart: async ({ agent, context }) => {
+  onStart: ({ agent, context }) => {
     const opId = crypto.randomUUID()
     context.context.set("operationId", opId)
     context.context.set("startTime", new Date().toISOString())
     context.context.set("curationDecisions", [])
     voltlogger.info(`[${opId}] Content Curator starting`, { agent: agent.name })
   },
-  onToolStart: async ({ tool, context, args: toolArgs }) => {
-    const opId = context.context.get("operationId")
-    voltlogger.info(`[${opId}] Tool starting: ${tool.name}`, { toolArgs })
+  onToolStart: ({ tool, context, args }) => {
+    const opId = context.context.get("operationId") as string
+    voltlogger.info(`[${opId}] Tool starting: ${String(tool.name)}`, { args: JSON.stringify(args) })
   },
-  onToolEnd: async ({ tool, output, error, context }) => {
-    const opId = context.context.get("operationId")
+  onToolEnd: ({ tool, output, error, context }) => {
+    const opId = context.context.get("operationId") as string
     if (error) {
-      voltlogger.error(`[${opId}] Tool failed: ${tool.name}`, { error })
+      voltlogger.error(`[${opId}] Tool failed: ${String(tool.name)}`, { error })
     } else {
-      voltlogger.info(`[${opId}] Tool completed: ${tool.name}`)
+      voltlogger.info(`[${opId}] Tool completed: ${String(tool.name)}`)
     }
   },
-  onEnd: async ({ agent, output, error, context }) => {
-    const opId = context.context.get("operationId")
-    const startTime = context.context.get("startTime") as string
+  onEnd: ({ agent, output, error, context }) => {
+    const opId = String(context.context.get("operationId"))
+    const startTime = String(context.context.get("startTime"))
     const duration = new Date().getTime() - new Date(startTime).getTime()
-    const decisions = context.context.get("curationDecisions")
+    const decisions = context.context.get("curationDecisions") as any[]
     voltlogger.info(`[${opId}] Content Curator completed in ${duration}ms`, { decisions })
   },
 })
@@ -63,11 +63,11 @@ export const contentCuratorAgent = new Agent({
   id: "content-curator",
   name: "Content Curator",
   purpose: "Evaluate, organize, and recommend content based on quality, relevance, and user preferences",
-  model: google("gemini-2.5-flash-lite-preview-06-2025"),
+  model: google("gemini-2.5-flash-lite-preview-09-2025"),
   instructions: ({ context }) => {
     const userPrefs = context?.get("userPreferences") as Record<string, unknown> | undefined
-    const contentType = context?.get("contentType") || "general"
-    
+    const contentType = context?.get("contentType") ?? "general"
+
     let baseInstructions = `You are a Content Curator agent specialized in evaluating and organizing information.
 
 Your responsibilities:
@@ -101,7 +101,7 @@ Curation Methodology:
     } else if (contentType === "news") {
       baseInstructions += "\n\nPrioritize recency and source diversity."
     }
-    
+
     return baseInstructions
   },
   tools: ({ context }) => {

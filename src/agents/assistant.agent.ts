@@ -96,7 +96,7 @@ const getWeatherTool = createTool({
 
       const series = data["Time Series (Daily)"]
       if (!series) {
-        throw new Error(data.Note || "Missing 'Time Series (Daily)' in response")
+        throw new Error(data.Note ?? "Missing 'Time Series (Daily)' in response")
       }
 
       const points = Object.entries(series).map(([date, v]) => ({
@@ -142,31 +142,32 @@ export const assistantAgent = new Agent({
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: async ({ context }) => {
+    onStart: ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Assistant starting`);
     },
-    onEnd: async ({ output, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId = String(context.context.get('opId'));
+      voltlogger.info(`[${opId}] tool: ${String(tool.name)}`);
+    },
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = String(context.context.get('opId'));
       if (error) {
-        voltlogger.error(`[${opId}] Assistant error: ${error.message}`);
+        voltlogger.error(`[${opId}] tool ${String(tool.name)} failed`);
+      }
+    },
+    onPrepareMessages: ({ messages }) => {
+      return { messages };
+    },
+    onEnd: ({ output, error, context }) => {
+      const opId = String(context.context.get('opId'));
+      if (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        voltlogger.error(`[${opId}] Assistant error: ${errorMessage}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Assistant completed`);
       }
-    },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
-    },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
-      if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
-      }
-    },
-    onPrepareMessages: async ({ messages }) => {
-      return { messages };
     },
   },
   inputGuardrails: [],
@@ -178,7 +179,9 @@ export const assistantAgent = new Agent({
   markdown: false,
   voice: undefined,
   context: undefined,
-  eval: undefined,
+  eval: {
+    scorers: {},
+  },
   logger: voltlogger,
   voltOpsClient: undefined,
   observability: voltObservability,
