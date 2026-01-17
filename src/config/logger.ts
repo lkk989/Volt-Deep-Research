@@ -34,7 +34,7 @@ export const voltlogger = createPinoLogger({
       ],
     },
     serializers: {
-      req: (req) => ({ method: req.method, url: req.url }),
+      req: (req: { method: string; url: string }) => ({ method: req.method, url: req.url }),
     },
     hooks: {
       logMethod(args, method) {

@@ -7,8 +7,38 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "outDir": "dist",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowJs": true,
+    "incremental": true,
+    "skipDefaultLibCheck": true,
+    "rootDir": ".",
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
   },
-  "include": ["src", "vitest.config.ts", "eslint.config.cjs"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "tests", "**/__tests__", ".vscode", ".idea", ".git", ".github"]
+  "include": [
+    "src",
+    "vitest.config.ts",
+    "eslint.config.js",
+    "src/**/*.{ts,tsx}",
+    "/src/**/*.{ts,tsx}"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "tests",
+    "**/__tests__",
+    ".vscode",
+    ".idea",
+    ".git",
+    ".github"
+  ]
 }

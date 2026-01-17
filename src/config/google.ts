@@ -31,7 +31,7 @@ export const googleAIFlashLite = google('gemini-2.5-flash-lite-preview-09-2025')
     * When to use: This model is ideal for tasks that require the conversion of text into high-dimensional vector representations, such as semantic search, clustering, and recommendation systems.
     * Why use: Utilize this model when you need efficient and effective text embeddings to enhance the performance of applications involving natural language understanding and information retrieval.
  */
-export const googleAIEmbedding = google.textEmbedding('gemini-embedding-001')
+export const googleAIEmbedding = google.embedding('gemini-embedding-001')
 // Gemini Computer Use model for tasks requiring higher accuracy and reliability
 /*
  * googleAIComputerUse: Gemini Computer Use model for tasks requiring higher accuracy and reliability

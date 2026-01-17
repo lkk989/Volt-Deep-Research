@@ -14,6 +14,7 @@ export const voltObservability = new VoltAgentObservability({
       // Remote Turso example:
       // url: "libsql://<your-db>.turso.io",
       // authToken: process.env.TURSO_AUTH_TOKEN,
+      maxSpansPerQuery: 1000, // Optional limit for spans per query
       debug: true, // Enable to log SQL queries
       logger: voltlogger,
     }),

@@ -555,12 +555,12 @@ if __name__ == '__main__':
         let stdout = '';
         let stderr = '';
 
-        child.stdout.on('data', (data) => {
-          stdout += data.toString();
+        child.stdout.on('data', (data: Buffer | string) => {
+          stdout += typeof data === 'string' ? data : data.toString('utf8');
         });
 
-        child.stderr.on('data', (data) => {
-          stderr += data.toString();
+        child.stderr.on('data', (data: Buffer | string) => {
+          stderr += typeof data === 'string' ? data : data.toString('utf8');
         });
 
         child.on('close', () => {

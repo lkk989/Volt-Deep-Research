@@ -14,7 +14,7 @@ export const liveQualityScorer = buildScorer({
 })
   .score(async ({ payload }) => {
     const prompt = `Rate the quality of this assistant response on a scale from 0 to 1. 1 means high quality, well-structured, informative. 0 means poor quality.
-Response: ${String(payload.output ?? '')}
+Response: ${String(payload.output)}
 Provide score and reason.`
 
     const response = await generateObject({
@@ -49,8 +49,8 @@ export const liveRelevanceScorer = buildScorer({
 })
   .score(async ({ payload }) => {
     const prompt = `Rate how relevant this assistant response is to the user input on a scale from 0 to 1. 1 means highly relevant, 0 means not relevant.
-User Input: ${String(payload.input ?? '')}
-Response: ${String(payload.output ?? '')}
+User Input: ${String(payload.input)}
+Response: ${String(payload.output)}
 Provide score and reason.`
 
     const response = await generateObject({
@@ -93,7 +93,7 @@ export const liveEvalConfig = {
   },
   redact: (payload: Record<string, unknown>) => ({
     ...payload,
-    input: String(payload.input || '').replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, '[EMAIL]'),
-    output: String(payload.output || '').replace(/\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/g, '[CARD]')
+    input: String(payload.input).replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, '[EMAIL]'),
+    output: String(payload.output).replace(/\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/g, '[CARD]')
   })
 }

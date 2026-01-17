@@ -186,16 +186,16 @@ Tips:
 						if ($el.is("pre")) {
 							const $code = $el.find("code").first()
 							code = $code.length > 0 ? $code.text() : $el.text()
-							const classAttr = $code.attr("class") || $el.attr("class")
+							const classAttr = $code.attr("class") ?? $el.attr("class")
 							if (classAttr) {
-								const match = classAttr.match(/language-(\w+)/)
+								const match = /language-(\w+)/.exec(classAttr)
 								language = match ? match[1] : "plaintext"
 							}
 						} else if ($el.is("code")) {
 							code = $el.text()
 							const classAttr = $el.attr("class")
 							if (classAttr) {
-								const match = classAttr.match(/language-(\w+)/)
+								const match = /language-(\w+)/.exec(classAttr)
 								language = match ? match[1] : "plaintext"
 							}
 						}
@@ -788,14 +788,14 @@ Tips:
 								code = $code.length > 0 ? $code.text() : $el.text()
 								const classAttr = $code.attr("class") || $el.attr("class")
 								if (classAttr) {
-									const match = classAttr.match(/language-(\w+)/)
+									const match = /language-(\w+)/.exec(classAttr)
 									language = match ? match[1] : "plaintext"
 								}
 							} else if ($el.is("code")) {
 								code = $el.text()
 								const classAttr = $el.attr("class")
 								if (classAttr) {
-									const match = classAttr.match(/language-(\w+)/)
+									const match = /language-(\w+)/.exec(classAttr)
 									language = match ? match[1] : "plaintext"
 								}
 							}

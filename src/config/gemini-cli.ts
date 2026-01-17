@@ -1,4 +1,4 @@
-import { createGeminiProvider } from 'ai-sdk-provider-gemini-cli'
+import { createGeminiProvider, ThinkingLevel } from 'ai-sdk-provider-gemini-cli'
 import os from 'os'
 
 const useApiKey =
@@ -10,28 +10,33 @@ const gemini = createGeminiProvider({
     cacheDir: process.env.GEMINI_OAUTH_CACHE ?? os.homedir() + '/.gemini/oauth-cache', // directory to store cached tokens
 })
 
-export const geminiAI = gemini('gemini-2.5-pro', {
+export const geminiAI = gemini('gemini-3-pro', {
     contextWindow: 1048576, // 1MB
     maxTokens: 65536,
     supportsStreaming: true,
-    thinkingBudget: -1,
-    showThoughts: true,
+    thinkingConfig: {
+        ThinkingLevel: ThinkingLevel.HIGH,
+        thinkingBudget: -1,
+        includeThoughts: true,
+    },
     codeexecution: true,
-    structuredOutput: true,
     functionCalling: true,
-    urlContext: true
-});
-export const geminiAIFlash = gemini('gemini-2.5-flash', {
-    contextWindow: 1048576, // 1MB
-    maxTokens: 65536,
-    supportsStreaming: true,
-    thinkingBudget: -1,
-    codeexecution: true,
-    showThoughts: true,
     structuredOutput: true,
     grounding: true,
+});
+export const geminiAIFlash = gemini('gemini-3-flash', {
+    contextWindow: 1048576, // 1MB
+    maxTokens: 65536,
+    supportsStreaming: true,
+    thinkingConfig: {
+        ThinkingLevel: ThinkingLevel.HIGH,
+        thinkingBudget: -1,
+        includeThoughts: true,
+    },
+    codeexecution: true,
+    grounding: true,
     functionCalling: true,
-    urlContext: true
+    structuredOutput: true,
 });
 export const geminiAIFlashLite = gemini('gemini-2.5-flash-lite', {
     contextWindow: 1048576, // 1MB

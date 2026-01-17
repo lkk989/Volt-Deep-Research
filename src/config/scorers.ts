@@ -25,8 +25,8 @@ export const helpfulnessScorer = buildScorer({
   .score(async ({ payload }) => {
     const prompt = `Rate the response for clarity and helpfulness.
 
-User Input: ${payload.input}
-Assistant Response: ${payload.output}
+User Input: ${payload.input as string}
+Assistant Response: ${payload.output as string}
 
 Provide a score from 0 to 1 with an explanation.`;
 
