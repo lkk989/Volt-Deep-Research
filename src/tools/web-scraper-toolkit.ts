@@ -4,13 +4,47 @@ import { z } from "zod"
 import { JSDOM } from "jsdom"
 import * as cheerio from "cheerio"
 import TurndownService from "turndown"
+import axios from "axios"
+import axiosRetry from "axios-retry"
+import RE2 from "re2"
+import { XMLParser } from "fast-xml-parser"
 import { voltlogger } from "../config/logger.js"
 
 const turndownService = new TurndownService({
-	headingStyle: "atx",
-	bulletListMarker: "-",
-	codeBlockStyle: "fenced",
+    headingStyle: "atx",
+    bulletListMarker: "-",
+    codeBlockStyle: "fenced",
 })
+
+// Create axios http client with retries
+const http = axios.create({ timeout: 20000, headers: { 'User-Agent': 'Mastervolt-Deep-Research/1.0 (+https://github.com/ssdeanx/Mastervolt-Deep-Research)' } })
+const retryDelay = axiosRetry.exponentialDelay.bind(axiosRetry)
+const retryCondition = axiosRetry.isNetworkOrIdempotentRequestError.bind(axiosRetry)
+axiosRetry(http, { retries: 3, retryDelay, retryCondition })
+
+const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
+
+// Detect and convert XML responses into a JSON string for downstream processing
+function transformXmlIfDetected(text: string): { isXml: boolean; text: string } {
+	const trimmed = text.trim()
+	// Heuristic: explicit XML declaration or common XML feed tags (rss, feed, rdf, opml)
+	if (!trimmed.startsWith('<')) {return { isXml: false, text }}
+	if (/^<\?xml/i.test(trimmed) || /<\s*(rss|feed|rdf|opml)(\s|>)/i.test(trimmed)) {
+		try {
+			// xmlParser.parse is not generic in this version; avoid assigning `any` by using `unknown` and narrowing
+			const parsed = xmlParser.parse(text) as unknown
+			if (typeof parsed === "object" && parsed !== null) {
+				return { isXml: true, text: JSON.stringify(parsed as Record<string, unknown>, null, 2) }
+			}
+			voltlogger.debug("XML parse produced non-object result")
+			return { isXml: false, text }
+		} catch (err) {
+			voltlogger.debug(`XML parse failed: ${String(err)}`)
+			return { isXml: false, text }
+		}
+	}
+	return { isXml: false, text }
+}
 
 export const webScraperToolkit: Toolkit = createToolkit({
 	name: "web_scraper_toolkit",
@@ -58,7 +92,7 @@ Tips:
 					.describe("Maximum length of content in characters. If exceeded, content will be truncated."),
 			}),
 			execute: async (args, context?: ToolExecuteOptions) => {
-				if (!context?.isActive) {
+				if (!((context?.isActive) ?? false)) {
 					throw new Error("Operation has been cancelled")
 				}
 
@@ -67,20 +101,19 @@ Tips:
 						operationId: context?.operationId,
 					})
 
-					const response = await fetch(args.url, {
+const resp = await http.get<string>(args.url, {
+						responseType: 'text',
 						headers: {
 							"User-Agent":
 								"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
 						},
 					})
 
-					if (!response.ok) {
-						throw new Error(`Failed to fetch URL: ${response.statusText}`)
-					}
-
-					const html = await response.text()
+				const htmlRaw = String(resp.data)
+				const { isXml, text: html } = transformXmlIfDetected(htmlRaw)
+				if (isXml) {voltlogger.info(`Detected XML at ${args.url} and converted to JSON representation`, { operationId: context?.operationId })}
 					const dom = new JSDOM(html, { url: args.url })
-					const document = dom.window.document
+					const {document} = dom.window
 
 					if (args.removeScripts) {
 						document.querySelectorAll("script, style, noscript, nav, footer").forEach((el) => {
@@ -144,7 +177,7 @@ Tips:
 					.describe("Number of lines before and after each code block to include as context"),
 			}),
 			execute: async (args, context?: ToolExecuteOptions) => {
-				if (!context?.isActive) {
+				if (!((context?.isActive) ?? false)) {
 					throw new Error("Operation has been cancelled")
 				}
 
@@ -253,8 +286,8 @@ Tips:
 							}
 
 							const filenameAttr =
-								$el.attr("data-filename") ||
-								$el.parent().attr("data-filename") ||
+								$el.attr("data-filename") ??
+								$el.parent().attr("data-filename") ??
 								$el.find("[data-filename]").first().attr("data-filename")
 
 							if (filenameAttr) {
@@ -523,10 +556,10 @@ Tips:
 
 					voltlogger.info(`Extracted structured data from: ${args.url}`, {
 						operationId: context?.operationId,
-						headingsCount: data.headings?.length || 0,
-						linksCount: data.links?.length || 0,
-						tablesCount: data.tables?.length || 0,
-						listsCount: data.lists?.length || 0,
+						headingsCount: data.headings?.length ?? 0,
+						linksCount: data.links?.length ?? 0,
+						tablesCount: data.tables?.length ?? 0,
+						listsCount: data.lists?.length ?? 0,
 					})
 
 					return {
@@ -698,16 +731,18 @@ Tips:
 					}> = []
 
 					// Helper function to check if URL matches patterns
-					const matchesPattern = (url: string, patterns?: string[]): boolean => {
-						if (!patterns || patterns.length === 0) {return true}
-						return patterns.some(pattern => {
-							try {
-								return new RegExp(pattern).test(url)
-							} catch {
-								return false
-							}
-						})
-					}
+const compilePattern = (pattern: string): RE2 | null => {
+				try { return new RE2(pattern) } catch { return null }
+			}
+
+			const matchesPattern = (url: string, patterns?: string[]): boolean => {
+				if (!patterns || patterns.length === 0) { return true }
+				return patterns.some(pattern => {
+					const re = compilePattern(pattern)
+					if (!re) {return false}
+					return re.test(url)
+				})
+			}
 
 					// Helper function to extract links from HTML
 					const extractLinks = (html: string, baseUrl: string): string[] => {
@@ -786,7 +821,7 @@ Tips:
 							if ($el.is("pre")) {
 								const $code = $el.find("code").first()
 								code = $code.length > 0 ? $code.text() : $el.text()
-								const classAttr = $code.attr("class") || $el.attr("class")
+								const classAttr = $code.attr("class") ?? $el.attr("class")
 								if (classAttr) {
 									const match = /language-(\w+)/.exec(classAttr)
 									language = match ? match[1] : "plaintext"
@@ -812,7 +847,7 @@ Tips:
 
 						// Extract markdown content
 						const dom = new JSDOM(html, { url })
-						const document = dom.window.document
+						const {document} = dom.window
 						document.querySelectorAll("script, style, noscript, nav, footer").forEach((el) => el.remove())
 						const contentEl = document.querySelector("main, article, .content, #content, body") || document.body
 						const markdown = turndownService.turndown(contentEl.innerHTML)

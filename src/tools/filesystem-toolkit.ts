@@ -2,7 +2,7 @@ import { createTool, createToolkit } from "@voltagent/core"
 import { z } from "zod"
 import { voltlogger } from "../config/logger.js"
 import { globby } from "globby"
-import * as fs from "fs/promises"
+import { promises as fsPromises } from 'node:fs'
 
 export const filesystemGlobTool = createTool({
   name: "filesystem_glob",
@@ -89,7 +89,7 @@ export const filesystemReadMultipleTool = createTool({
         try {
           // Check file size if limit specified
           if (args.maxFileSize) {
-            const stats = await fs.stat(filePath)
+            const stats = await fsPromises.stat(filePath)
             if (stats.size > args.maxFileSize) {
               errors.push({
                 filePath,
@@ -99,7 +99,7 @@ export const filesystemReadMultipleTool = createTool({
             }
           }
 
-          const content = await fs.readFile(filePath, { encoding: args.encoding as BufferEncoding })
+          const content = await fsPromises.readFile(filePath, { encoding: args.encoding as BufferEncoding })
           results.push({
             filePath,
             content,
@@ -150,7 +150,7 @@ export const filesystemStatsTool = createTool({
 
       for (const filePath of args.paths) {
         try {
-          const stats = await fs.stat(filePath, { bigint: false })
+          const stats = await fsPromises.stat(filePath, { bigint: false })
           const isDirectory = stats.isDirectory()
           const isFile = stats.isFile()
 

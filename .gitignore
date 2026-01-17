@@ -44,3 +44,4 @@ pids/
 .github/prompts/breakdown-epic-pm.prompt.md
 .github/==/nodejs-typescript-vitest.instructions.md
 VoltMaster_api_key.txt
+.eslintcache

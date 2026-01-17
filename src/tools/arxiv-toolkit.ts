@@ -1,8 +1,7 @@
 import { createTool, createToolkit } from "@voltagent/core"
+import { XMLParser } from "fast-xml-parser"
 import { z } from "zod"
 import { voltlogger } from "../config/logger.js"
-import { XMLParser } from "fast-xml-parser"
-import type { TextItem } from "pdfjs-dist/types/src/display/api.js"
 
 // Types for arXiv API response
 interface ArxivEntry {
@@ -202,55 +201,82 @@ export const arxivPdfExtractTool = createTool({
 
       const pdfBuffer = await response.arrayBuffer()
 
-      // Use pdfjs-dist with dynamic import
-      const { getDocument } = await import('pdfjs-dist')
+      // Use unpdf with dynamic import
+      const { extractText, getMeta } = await import('unpdf')
 
-      const pdf = await getDocument({ data: new Uint8Array(pdfBuffer) }).promise
-
-      let text = ''
-      const maxPagesToExtract = Math.min(pdf.numPages, args.maxPages)
-
-      for (let i = 1; i <= maxPagesToExtract; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .filter((item): item is TextItem => 'str' in item)
-          .map((item) => item.str)
-          .join(' ');
-        text += pageText + '\n\n';
-      }
-
-      const metadata = await pdf.getMetadata()
+      const text = await extractText(new Uint8Array(pdfBuffer))
+      const metadata = await getMeta(new Uint8Array(pdfBuffer))
 
       // Guard the unknown shape returned by the PDF library and ensure string|undefined values
-      const metaInfo = metadata.info as Record<string, unknown> | undefined
       const toStringOrUndefined = (v: unknown): string | undefined => {
-        if (typeof v === 'string') {return v}
-        if (v === null) {return undefined}
+        if (typeof v === 'string') { return v }
+        if (v === null) { return undefined }
         return safeStringify(v)
       }
 
-      const data: PdfParseResult = {
-        numpages: pdf.numPages,
-        text,
-        info: {
-          Title: toStringOrUndefined(metaInfo?.Title),
-          Author: toStringOrUndefined(metaInfo?.Author),
-          Subject: toStringOrUndefined(metaInfo?.Subject),
-          Creator: toStringOrUndefined(metaInfo?.Creator),
+      const data: PdfParseResult = (() => {
+        interface UnpdfMeta {
+          totalPages?: number | string
+          pages?: number | string
+          numPages?: number | string
+          metadata?: { pages?: number | string; numPages?: number | string; info?: Record<string, unknown> }
+          info?: { Pages?: number | string } & Record<string, unknown>
         }
-      }
+        const meta = metadata as UnpdfMeta | undefined
+
+        // Determine number of pages from several possible shapes returned by getMeta()
+        const pagesCandidate = meta?.totalPages ?? meta?.pages ?? meta?.numPages ?? meta?.metadata?.pages ?? meta?.metadata?.numPages ?? meta?.info?.Pages
+        let numpages = 0
+        if (typeof pagesCandidate === "number") {
+          numpages = pagesCandidate
+        } else if (typeof pagesCandidate === "string") {
+          const parsed = parseInt(pagesCandidate, 10)
+          numpages = Number.isFinite(parsed) ? parsed : 0
+        }
+
+        // Normalize text: extractText may return a string, { text: string[] }, or { totalPages: number; text: string[] }
+        let normalizedText = ""
+        if (typeof text === "string") {
+          normalizedText = text
+        } else if (text && typeof text === "object") {
+          const tAny = text as { text?: string | string[] } | string[]
+          const textField = (tAny as { text?: string | string[] }).text
+          if (typeof textField === "string") {
+            normalizedText = textField
+          } else if (Array.isArray(textField)) {
+            normalizedText = textField.join("\n\n")
+          } else if (Array.isArray(tAny)) {
+            normalizedText = (tAny as unknown as string[]).join("\n\n")
+          } else {
+            normalizedText = safeStringify(text)
+          }
+        }
+
+        const infoSource = meta?.info ?? meta?.metadata?.info ?? {}
+
+        return {
+          numpages,
+          text: normalizedText,
+          info: {
+            Title: toStringOrUndefined(infoSource.Title),
+            Author: toStringOrUndefined(infoSource.Author),
+            Subject: toStringOrUndefined(infoSource.Subject),
+            Creator: toStringOrUndefined(infoSource.Creator),
+          },
+          hasEOL: normalizedText.includes("\n"),
+        } as PdfParseResult
+      })()
 
       // Extract text from specified number of pages
       const extractedText = text
 
-      voltlogger.info(`Extracted ${maxPagesToExtract} pages from PDF`)
+      voltlogger.info(`Extracted ${data.numpages} pages from PDF`)
 
       return {
         pdfUrl: args.pdfUrl,
         totalPages: data.numpages,
-        extractedPages: args.maxPages,
-        text: extractedText,
+        extractedPages: data.numpages,
+        text,
         info: {
           title: data.info?.Title,
           author: data.info?.Author,
@@ -275,19 +301,19 @@ export const arxivToolkit = createToolkit({
 
 // Use JSON.stringify with circular detection to avoid default "[object Object]" output
 const safeStringify = (value: unknown): string => {
-    const seen = new WeakSet<object>()
-    try {
-        return JSON.stringify(value, (_k, v) => {
-            if ((Boolean(v)) && typeof v === 'object') {
-                const objVal = v as object
-                if (seen.has(objVal)) {return '[Circular]'}
-                seen.add(objVal)
-            }
-            if (typeof v === 'function' || typeof v === 'symbol') {return String(v)}
-            return v as unknown
-        }) ?? Object.prototype.toString.call(value)
-    } catch {
-        // Fallback to a stable, informative descriptor
-        return Object.prototype.toString.call(value)
-    }
+  const seen = new WeakSet<object>()
+  try {
+    return JSON.stringify(value, (_k, v) => {
+      if ((Boolean(v)) && typeof v === 'object') {
+        const objVal = v as object
+        if (seen.has(objVal)) { return '[Circular]' }
+        seen.add(objVal)
+      }
+      if (typeof v === 'function' || typeof v === 'symbol') { return String(v) }
+      return v as unknown
+    }) ?? Object.prototype.toString.call(value)
+  } catch {
+    // Fallback to a stable, informative descriptor
+    return Object.prototype.toString.call(value)
+  }
 }

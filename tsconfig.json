@@ -24,6 +24,7 @@
   },
   "include": [
     "src",
+    "prettier.config.js",
     "vitest.config.ts",
     "eslint.config.js",
     "src/**/*.{ts,tsx}",
