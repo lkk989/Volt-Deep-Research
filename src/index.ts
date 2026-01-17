@@ -21,6 +21,7 @@ import { comprehensiveResearchWorkflow } from "./workflows/comprehensive-researc
 import { comprehensiveResearchDirectorWorkflow } from "./workflows/ai-agent.workflow.js";
 import { dataPatternAnalyzerWorkflow } from "./workflows/data-pattern-analyzer.workflow.js";
 import { factCheckSynthesisWorkflow } from "./workflows/fact-check-synthesis.workflow.js";
+import { judgeAgent, supportAgent } from "./agents/judge.agent.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
@@ -78,6 +79,8 @@ sdk.start();
 new VoltAgent({
   agents: {
     assistant: assistantAgent,
+    supportAgent,
+    judgeAgent,
     writer: writerAgent,
     director: directorAgent,
     dataAnalyzer: dataAnalyzerAgent,
