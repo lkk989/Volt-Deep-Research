@@ -26,21 +26,21 @@ const dataScientistMemory = new Memory({
 })
 
 const dataScientistHooks = createHooks({
-  onStart: async ({ agent, context }) => {
+  onStart: ({ agent, context }) => {
     const opId = crypto.randomUUID()
     context.context.set("operationId", opId)
     context.context.set("startTime", new Date().toISOString())
     context.context.set("toolExecutions", [])
     voltlogger.info(`[${opId}] Data Scientist starting`, { agent: agent.name })
   },
-  onToolStart: async ({ tool, context, args: toolArgs }) => {
-    const opId = context.context.get("operationId")
+  onToolStart: ({ tool, context, args: toolArgs }) => {
+    const opId = context.context.get("operationId") as string
     const toolStart = new Date().toISOString()
     context.context.set(`tool_${tool.name}_start`, toolStart)
-    voltlogger.info(`[${opId}] Tool starting: ${tool.name}`, { toolArgs })
+    voltlogger.info(`[${opId}] Tool starting: ${tool.name}`, { toolArgs: JSON.stringify(toolArgs) })
   },
-  onToolEnd: async ({ tool, output, error, context }) => {
-    const opId = context.context.get("operationId")
+  onToolEnd: ({ tool, output, error, context }) => {
+    const opId = context.context.get("operationId") as string
     const toolStart = context.context.get(`tool_${tool.name}_start`) as string
     const duration = toolStart ? new Date().getTime() - new Date(toolStart).getTime() : 0
     const executions = (context.context.get("toolExecutions") as unknown[]) || []
@@ -52,8 +52,8 @@ const dataScientistHooks = createHooks({
       voltlogger.info(`[${opId}] Tool completed: ${tool.name} (${duration}ms)`)
     }
   },
-  onEnd: async ({ agent, output, error, context }) => {
-    const opId = context.context.get("operationId")
+  onEnd: ({ agent, output, error, context }) => {
+    const opId = context.context.get("operationId") as string
     const startTime = context.context.get("startTime") as string
     const duration = new Date().getTime() - new Date(startTime).getTime()
     const executions = context.context.get("toolExecutions")

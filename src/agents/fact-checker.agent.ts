@@ -27,9 +27,11 @@ const factCheckerMemory = new Memory({
       goals: z.array(z.string()).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("text-embedding-004")),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true,
+  cacheSize: 1000,
+  cacheTTL: 3600000,
 });
 
 // Fact checking tools

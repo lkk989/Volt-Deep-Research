@@ -46,25 +46,25 @@ export const codingAgent = new Agent({
   toolkits: [codeAnalysisToolkit, filesystemToolkit, gitToolkit, testToolkit, thinkOnlyToolkit],
   memory: codingMemory,
   hooks: {
-    onStart: async ({ context }) => {
+    onStart: ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Coding Agent starting`);
     },
-    onEnd: async ({ output, error, context }) => {
-      const opId = context.context.get('opId');
+    onEnd: ({ output, error, context }) => {
+      const opId = String(context.context.get('opId'));
       if (error) {
         voltlogger.error(`[${opId}] Coding Agent error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Coding Agent completed`);
       }
     },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId =String(context.context.get('opId'))
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
     },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = String(context.context.get('opId'));
       if (error) {
         voltlogger.error(`[${opId}] tool ${tool.name} failed`);
       }

@@ -54,30 +54,30 @@ export const scrapperAgent = new Agent({
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: async ({ context }) => {
+    onStart: ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Scrapper starting`);
     },
-    onEnd: async ({ output, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId = context.context.get('opId') as string;
+      voltlogger.info(`[${opId}] tool: ${tool.name}`);
+    },
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = context.context.get('opId') as string;
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onEnd: ({ output, error, context }) => {
+      const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] Scrapper error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Scrapper completed`);
       }
     },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
-    },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
-      if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
-      }
-    },
-    onPrepareMessages: async ({ messages }) => {
+    onPrepareMessages: ({ messages }) => {
       return { messages };
     },
   },

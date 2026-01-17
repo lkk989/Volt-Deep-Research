@@ -40,7 +40,7 @@ const analyzeDataTool = createTool({
     data: z.string().describe("The data to analyze"),
     analysisType: z.enum(["patterns", "trends", "correlations", "anomalies"]).describe("Type of analysis to perform"),
   }),
-  execute: async ({ data, analysisType }, context) => {
+  execute: ({ data, analysisType }, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -122,7 +122,7 @@ const extractInsightsTool = createTool({
     data: z.string().describe("The data to extract insights from"),
     focus: z.string().optional().describe("Specific focus area for insights"),
   }),
-  execute: async ({ data, focus }, context) => {
+  execute: ({ data, focus }, context) => {
     if (!context?.isActive) {
       throw new Error("Operation has been cancelled");
     }
@@ -201,30 +201,30 @@ export const dataAnalyzerAgent = new Agent({
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: async ({ context }) => {
+    onStart: ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] DataAnalyzer starting`);
     },
-    onEnd: async ({ output, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId = context.context.get('opId') as string;
+      voltlogger.info(`[${opId}] tool: ${String(tool.name)}`);
+    },
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = context.context.get('opId') as string;
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onEnd: ({ output, error, context }) => {
+      const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] DataAnalyzer error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] DataAnalyzer completed`);
       }
     },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
-    },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
-      if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
-      }
-    },
-    onPrepareMessages: async ({ messages }) => {
+    onPrepareMessages: ({ messages }) => {
       return { messages };
     },
   },

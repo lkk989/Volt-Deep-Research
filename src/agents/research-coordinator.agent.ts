@@ -28,26 +28,26 @@ const researchCoordinatorMemory = new Memory({
 })
 
 const researchCoordinatorHooks = createHooks({
-  onStart: async ({ agent, context }) => {
+  onStart: ({ agent, context }) => {
     const opId = crypto.randomUUID()
     context.context.set("operationId", opId)
     context.context.set("startTime", new Date().toISOString())
     voltlogger.info(`[${opId}] Research Coordinator starting`, { agent: agent.name })
   },
-  onToolStart: async ({ tool, context, args: toolArgs }) => {
-    const opId = context.context.get("operationId")
-    voltlogger.info(`[${opId}] Tool starting: ${tool.name}`, { toolArgs })
+  onToolStart: ({ tool, context, args: toolArgs }) => {
+    const opId = context.context.get("operationId") as string
+    voltlogger.info(`[${opId}] Tool starting: ${tool.name}`, { toolArgs: toolArgs as unknown })
   },
-  onToolEnd: async ({ tool, output, error, context }) => {
-    const opId = context.context.get("operationId")
+  onToolEnd: ({ tool, output, error, context }) => {
+    const opId = context.context.get("operationId") as string
     if (error) {
       voltlogger.error(`[${opId}] Tool failed: ${tool.name}`, { error })
     } else {
       voltlogger.info(`[${opId}] Tool completed: ${tool.name}`)
     }
   },
-  onEnd: async ({ agent, output, error, context }) => {
-    const opId = context.context.get("operationId")
+  onEnd: ({ agent, output, error, context }) => {
+    const opId = context.context.get("operationId") as string
     const startTime = context.context.get("startTime") as string
     const duration = new Date().getTime() - new Date(startTime).getTime()
     if (error) {
@@ -64,8 +64,8 @@ export const researchCoordinatorAgent = new Agent({
   purpose: "Orchestrate complex multi-step research projects by decomposing tasks, coordinating execution, and synthesizing results",
   model: google("gemini-2.5-flash-lite-preview-06-2025"),
   instructions: ({ context }) => {
-    const role = context?.get("role") || "researcher"
-    const tier = context?.get("tier") || "standard"
+    const role = context?.get("role") ?? "researcher"
+    const tier = context?.get("tier") ?? "standard"
 
     let baseInstructions = `You are a Research Coordinator agent specialized in managing complex research projects.
 

@@ -116,33 +116,33 @@ export const directorAgent = new Agent({
   },
   maxHistoryEntries: 100,
   hooks: {
-    onStart: async ({ agent, context }) => {
+    onStart: ({ agent, context }) => {
       const opId = Math.random().toString(36).substr(2, 9);
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] ${agent.name} started`);
     },
-    onEnd: async ({ agent, output, error, context }) => {
-      const opId = context.context.get('opId');
+    onToolStart: ({ tool, context }) => {
+      const opId = context.context.get('opId') as string;
+      voltlogger.info(`[${opId}] tool: ${tool.name}`);
+    },
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = context.context.get('opId') as string;
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onEnd: ({ agent, output, error, context }) => {
+      const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] ${agent.name} error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] ${agent.name} completed`);
       }
     },
-    onToolStart: async ({ tool, context }) => {
-      const opId = context.context.get('opId');
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
-    },
-    onToolEnd: async ({ tool, error, context }) => {
-      const opId = context.context.get('opId');
-      if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
-      }
-    },
-    onPrepareMessages: async ({ messages }) => {
+    onPrepareMessages: ({ messages }) => {
       return { messages };
     },
-    onHandoff: async ({ agent, sourceAgent }) => {
+    onHandoff: ({ agent, sourceAgent }) => {
       voltlogger.info(`${sourceAgent.name} → ${agent.name}`);
     }
   },
