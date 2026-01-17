@@ -1,3 +1,4 @@
+import { registerCopilotKitRoutes } from "@voltagent/ag-ui";
 import { VoltAgent, VoltOpsClient, createWorkflowChain } from "@voltagent/core";
 import { voltlogger } from "./config/logger.js";
 import { assistantAgent } from "./agents/assistant.agent.js";
@@ -97,7 +98,16 @@ new VoltAgent({
     "data-pattern-analyzer": dataPatternAnalyzerWorkflow,
     "fact-check-synthesis": factCheckSynthesisWorkflow,
   },
-  server: honoServer(),
+  server: honoServer({
+    configureApp: (app) =>
+      registerCopilotKitRoutes({
+        app,
+        // Expose specific agent IDs; omit to expose all registered agents.
+        resourceIds: ["assistantAgent", "judgeAgent", "supportAgent",  "writerAgent", "directorAgent", "dataAnalyzerAgent", "factCheckerAgent", "synthesizerAgent", "scrapperAgent", "codingAgent", "codeReviewerAgent"],
+        // Optional: pass an agents map directly instead of resourceIds.
+        // agents: { MathAgent: mathAgent, StoryAgent: storyAgent },
+      }),
+  }),
   logger: voltlogger,
   enableSwaggerUI: true, // Enable Swagger UI for API documentation
   observability: voltObservability,
