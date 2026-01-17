@@ -23,6 +23,8 @@ import { comprehensiveResearchDirectorWorkflow } from "./workflows/ai-agent.work
 import { dataPatternAnalyzerWorkflow } from "./workflows/data-pattern-analyzer.workflow.js";
 import { factCheckSynthesisWorkflow } from "./workflows/fact-check-synthesis.workflow.js";
 import { judgeAgent, supportAgent } from "./agents/judge.agent.js";
+import { dataScientistAgent } from "./agents/data-scientist.agent.js";
+import { researchCoordinatorAgent } from "./agents/research-coordinator.agent.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
@@ -79,17 +81,19 @@ sdk.start();
 // Register with VoltOps
 new VoltAgent({
   agents: {
-    assistant: assistantAgent,
-    supportAgent,
-    judgeAgent,
-    writer: writerAgent,
-    director: directorAgent,
-    dataAnalyzer: dataAnalyzerAgent,
-    factChecker: factCheckerAgent,
-    synthesizer: synthesizerAgent,
-    scrapper: scrapperAgent,
-    coding: codingAgent,
-    codeReviewer: codeReviewerAgent,
+    "assistant": assistantAgent,
+    "support-agent": supportAgent,
+    "satisfaction-judge": judgeAgent,
+    "research-coordinator": researchCoordinatorAgent,
+    "writer": writerAgent,
+    "director": directorAgent,
+    "data-analyzer": dataAnalyzerAgent,
+    "data-scientist": dataScientistAgent,
+    "fact-checker": factCheckerAgent,
+    "synthesizer": synthesizerAgent,
+    "scrapper": scrapperAgent,
+    "coding-agent": codingAgent,
+    "code-reviewer": codeReviewerAgent,
   },
   workflows: {
     "research-assistant-demo": workflow,
@@ -99,13 +103,29 @@ new VoltAgent({
     "fact-check-synthesis": factCheckSynthesisWorkflow,
   },
   server: honoServer({
+    port: 3141,
+    enableSwaggerUI: true,
     configureApp: (app) =>
       registerCopilotKitRoutes({
         app,
         // Expose specific agent IDs; omit to expose all registered agents.
         resourceIds: ["assistantAgent", "judgeAgent", "supportAgent",  "writerAgent", "directorAgent", "dataAnalyzerAgent", "factCheckerAgent", "synthesizerAgent", "scrapperAgent", "codingAgent", "codeReviewerAgent"],
         // Optional: pass an agents map directly instead of resourceIds.
-        // agents: { MathAgent: mathAgent, StoryAgent: storyAgent },
+        agents: {
+          "assistant": assistantAgent,
+          "support-agent": supportAgent,
+          "satisfaction-judge": judgeAgent,
+          "research-coordinator": researchCoordinatorAgent,
+          "writer": writerAgent,
+          "director": directorAgent,
+          "data-analyzer": dataAnalyzerAgent,
+          "data-scientist": dataScientistAgent,
+          "fact-checker": factCheckerAgent,
+          "synthesizer": synthesizerAgent,
+          "scrapper": scrapperAgent,
+          "coding-agent": codingAgent,
+          "code-reviewer": codeReviewerAgent,
+        }
       }),
   }),
   logger: voltlogger,
@@ -114,5 +134,4 @@ new VoltAgent({
   voltOpsClient, // enables automatic forwarding
   mcpServers: {mcpServer},
   a2aServers: {a2aServer},
-
 });

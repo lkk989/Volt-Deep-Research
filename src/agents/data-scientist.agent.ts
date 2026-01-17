@@ -66,15 +66,15 @@ export const dataScientistAgent = new Agent({
   name: "Data Scientist",
   purpose: "Perform statistical analysis, extract insights from datasets, and generate data-driven hypotheses",
   model: ({ context }) => {
-    const complexity = context?.get("complexity") || "standard"
+    const complexity = context?.get("complexity") ?? "standard"
     if (complexity === "high") {
       return google("gemini-2.5-flash-preview-06-2025")
     }
     return google("gemini-2.5-flash-lite-preview-06-2025")
   },
   instructions: ({ context }) => {
-    const analysisType = context?.get("analysisType") || "exploratory"
-    
+    const analysisType = context?.get("analysisType") ?? "exploratory"
+
     let baseInstructions = `You are a Data Scientist agent specialized in statistical analysis and data-driven insights.
 
 Your responsibilities:
@@ -97,7 +97,7 @@ Statistical Methodology:
     } else if (analysisType === "causal") {
       baseInstructions += "\n\nFocus on causal inference and experimental design."
     }
-    
+
     return baseInstructions
   },
   tools: [],

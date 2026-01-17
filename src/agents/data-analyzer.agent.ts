@@ -137,7 +137,7 @@ const extractInsightsTool = createTool({
       keyPoints: [] as string[],
       actionableItems: [] as string[],
       recommendations: [] as string[],
-      focusArea: focus || "general"
+      focusArea: focus ?? "general"
     };
 
     // Extract key points based on content analysis
