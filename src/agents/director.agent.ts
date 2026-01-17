@@ -71,6 +71,8 @@ export const directorAgent = new Agent({
   retriever: undefined,
   subAgents: [assistantAgent, writerAgent, dataAnalyzerAgent, factCheckerAgent, synthesizerAgent, scrapperAgent],
   supervisorConfig: {
+    includeAgentsMemory: true,
+    systemMessage: "You are an expert director agent. Your role is to efficiently delegate tasks to specialized agents to achieve comprehensive research outcomes.",
     customGuidelines: [
       "For research queries: Start with Assistant → Scrapper → DataAnalyzer → FactChecker → Synthesizer → Writer",
       "For web scraping tasks: Delegate directly to Scrapper agent for data extraction from URLs",
