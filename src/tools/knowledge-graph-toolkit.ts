@@ -1,7 +1,7 @@
-import { createTool, createToolkit, type Toolkit } from "@voltagent/core"
-import { randomUUID } from "crypto"
-import { z } from "zod"
-import { voltlogger } from "../config/logger.js"
+import { createTool, createToolkit, type ToolExecuteOptions, type Toolkit } from '@voltagent/core'
+import { randomUUID } from 'crypto'
+import { z } from 'zod'
+import { voltlogger } from '../config/logger.js'
 
 // --- Interfaces ---
 
@@ -52,21 +52,22 @@ export interface EntityInput {
 export class InMemoryGraphStorage implements GraphStorage {
   private graphs = new Map<string, KnowledgeGraph>()
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async get(id: string): Promise<KnowledgeGraph | undefined> {
-    return this.graphs.get(id)
+  get(id: string): Promise<KnowledgeGraph | undefined> {
+    return Promise.resolve(this.graphs.get(id))
   }
 
-  async save(graph: KnowledgeGraph): Promise<void> {
+  save(graph: KnowledgeGraph): Promise<void> {
     this.graphs.set(graph.id, graph)
+    return Promise.resolve()
   }
 
-  async delete(id: string): Promise<void> {
+  delete(id: string): Promise<void> {
     this.graphs.delete(id)
+    return Promise.resolve()
   }
 
-  async list(): Promise<string[]> {
-    return Array.from(this.graphs.keys())
+  list(): Promise<string[]> {
+    return Promise.resolve(Array.from(this.graphs.keys()))
   }
 }
 
@@ -81,8 +82,13 @@ export class KnowledgeGraphService {
     return `edge_${randomUUID()}`
   }
 
-  async createGraph(args: { name: string; entities?: EntityInput[] }, context?: any) {
-    voltlogger.info(`Creating knowledge graph: ${args.name}`, { operationId: context?.operationId })
+  async createGraph(
+    args: { name: string; entities?: EntityInput[] },
+    context?: ToolExecuteOptions
+  ) {
+    voltlogger.info(`Creating knowledge graph: ${args.name}`, {
+      operationId: context?.operationId,
+    })
 
     const graphId = this.createGraphId()
     const now = new Date().toISOString()
@@ -113,7 +119,10 @@ export class KnowledgeGraphService {
 
     await this.storage.save(graph)
 
-    voltlogger.info(`Created graph ${graphId} with ${graph.nodes.size} nodes`, { operationId: context?.operationId })
+    voltlogger.info(
+      `Created graph ${graphId} with ${graph.nodes.size} nodes`,
+      { operationId: context?.operationId }
+    )
 
     return {
       graphId,
@@ -124,21 +133,27 @@ export class KnowledgeGraphService {
     }
   }
 
-  async addRelationship(args: {
-    graphId: string
-    source: EntityInput
-    target: EntityInput
-    relationship: string
-    properties?: Record<string, unknown>
-    weight: number
-    bidirectional: boolean
-  }, context?: any) {
+  async addRelationship(
+    args: {
+      graphId: string
+      source: EntityInput
+      target: EntityInput
+      relationship: string
+      properties?: Record<string, unknown>
+      weight: number
+      bidirectional: boolean
+    },
+    context?: ToolExecuteOptions
+  ) {
     const graph = await this.storage.get(args.graphId)
     if (!graph) {
       throw new Error(`Graph not found: ${args.graphId}`)
     }
 
-    voltlogger.info(`Adding relationship: ${args.source.id} -[${args.relationship}]-> ${args.target.id}`, { operationId: context?.operationId })
+    voltlogger.info(
+      `Adding relationship: ${args.source.id} -[${args.relationship}]-> ${args.target.id}`,
+      { operationId: context?.operationId }
+    )
 
     const now = new Date().toISOString()
 
@@ -198,55 +213,78 @@ export class KnowledgeGraphService {
     }
   }
 
-  async queryGraph(args: {
-    graphId: string
-    queryType: "path" | "neighbors" | "cluster"
-    startNode: string
-    endNode?: string
-    maxDepth: number
-  }, context?: any) {
+  async queryGraph(
+    args: {
+      graphId: string
+      queryType: 'path' | 'neighbors' | 'cluster'
+      startNode: string
+      endNode?: string
+      maxDepth: number
+    },
+    _context?: ToolExecuteOptions
+  ) {
     const graph = await this.storage.get(args.graphId)
     if (!graph) {
       throw new Error(`Graph not found: ${args.graphId}`)
     }
 
-    voltlogger.info(`Querying graph: ${args.queryType} from ${args.startNode}`, { })
+    voltlogger.info(
+      `Querying graph ${args.graphId} for ${args.queryType}`,
+      { operationId: _context?.operationId }
+    )
 
-    if (args.queryType === "path") {
+    if (args.queryType === 'path') {
       if (!args.endNode) {
-        throw new Error("endNode is required for path queries")
+        throw new Error('endNode is required for path queries')
       }
-      const paths = this.findPath(graph, args.startNode, args.endNode, args.maxDepth)
+      const paths = this.findPath(
+        graph,
+        args.startNode,
+        args.endNode,
+        args.maxDepth
+      )
       return {
-        queryType: "path",
+        queryType: 'path',
         startNode: args.startNode,
         endNode: args.endNode,
         pathCount: paths.length,
-        paths: paths.map(p => p.map(n => ({ id: n.id, label: n.label, type: n.type }))),
+        paths: paths.map((p) =>
+          p.map((n) => ({ id: n.id, label: n.label, type: n.type }))
+        ),
         timestamp: new Date().toISOString(),
       }
     }
 
-    if (args.queryType === "neighbors") {
-      const neighbors = this.getNeighbors(graph, args.startNode, args.maxDepth)
+    if (args.queryType === 'neighbors') {
+      const neighbors = this.getNeighbors(
+        graph,
+        args.startNode,
+        args.maxDepth
+      )
       return {
-        queryType: "neighbors",
+        queryType: 'neighbors',
         startNode: args.startNode,
         depth: args.maxDepth,
         neighborCount: neighbors.length,
-        neighbors: neighbors.map(n => ({ id: n.id, label: n.label, type: n.type, properties: n.properties })),
+        neighbors: neighbors.map((n) => ({
+          id: n.id,
+          label: n.label,
+          type: n.type,
+          properties: n.properties,
+        })),
         timestamp: new Date().toISOString(),
       }
     }
 
     // cluster query
     const communities = this.detectCommunities(graph)
-    const cluster = communities.find(c => c.includes(args.startNode)) ?? []
+    const cluster =
+      communities.find((c) => c.includes(args.startNode)) ?? []
     return {
-      queryType: "cluster",
+      queryType: 'cluster',
       startNode: args.startNode,
       clusterSize: cluster.length,
-      clusterNodes: cluster.map(id => {
+      clusterNodes: cluster.map((id) => {
         const n = graph.nodes.get(id)!
         return { id: n.id, label: n.label, type: n.type }
       }),
@@ -254,44 +292,56 @@ export class KnowledgeGraphService {
     }
   }
 
-  async analyzeGraph(args: {
-    graphId: string
-    analysisType: "centrality" | "communities" | "anomalies" | "statistics"
-  }, context?: any) {
+  async analyzeGraph(
+    args: {
+      graphId: string
+      analysisType:
+      | 'centrality'
+      | 'communities'
+      | 'anomalies'
+      | 'statistics'
+    },
+    _context?: ToolExecuteOptions
+  ) {
     const graph = await this.storage.get(args.graphId)
     if (!graph) {
       throw new Error(`Graph not found: ${args.graphId}`)
     }
 
-    voltlogger.info(`Analyzing graph: ${args.analysisType}`, )
+    voltlogger.info(`Analyzing graph: ${args.analysisType}`)
 
-    if (args.analysisType === "centrality") {
+    if (args.analysisType === 'centrality') {
       const centrality = this.calculateCentrality(graph)
       const sorted = Array.from(centrality.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10)
         .map(([id, score]) => {
           const node = graph.nodes.get(id)!
-          return { id, label: node.label, type: node.type, centralityScore: score }
+          return {
+            id,
+            label: node.label,
+            type: node.type,
+            centralityScore: score,
+          }
         })
 
       return {
-        analysisType: "centrality",
+        analysisType: 'centrality',
         topNodes: sorted,
         totalNodes: graph.nodes.size,
         timestamp: new Date().toISOString(),
       }
     }
 
-    if (args.analysisType === "communities") {
+    if (args.analysisType === 'communities') {
       const communities = this.detectCommunities(graph)
       return {
-        analysisType: "communities",
+        analysisType: 'communities',
         communityCount: communities.length,
         communities: communities.map((c, i) => ({
           id: i,
           size: c.length,
-          members: c.slice(0, 10).map(id => {
+          members: c.slice(0, 10).map((id) => {
             const n = graph.nodes.get(id)!
             return { id: n.id, label: n.label, type: n.type }
           }),
@@ -300,10 +350,11 @@ export class KnowledgeGraphService {
       }
     }
 
-    if (args.analysisType === "anomalies") {
+    if (args.analysisType === 'anomalies') {
       const isolated: GraphNode[] = []
       const hubs: Array<{ node: GraphNode; degree: number }> = []
-      const avgDegree = graph.edges.size * 2 / Math.max(graph.nodes.size, 1)
+      const avgDegree =
+        (graph.edges.size * 2) / Math.max(graph.nodes.size, 1)
 
       for (const [nodeId, node] of graph.nodes) {
         const degree = graph.adjacencyList.get(nodeId)?.size ?? 0
@@ -315,14 +366,21 @@ export class KnowledgeGraphService {
       }
 
       return {
-        analysisType: "anomalies",
-        isolatedNodes: isolated.map(n => ({ id: n.id, label: n.label, type: n.type })),
-        hubNodes: hubs.sort((a, b) => b.degree - a.degree).slice(0, 10).map(h => ({
-          id: h.node.id,
-          label: h.node.label,
-          type: h.node.type,
-          degree: h.degree,
+        analysisType: 'anomalies',
+        isolatedNodes: isolated.map((n) => ({
+          id: n.id,
+          label: n.label,
+          type: n.type,
         })),
+        hubNodes: hubs
+          .sort((a, b) => b.degree - a.degree)
+          .slice(0, 10)
+          .map((h) => ({
+            id: h.node.id,
+            label: h.node.label,
+            type: h.node.type,
+            degree: h.degree,
+          })),
         averageDegree: avgDegree,
         timestamp: new Date().toISOString(),
       }
@@ -336,52 +394,77 @@ export class KnowledgeGraphService {
 
     const relationshipTypes = new Map<string, number>()
     for (const [, edge] of graph.edges) {
-      relationshipTypes.set(edge.relationship, (relationshipTypes.get(edge.relationship) ?? 0) + 1)
+      relationshipTypes.set(
+        edge.relationship,
+        (relationshipTypes.get(edge.relationship) ?? 0) + 1
+      )
     }
 
     return {
-      analysisType: "statistics",
+      analysisType: 'statistics',
       nodeCount: graph.nodes.size,
       edgeCount: graph.edges.size,
       nodeTypes: Object.fromEntries(nodeTypes),
       relationshipTypes: Object.fromEntries(relationshipTypes),
-      density: graph.nodes.size > 1 ? (2 * graph.edges.size) / (graph.nodes.size * (graph.nodes.size - 1)) : 0,
+      density:
+        graph.nodes.size > 1
+          ? (2 * graph.edges.size) /
+          (graph.nodes.size * (graph.nodes.size - 1))
+          : 0,
       createdAt: graph.createdAt,
       updatedAt: graph.updatedAt,
       timestamp: new Date().toISOString(),
     }
   }
 
-  async exportGraph(args: {
-    graphId: string
-    format: "json" | "graphml" | "cypher"
-  }, context?: any) {
+  async exportGraph(
+    args: {
+      graphId: string
+      format: 'json' | 'graphml' | 'cypher'
+    },
+    _context?: ToolExecuteOptions
+  ) {
     const graph = await this.storage.get(args.graphId)
     if (!graph) {
       throw new Error(`Graph not found: ${args.graphId}`)
     }
 
-    voltlogger.info(`Exporting graph as ${args.format}`, )
+    voltlogger.info(`Exporting graph as ${args.format}`)
 
     const nodes = Array.from(graph.nodes.values())
     const edges = Array.from(graph.edges.values())
 
-    if (args.format === "json") {
+    if (args.format === 'json') {
       return {
-        format: "json",
-        data: JSON.stringify({
-          id: graph.id,
-          name: graph.name,
-          nodes: nodes.map(n => ({ id: n.id, label: n.label, type: n.type, properties: n.properties })),
-          edges: edges.map(e => ({ source: e.source, target: e.target, relationship: e.relationship, weight: e.weight, properties: e.properties })),
-        }, null, 2),
+        format: 'json',
+        data: JSON.stringify(
+          {
+            id: graph.id,
+            name: graph.name,
+            nodes: nodes.map((n) => ({
+              id: n.id,
+              label: n.label,
+              type: n.type,
+              properties: n.properties,
+            })),
+            edges: edges.map((e) => ({
+              source: e.source,
+              target: e.target,
+              relationship: e.relationship,
+              weight: e.weight,
+              properties: e.properties,
+            })),
+          },
+          null,
+          2
+        ),
         nodeCount: nodes.length,
         edgeCount: edges.length,
         timestamp: new Date().toISOString(),
       }
     }
 
-    if (args.format === "graphml") {
+    if (args.format === 'graphml') {
       let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<graphml xmlns="http://graphml.graphdrawing.org/xmlns">\n`
       xml += `  <key id="label" for="node" attr.name="label" attr.type="string"/>\n`
       xml += `  <key id="type" for="node" attr.name="type" attr.type="string"/>\n`
@@ -403,28 +486,49 @@ export class KnowledgeGraphService {
 
       xml += `  </graph>\n</graphml>`
 
-      return { format: "graphml", data: xml, nodeCount: nodes.length, edgeCount: edges.length, timestamp: new Date().toISOString() }
+      return {
+        format: 'graphml',
+        data: xml,
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+        timestamp: new Date().toISOString(),
+      }
     }
 
     // cypher
     const statements: string[] = []
     for (const node of nodes) {
-      const props = JSON.stringify({ ...node.properties, label: node.label })
-      statements.push(`CREATE (n:${node.type} ${props.replace(/"/g, "'")})`)
+      const props = JSON.stringify({
+        ...node.properties,
+        label: node.label,
+      })
+      statements.push(
+        `CREATE (n:${node.type} ${props.replace(/"/g, "'")})`
+      )
     }
     for (const edge of edges) {
-      statements.push(`MATCH (a {id: '${edge.source}'}), (b {id: '${edge.target}'}) CREATE (a)-[:${edge.relationship}]->(b)`)
+      statements.push(
+        `MATCH (a {id: '${edge.source}'}), (b {id: '${edge.target}'}) CREATE (a)-[:${edge.relationship}]->(b)`
+      )
     }
 
-    return { format: "cypher", data: statements.join(";\n"), statementCount: statements.length, timestamp: new Date().toISOString() }
+    return {
+      format: 'cypher',
+      data: statements.join(';\n'),
+      statementCount: statements.length,
+      timestamp: new Date().toISOString(),
+    }
   }
 
-  async mergeGraphs(args: {
-    graphIds: string[]
-    newName?: string
-    conflictResolution: "keep_first" | "keep_last" | "merge_properties"
-  }, context?: any) {
-    voltlogger.info(`Merging ${args.graphIds.length} graphs`, {  })
+  async mergeGraphs(
+    args: {
+      graphIds: string[]
+      newName?: string
+      conflictResolution: 'keep_first' | 'keep_last' | 'merge_properties'
+    },
+    _context?: ToolExecuteOptions
+  ) {
+    voltlogger.info(`Merging ${args.graphIds.length} graphs`, {})
 
     const now = new Date().toISOString()
     const mergedId = this.createGraphId()
@@ -450,18 +554,24 @@ export class KnowledgeGraphService {
       for (const [nodeId, node] of graph.nodes) {
         if (merged.nodes.has(nodeId)) {
           const existing = merged.nodes.get(nodeId)!
-          if (args.conflictResolution === "keep_first") {
-            conflicts.push({ nodeId, resolution: "kept_first" })
-          } else if (args.conflictResolution === "keep_last") {
+          if (args.conflictResolution === 'keep_first') {
+            conflicts.push({ nodeId, resolution: 'kept_first' })
+          } else if (args.conflictResolution === 'keep_last') {
             merged.nodes.set(nodeId, { ...node })
-            conflicts.push({ nodeId, resolution: "kept_last" })
+            conflicts.push({ nodeId, resolution: 'kept_last' })
           } else {
             // merge_properties
             merged.nodes.set(nodeId, {
               ...existing,
-              properties: { ...existing.properties, ...node.properties },
+              properties: {
+                ...existing.properties,
+                ...node.properties,
+              },
             })
-            conflicts.push({ nodeId, resolution: "merged_properties" })
+            conflicts.push({
+              nodeId,
+              resolution: 'merged_properties',
+            })
           }
         } else {
           merged.nodes.set(nodeId, { ...node })
@@ -494,17 +604,26 @@ export class KnowledgeGraphService {
 
   // --- Internal Helpers ---
 
-  private findPath(graph: KnowledgeGraph, startNodeId: string, endNodeId: string, maxDepth: number): GraphNode[][] {
+  private findPath(
+    graph: KnowledgeGraph,
+    startNodeId: string,
+    endNodeId: string,
+    maxDepth: number
+  ): GraphNode[][] {
     const paths: GraphNode[][] = []
-    const queue: Array<{ id: string; path: string[] }> = [{ id: startNodeId, path: [startNodeId] }]
+    const queue: Array<{ id: string; path: string[] }> = [
+      { id: startNodeId, path: [startNodeId] },
+    ]
 
     while (queue.length > 0) {
       const { id, path } = queue.shift()!
 
-      if (path.length > maxDepth + 1) { continue }
+      if (path.length > maxDepth + 1) {
+        continue
+      }
 
       if (id === endNodeId) {
-        paths.push(path.map(nodeId => graph.nodes.get(nodeId)!))
+        paths.push(path.map((nodeId) => graph.nodes.get(nodeId)!))
         continue
       }
 
@@ -519,7 +638,11 @@ export class KnowledgeGraphService {
     return paths
   }
 
-  private getNeighbors(graph: KnowledgeGraph, nodeId: string, depth: number): GraphNode[] {
+  private getNeighbors(
+    graph: KnowledgeGraph,
+    nodeId: string,
+    depth: number
+  ): GraphNode[] {
     const visited = new Set<string>()
     const result = new Set<string>()
     const queue: Array<{ id: string; d: number }> = [{ id: nodeId, d: 0 }]
@@ -527,11 +650,17 @@ export class KnowledgeGraphService {
     while (queue.length > 0) {
       const { id, d } = queue.shift()!
 
-      if (d > depth) { continue }
-      if (visited.has(id)) { continue }
+      if (d > depth) {
+        continue
+      }
+      if (visited.has(id)) {
+        continue
+      }
       visited.add(id)
 
-      if (id !== nodeId) { result.add(id) }
+      if (id !== nodeId) {
+        result.add(id)
+      }
 
       const neighbors = graph.adjacencyList.get(id) ?? new Set()
       for (const nid of neighbors) {
@@ -541,7 +670,9 @@ export class KnowledgeGraphService {
       }
     }
 
-    return Array.from(result).map(id => graph.nodes.get(id)!).filter(Boolean)
+    return Array.from(result)
+      .map((id) => graph.nodes.get(id)!)
+      .filter(Boolean)
   }
 
   private calculateCentrality(graph: KnowledgeGraph): Map<string, number> {
@@ -561,24 +692,32 @@ export class KnowledgeGraphService {
     const communities: string[][] = []
 
     for (const [nodeId] of graph.nodes) {
-      if (visited.has(nodeId)) { continue }
+      if (visited.has(nodeId)) {
+        continue
+      }
 
       const community: string[] = []
       const stack = [nodeId]
 
       while (stack.length > 0) {
         const current = stack.pop()!
-        if (visited.has(current)) { continue }
+        if (visited.has(current)) {
+          continue
+        }
         visited.add(current)
         community.push(current)
 
         const neighbors = graph.adjacencyList.get(current) ?? new Set()
         for (const nid of neighbors) {
-          if (!visited.has(nid)) { stack.push(nid) }
+          if (!visited.has(nid)) {
+            stack.push(nid)
+          }
         }
       }
 
-      if (community.length > 0) { communities.push(community) }
+      if (community.length > 0) {
+        communities.push(community)
+      }
     }
 
     return communities
@@ -586,8 +725,9 @@ export class KnowledgeGraphService {
 
   getToolkit(): Toolkit {
     return createToolkit({
-      name: "knowledge_graph_toolkit",
-      description: "Build and query knowledge graphs. Create graphs, add entities and relationships, find paths, detect communities, and export in multiple formats.",
+      name: 'knowledge_graph_toolkit',
+      description:
+        'Build and query knowledge graphs. Create graphs, add entities and relationships, find paths, detect communities, and export in multiple formats.',
       instructions: `Use these tools to build knowledge graphs from research data:
 1. create_graph - Start a new graph with optional initial entities
 2. add_relationship - Add nodes and edges (creates nodes if they don't exist)
@@ -598,82 +738,202 @@ export class KnowledgeGraphService {
       addInstructions: true,
       tools: [
         createTool({
-          name: "create_graph",
-          description: "Create a new knowledge graph with optional initial entities. Returns a graph ID for subsequent operations.",
+          name: 'create_graph',
+          description:
+            'Create a new knowledge graph with optional initial entities. Returns a graph ID for subsequent operations.',
           parameters: z.object({
-            name: z.string().describe("Name for the knowledge graph"),
-            entities: z.array(z.object({
-              id: z.string(),
-              label: z.string(),
-              type: z.string(),
-              properties: z.record(z.string(), z.any()).optional(),
-            })).optional().describe("Initial entities to add to the graph"),
+            name: z
+              .string()
+              .describe('Name for the knowledge graph'),
+            entities: z
+              .array(
+                z.object({
+                  id: z.string(),
+                  label: z.string(),
+                  type: z.string(),
+                  properties: z
+                    .record(z.string(), z.unknown())
+                    .optional(),
+                })
+              )
+              .optional()
+              .describe('Initial entities to add to the graph'),
           }),
-          execute: (args, context) => this.createGraph(args, context),
+          execute: (
+            args: Parameters<
+              KnowledgeGraphService['createGraph']
+            >[0],
+            context?: ToolExecuteOptions
+          ) => {
+            return this.createGraph(args, context)
+          },
         }),
         createTool({
-          name: "add_relationship",
-          description: "Add entities and a relationship between them to an existing graph. Creates nodes if they don't exist.",
+          name: 'add_relationship',
+          description:
+            "Add entities and a relationship between them to an existing graph. Creates nodes if they don't exist.",
           parameters: z.object({
-            graphId: z.string().describe("ID of the graph to modify"),
-            source: z.object({
-              id: z.string(),
-              label: z.string(),
-              type: z.string(),
-              properties: z.record(z.string(), z.any()).optional(),
-            }).describe("Source entity"),
-            target: z.object({
-              id: z.string(),
-              label: z.string(),
-              type: z.string(),
-              properties: z.record(z.string(), z.any()).optional(),
-            }).describe("Target entity"),
-            relationship: z.string().describe("Type of relationship (e.g., 'works_for', 'located_in')"),
-            properties: z.record(z.string(), z.any()).optional().describe("Additional properties for the edge"),
-            weight: z.number().default(1).describe("Weight of the relationship"),
-            bidirectional: z.boolean().default(false).describe("Whether the relationship goes both ways"),
+            graphId: z
+              .string()
+              .describe('ID of the graph to modify'),
+            source: z
+              .object({
+                id: z.string(),
+                label: z.string(),
+                type: z.string(),
+                properties: z
+                  .record(z.string(), z.unknown())
+                  .optional(),
+              })
+              .describe('Source entity'),
+            target: z
+              .object({
+                id: z.string(),
+                label: z.string(),
+                type: z.string(),
+                properties: z
+                  .record(z.string(), z.unknown())
+                  .optional(),
+              })
+              .describe('Target entity'),
+            relationship: z
+              .string()
+              .describe(
+                "Type of relationship (e.g., 'works_for', 'located_in')"
+              ),
+            properties: z
+              .record(z.string(), z.unknown())
+              .optional()
+              .describe('Additional properties for the edge'),
+            weight: z
+              .number()
+              .default(1)
+              .describe('Weight of the relationship'),
+            bidirectional: z
+              .boolean()
+              .default(false)
+              .describe(
+                'Whether the relationship goes both ways'
+              ),
           }),
-          execute: (args, context) => this.addRelationship(args, context),
+          execute: (
+            args: Parameters<
+              KnowledgeGraphService['addRelationship']
+            >[0],
+            context?: ToolExecuteOptions
+          ) => {
+            return this.addRelationship(args, context)
+          },
         }),
         createTool({
-          name: "query_graph",
-          description: "Query the graph for paths between nodes, neighbors, or clusters.",
+          name: 'query_graph',
+          description:
+            'Query the graph for paths between nodes, neighbors, or clusters.',
           parameters: z.object({
-            graphId: z.string().describe("ID of the graph to query"),
-            queryType: z.enum(["path", "neighbors", "cluster"]).default("neighbors").describe("Type of query"),
-            startNode: z.string().describe("Starting node ID"),
-            endNode: z.string().optional().describe("End node ID (required for path queries)"),
-            maxDepth: z.number().default(3).describe("Maximum depth for traversal"),
+            graphId: z
+              .string()
+              .describe('ID of the graph to query'),
+            queryType: z
+              .enum(['path', 'neighbors', 'cluster'])
+              .default('neighbors')
+              .describe('Type of query'),
+            startNode: z.string().describe('Starting node ID'),
+            endNode: z
+              .string()
+              .optional()
+              .describe(
+                'End node ID (required for path queries)'
+              ),
+            maxDepth: z
+              .number()
+              .default(3)
+              .describe('Maximum depth for traversal'),
           }),
-          execute: (args, context) => this.queryGraph(args, context),
+          execute: (
+            args: Parameters<
+              KnowledgeGraphService['queryGraph']
+            >[0],
+            context?: ToolExecuteOptions
+          ) => {
+            return this.queryGraph(args, context)
+          },
         }),
         createTool({
-          name: "analyze_graph",
-          description: "Analyze graph structure - compute centrality, detect communities, or find anomalies.",
+          name: 'analyze_graph',
+          description:
+            'Analyze graph structure - compute centrality, detect communities, or find anomalies.',
           parameters: z.object({
-            graphId: z.string().describe("ID of the graph to analyze"),
-            analysisType: z.enum(["centrality", "communities", "anomalies", "statistics"]).default("statistics"),
+            graphId: z
+              .string()
+              .describe('ID of the graph to analyze'),
+            analysisType: z
+              .enum([
+                'centrality',
+                'communities',
+                'anomalies',
+                'statistics',
+              ])
+              .default('statistics'),
           }),
-          execute: (args, context) => this.analyzeGraph(args, context),
+          execute: (
+            args: Parameters<
+              KnowledgeGraphService['analyzeGraph']
+            >[0],
+            context?: ToolExecuteOptions
+          ) => {
+            return this.analyzeGraph(args, context)
+          },
         }),
         createTool({
-          name: "export_graph",
-          description: "Export graph data in various formats (JSON, GraphML, or Cypher statements).",
+          name: 'export_graph',
+          description:
+            'Export graph data in various formats (JSON, GraphML, or Cypher statements).',
           parameters: z.object({
-            graphId: z.string().describe("ID of the graph to export"),
-            format: z.enum(["json", "graphml", "cypher"]).default("json"),
+            graphId: z
+              .string()
+              .describe('ID of the graph to export'),
+            format: z
+              .enum(['json', 'graphml', 'cypher'])
+              .default('json'),
           }),
-          execute: (args, context) => this.exportGraph(args, context),
+          execute: (
+            args: Parameters<
+              KnowledgeGraphService['exportGraph']
+            >[0],
+            context?: ToolExecuteOptions
+          ) => {
+            return this.exportGraph(args, context)
+          },
         }),
         createTool({
-          name: "merge_graphs",
-          description: "Merge multiple graphs into a new graph, handling node conflicts.",
+          name: 'merge_graphs',
+          description:
+            'Merge multiple graphs into a new graph, handling node conflicts.',
           parameters: z.object({
-            graphIds: z.array(z.string()).min(2).describe("IDs of graphs to merge"),
-            newName: z.string().optional().describe("Name for the merged graph"),
-            conflictResolution: z.enum(["keep_first", "keep_last", "merge_properties"]).default("merge_properties"),
+            graphIds: z
+              .array(z.string())
+              .min(2)
+              .describe('IDs of graphs to merge'),
+            newName: z
+              .string()
+              .optional()
+              .describe('Name for the merged graph'),
+            conflictResolution: z
+              .enum([
+                'keep_first',
+                'keep_last',
+                'merge_properties',
+              ])
+              .default('merge_properties'),
           }),
-          execute: (args, context) => this.mergeGraphs(args, context),
+          execute: (
+            args: Parameters<
+              KnowledgeGraphService['mergeGraphs']
+            >[0],
+            context?: ToolExecuteOptions
+          ) => {
+            return this.mergeGraphs(args, context)
+          },
         }),
       ],
     })
