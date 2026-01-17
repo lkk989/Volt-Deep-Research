@@ -45,3 +45,9 @@ pids/
 .github/==/nodejs-typescript-vitest.instructions.md
 VoltMaster_api_key.txt
 .eslintcache
+
+node_modules
+.kiro
+.roo
+.windsurf
+.cursor

@@ -24,11 +24,18 @@
   },
   "include": [
     "src",
+    "tests",
+    "app",
+    "app/**/*.{ts,tsx}",
     "prettier.config.js",
     "vitest.config.ts",
     "eslint.config.js",
     "src/**/*.{ts,tsx}",
-    "/src/**/*.{ts,tsx}"
+    "/src/**/*.{ts,tsx}",
+    "next-env.d.ts",
+    "next.config.ts",
+    "globalSetup.ts",
+    "testSetup.ts"
   ],
   "exclude": [
     "node_modules",
