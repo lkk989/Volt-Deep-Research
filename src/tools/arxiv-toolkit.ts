@@ -188,8 +188,13 @@ export const arxivPdfExtractTool = createTool({
     voltlogger.info(`Extracting PDF content from: ${args.pdfUrl}`)
 
     try {
-      // Validate arXiv URL
-      if (!args.pdfUrl.includes("arxiv.org") || !args.pdfUrl.includes(".pdf")) {
+      // Validate arXiv URL (must be a PDF hosted on arxiv.org)
+      try {
+        const parsed = new URL(args.pdfUrl)
+        if (!parsed.hostname.endsWith("arxiv.org") || !parsed.pathname.endsWith(".pdf")) {
+          throw new Error("Invalid arXiv PDF URL. Must be a PDF link from arxiv.org")
+        }
+      } catch {
         throw new Error("Invalid arXiv PDF URL. Must be a PDF link from arxiv.org")
       }
 
@@ -200,83 +205,159 @@ export const arxivPdfExtractTool = createTool({
       }
 
       const pdfBuffer = await response.arrayBuffer()
+      const buf = new Uint8Array(pdfBuffer)
 
-      // Use unpdf with dynamic import
-      const { extractText, getMeta } = await import('unpdf')
+      // Use unpdf with dynamic import and typed wrappers to avoid `any`
+      const unpdf = (await import("unpdf")) as {
+        extractText: (input: Uint8Array) => Promise<unknown>
+        getMeta: (input: Uint8Array) => Promise<unknown>
+      }
 
-      const text = await extractText(new Uint8Array(pdfBuffer))
-      const metadata = await getMeta(new Uint8Array(pdfBuffer))
+      const rawText: unknown = await unpdf.extractText(buf)
+      const rawMeta: unknown = await unpdf.getMeta(buf)
 
-      // Guard the unknown shape returned by the PDF library and ensure string|undefined values
+      // Helpers for robust type narrowing
+      const isObject = (v: unknown): v is Record<string, unknown> =>
+        v !== null && typeof v === "object" && !Array.isArray(v)
+
+      const getProp = <T = unknown>(obj: unknown, key: string): T | undefined => {
+        if (!isObject(obj)) {
+          return undefined
+        }
+        return obj[key] as T | undefined
+      }
+
       const toStringOrUndefined = (v: unknown): string | undefined => {
-        if (typeof v === 'string') { return v }
-        if (v === null) { return undefined }
+        if (typeof v === "string") {
+          return v
+        }
+        if (v === null || v === undefined) {
+          return undefined
+        }
         return safeStringify(v)
       }
 
-      const data: PdfParseResult = (() => {
-        interface UnpdfMeta {
-          totalPages?: number | string
-          pages?: number | string
-          numPages?: number | string
-          metadata?: { pages?: number | string; numPages?: number | string; info?: Record<string, unknown> }
-          info?: { Pages?: number | string } & Record<string, unknown>
+      const parseNumber = (v: unknown): number | undefined => {
+        if (typeof v === "number" && Number.isFinite(v)) {
+          return Math.trunc(v)
         }
-        const meta = metadata as UnpdfMeta | undefined
+        if (typeof v === "string") {
+          const parsed = parseInt(v, 10)
+          return Number.isFinite(parsed) ? parsed : undefined
+        }
+        return undefined
+      }
 
-        // Determine number of pages from several possible shapes returned by getMeta()
-        const pagesCandidate = meta?.totalPages ?? meta?.pages ?? meta?.numPages ?? meta?.metadata?.pages ?? meta?.metadata?.numPages ?? meta?.info?.Pages
-        let numpages = 0
-        if (typeof pagesCandidate === "number") {
-          numpages = pagesCandidate
-        } else if (typeof pagesCandidate === "string") {
-          const parsed = parseInt(pagesCandidate, 10)
-          numpages = Number.isFinite(parsed) ? parsed : 0
+      // Determine number of pages from several possible shapes returned by getMeta()
+      let numpages = 0
+      if (isObject(rawMeta)) {
+        const m = rawMeta
+        const candidates: unknown[] = []
+
+        if ("totalPages" in m) {
+          candidates.push(m.totalPages)
+        }
+        if ("pages" in m) {
+          candidates.push(m.pages)
+        }
+        if ("numPages" in m) {
+          candidates.push(m.numPages)
         }
 
-        // Normalize text: extractText may return a string, { text: string[] }, or { totalPages: number; text: string[] }
-        let normalizedText = ""
-        if (typeof text === "string") {
-          normalizedText = text
-        } else if (text && typeof text === "object") {
-          const tAny = text as { text?: string | string[] } | string[]
-          const textField = (tAny as { text?: string | string[] }).text
-          if (typeof textField === "string") {
-            normalizedText = textField
-          } else if (Array.isArray(textField)) {
-            normalizedText = textField.join("\n\n")
-          } else if (Array.isArray(tAny)) {
-            normalizedText = (tAny as unknown as string[]).join("\n\n")
-          } else {
-            normalizedText = safeStringify(text)
+        const mm = getProp<Record<string, unknown>>(m, "metadata")
+        if (isObject(mm)) {
+          if ("pages" in mm) {
+            candidates.push(mm.pages)
+          }
+          if ("numPages" in mm) {
+            candidates.push(mm.numPages)
           }
         }
 
-        const infoSource = meta?.info ?? meta?.metadata?.info ?? {}
+        const mi = getProp<Record<string, unknown>>(m, "info")
+        if (isObject(mi)) {
+          if ("Pages" in mi) {
+            candidates.push(mi.Pages)
+          }
+        }
 
-        return {
-          numpages,
-          text: normalizedText,
-          info: {
-            Title: toStringOrUndefined(infoSource.Title),
-            Author: toStringOrUndefined(infoSource.Author),
-            Subject: toStringOrUndefined(infoSource.Subject),
-            Creator: toStringOrUndefined(infoSource.Creator),
-          },
-          hasEOL: normalizedText.includes("\n"),
-        } as PdfParseResult
+        for (const candidate of candidates) {
+          const extracted = parseNumber(candidate)
+          if (extracted !== undefined) {
+            numpages = extracted
+            break
+          }
+        }
+      }
+
+      // Normalize text: extractText may return a string, an array, or an object with a text field
+      const normalizedText = (() => {
+        if (typeof rawText === "string") {
+          return rawText
+        }
+
+        if (Array.isArray(rawText)) {
+          const strs = (rawText as unknown[]).filter((el): el is string => typeof el === "string")
+          if (strs.length > 0) {
+            return strs.join("\n\n")
+          }
+        }
+
+        if (isObject(rawText)) {
+          const tField = getProp<unknown>(rawText, "text")
+          if (typeof tField === "string") {
+            return tField
+          }
+          if (Array.isArray(tField)) {
+            const strs = (tField as unknown[]).filter((el): el is string => typeof el === "string")
+            if (strs.length > 0) {
+              return strs.join("\n\n")
+            }
+          }
+        }
+
+        // Fallback to a safe string representation
+        return safeStringify(rawText)
       })()
 
-      // Extract text from specified number of pages
-      const extractedText = text
+      const infoSource = (() => {
+        if (!isObject(rawMeta)) {
+          return undefined
+        }
+        const m = rawMeta
+        const topInfo = getProp<Record<string, unknown>>(m, "info")
+        if (isObject(topInfo)) {
+          return topInfo
+        }
+        const mm = getProp<Record<string, unknown>>(m, "metadata")
+        if (isObject(mm)) {
+          const nestedInfo = getProp<Record<string, unknown>>(mm, "info")
+          if (isObject(nestedInfo)) {
+            return nestedInfo
+          }
+        }
+        return undefined
+      })()
+
+      const data: PdfParseResult = {
+        numpages,
+        text: normalizedText,
+        info: {
+          Title: toStringOrUndefined(getProp(infoSource, "Title")),
+          Author: toStringOrUndefined(getProp(infoSource, "Author")),
+          Subject: toStringOrUndefined(getProp(infoSource, "Subject")),
+          Creator: toStringOrUndefined(getProp(infoSource, "Creator")),
+        },
+        hasEOL: normalizedText.includes("\n"),
+      }
 
       voltlogger.info(`Extracted ${data.numpages} pages from PDF`)
 
       return {
         pdfUrl: args.pdfUrl,
         totalPages: data.numpages,
-        extractedPages: data.numpages,
-        text,
+        extractedPages: Math.min(data.numpages, args.maxPages),
+        text: data.text,
         info: {
           title: data.info?.Title,
           author: data.info?.Author,
@@ -288,7 +369,7 @@ export const arxivPdfExtractTool = createTool({
       voltlogger.error(`PDF extraction failed: ${String(error)}`)
       throw new Error(`Failed to extract PDF content: ${String(error)}`)
     }
-  },
+  }
 })
 
 export const arxivToolkit = createToolkit({
