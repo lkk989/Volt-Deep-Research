@@ -11,12 +11,13 @@ import { testToolkit } from "../tools/test-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { voltObservability } from "../config/observability.js";
 import z from "zod";
-import * as crypto from "crypto";
+import * as crypto from "node:crypto";
 
 // Agent Memory Setup
 const reviewerMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/reviewer-memory.db",
+    logger: voltlogger,
   }),
   workingMemory: {
     enabled: true,
@@ -30,7 +31,10 @@ const reviewerMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
+  enableCache: true,
+  cacheSize: 1000,
+  cacheTTL: 3600000,
 });
 
 export const codeReviewerAgent = new Agent({
@@ -77,4 +81,6 @@ export const codeReviewerAgent = new Agent({
   eval: {
     scorers: {},
   },
+  inputGuardrails: [],
+  outputGuardrails: [],
 });

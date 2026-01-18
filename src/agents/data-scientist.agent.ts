@@ -5,9 +5,10 @@ import { voltlogger } from "../config/logger.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 import { dataProcessingToolkit } from "../tools/data-processing-toolkit.js"
 import z from "zod"
+import { voltObservability } from "../config/observability.js"
 
 const dataScientistMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/data-scientist-memory.db" }),
+  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/data-scientist-memory.db", logger: voltlogger }),
   workingMemory: {
     enabled: true,
     scope: "user",
@@ -19,7 +20,7 @@ const dataScientistMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
   cacheSize: 1000,
   cacheTTL: 3600000,
@@ -110,4 +111,7 @@ Statistical Methodology:
   markdown: true,
   logger: voltlogger,
   hooks: dataScientistHooks,
+  observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 })

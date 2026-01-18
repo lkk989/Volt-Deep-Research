@@ -11,6 +11,7 @@ import { dataAnalyzerPrompt } from "./prompts.js";
 const dataAnalyzerMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/data-analyzer-memory.db",
+    logger: voltlogger,
   }),
   workingMemory: {
     enabled: true,
@@ -28,7 +29,7 @@ const dataAnalyzerMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
 });
 
@@ -234,4 +235,6 @@ export const dataAnalyzerAgent = new Agent({
   markdown: true,
   logger: voltlogger,
   observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 });

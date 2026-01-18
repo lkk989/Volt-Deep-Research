@@ -79,7 +79,7 @@ const sdk = new NodeSDK({
 sdk.start();
 
 // Register with VoltOps
-new VoltAgent({
+export const voltAgent = new VoltAgent({
   agents: {
     "assistant": assistantAgent,
     "support-agent": supportAgent,
@@ -126,7 +126,8 @@ new VoltAgent({
           "coding-agent": codingAgent,
           "code-reviewer": codeReviewerAgent,
         }
-      }),
+      }
+    )
   }),
   logger: voltlogger,
   enableSwaggerUI: true, // Enable Swagger UI for API documentation

@@ -6,9 +6,10 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
 //import { sentimentBiasToolkit } from "../tools/sentiment-bias-toolkit.js"
 import z from "zod"
+import { voltObservability } from "../config/observability.js"
 
 const contentCuratorMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/content-curator-memory.db" }),
+  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/content-curator-memory.db", logger: voltlogger }),
   workingMemory: {
     enabled: true,
     scope: "user",
@@ -24,7 +25,7 @@ const contentCuratorMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
   cacheSize: 1000,
   cacheTTL: 3600000,
@@ -105,7 +106,7 @@ Curation Methodology:
     return baseInstructions
   },
   tools: ({ context }) => {
-    const role = context?.get("role") || "user"
+    const role = context?.get("role") ?? "user"
     // Base tools available to all users
     const baseTools: never[] = []
     // Admin-only tools could be added here
@@ -123,4 +124,7 @@ Curation Methodology:
   markdown: true,
   logger: voltlogger,
   hooks: contentCuratorHooks,
+  observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 })

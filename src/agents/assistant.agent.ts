@@ -11,6 +11,7 @@ import { voltObservability } from "../config/observability.js";
 const assistantMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/assistant-memory.db",
+    logger: voltlogger
   }),
   workingMemory: {
     enabled: true,
@@ -26,7 +27,7 @@ const assistantMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }), // or InMemoryVectorAdapter() for dev
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }), // or InMemoryVectorAdapter() for dev
   enableCache: true, // optional embedding cache
   cacheSize: 1000, // optional cache size
   cacheTTL: 3600000, // optional cache TTL in seconds

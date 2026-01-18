@@ -11,6 +11,7 @@ import { factCheckerPrompt } from "./prompts.js";
 const factCheckerMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/fact-checker-memory.db",
+    logger: voltlogger,
   }),
   workingMemory: {
     enabled: true,
@@ -28,7 +29,7 @@ const factCheckerMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
   cacheSize: 1000,
   cacheTTL: 3600000,
@@ -47,7 +48,7 @@ const verifyClaimTool = createTool({
       throw new Error("Operation has been cancelled");
     }
 
-    voltlogger.info(`Verifying claim: ${claim.substring(0, 100)}...`);
+    voltlogger.info(`Verifying claim: ${claim.substring(0, 100)}...`, { claim, context });
 
     // Basic claim verification logic
     const verification = {
@@ -339,4 +340,6 @@ export const factCheckerAgent = new Agent({
   markdown: true,
   logger: voltlogger,
   observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 });

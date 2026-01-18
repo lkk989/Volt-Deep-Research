@@ -17,6 +17,7 @@ import * as crypto from "node:crypto";
 const codingMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/coding-memory.db",
+    logger: voltlogger,
   }),
   workingMemory: {
     enabled: true,
@@ -27,7 +28,10 @@ const codingMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
+  enableCache: true,
+  cacheSize: 1000,
+  cacheTTL: 3600000,
 });
 
 export const codingAgent = new Agent({
@@ -75,4 +79,6 @@ export const codingAgent = new Agent({
   maxSteps: 30,
   observability: voltObservability,
   logger: voltlogger,
+  inputGuardrails: [],
+  outputGuardrails: [],
 });
