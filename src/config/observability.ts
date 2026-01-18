@@ -7,6 +7,16 @@ export const voltObservability = new VoltAgentObservability({
   serviceName: "VoltMaster", // Optional service metadata
   serviceVersion: "1.0.0", // Optional service metadata
   instrumentationScopeName: "ai", // Optional instrumentation scope name
+  logger: voltlogger, // Optional logger
+  resourceAttributes: {
+    "deployment.environment": "production", // Optional resource attributes
+    "host.name": "volt-master-host",
+  },
+  spanFilters: {
+    enabled: false, // Enable or disable span filtering
+    instrumentationScopeNames: ["ai"],
+    serviceNames: ["VoltMaster"],
+  },
   storage: new LibSQLObservabilityAdapter({
       url: "file:./.voltagent/observability.db", // or ":memory:" for ephemeral
       // Local file (default): creates ./.voltagent/observability.db if not present
@@ -20,7 +30,7 @@ export const voltObservability = new VoltAgentObservability({
     }),
   voltOpsSync: {
     // Sampling strategies: "always" | "never" | "ratio" | "parent"
-    sampling: { strategy: "ratio", ratio: 0.5 },
+    sampling: { strategy: "ratio", ratio: 0.7 },
     // Batching controls
     maxQueueSize: 4096,
     maxExportBatchSize: 512,

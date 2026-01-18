@@ -11,6 +11,7 @@ import { voltObservability } from "../config/observability.js";
 const scrapperMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/scrapper-memory.db",
+    logger: voltlogger,
   }),
   workingMemory: {
     enabled: true,
@@ -28,8 +29,10 @@ const scrapperMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
+  cacheSize: 1000, // optional cache size
+  cacheTTL: 3600000, // optional cache time-to-live in seconds
 });
 
 export const scrapperAgent = new Agent({
@@ -87,4 +90,6 @@ export const scrapperAgent = new Agent({
   markdown: false,
   logger: voltlogger,
   observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 });

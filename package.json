@@ -1,6 +1,6 @@
 {
   "name": "mastervolt",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "An advanced AI agent framework built on Voltagent.",
   "author": "ssdeanx",
   "keywords": [
@@ -42,6 +42,7 @@
     "@voltagent/a2a-server": "^2.0.2",
     "@voltagent/ag-ui": "^1.0.2",
     "@voltagent/cli": "^0.1.21",
+    "@voltagent/cloudflare-d1": "^2.0.4",
     "@voltagent/core": "^2.1.2",
     "@voltagent/evals": "^2.0.2",
     "@voltagent/langfuse-exporter": "^2.0.2",
@@ -53,6 +54,7 @@
     "@voltagent/scorers": "^2.0.4",
     "@voltagent/server-hono": "^2.0.3",
     "@voltagent/supabase": "^2.0.2",
+    "@voltagent/voice": "^2.0.2",
     "@voltagent/voltagent-memory": "^1.0.2",
     "@xterm/addon-attach": "^0.12.0",
     "@xterm/addon-fit": "^0.11.0",
@@ -90,6 +92,7 @@
     "lodash": "^4.17.21",
     "marked": "^17.0.1",
     "next": "^16.1.3",
+    "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
     "node-cache": "^5.1.2",
     "octokit": "^5.0.5",

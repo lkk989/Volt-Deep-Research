@@ -7,9 +7,10 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
 //import { reportGenerationToolkit } from "../tools/report-generation-toolkit.js"
 import z from "zod"
+import { voltObservability } from "../config/observability.js"
 
 const researchCoordinatorMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/research-coordinator-memory.db" }),
+  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/research-coordinator-memory.db", logger: voltlogger }),
   workingMemory: {
     enabled: true,
     scope: "user",
@@ -21,7 +22,7 @@ const researchCoordinatorMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
   cacheSize: 1000,
   cacheTTL: 3600000,
@@ -62,7 +63,7 @@ export const researchCoordinatorAgent = new Agent({
   id: "research-coordinator",
   name: "Research Coordinator",
   purpose: "Orchestrate complex multi-step research projects by decomposing tasks, coordinating execution, and synthesizing results",
-  model: google("gemini-2.5-flash-lite-preview-06-2025"),
+  model: google("gemini-2.5-flash-lite-preview-09-2025"),
   instructions: ({ context }) => {
     const role = context?.get("role") ?? "researcher"
     const tier = context?.get("tier") ?? "standard"
@@ -103,4 +104,7 @@ Research Methodology:
   markdown: true,
   logger: voltlogger,
   hooks: researchCoordinatorHooks,
+  observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 })

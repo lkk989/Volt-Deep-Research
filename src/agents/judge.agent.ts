@@ -1,6 +1,7 @@
 import { Agent, buildScorer } from "@voltagent/core";
 import { z } from "zod";
 import { voltlogger } from "../config/logger.js";
+import { voltObservability } from "../config/observability.js";
 
 export const judgeAgent = new Agent({
     id: "satisfaction-judge",
@@ -12,6 +13,7 @@ export const judgeAgent = new Agent({
     maxOutputTokens: 64000,
     temperature: 0.3,
     logger: voltlogger,
+    observability: voltObservability,
 });
 
 const judgeSchema = z.object({
@@ -46,9 +48,13 @@ export const supportAgent = new Agent({
     instructions: "You are a support agent.",
     model: "github-copilot/grok-code-fast-1",
     tools: [],
+    toolkits: [],
     maxOutputTokens: 64000,
     temperature: 0.3,
     logger: voltlogger,
+    observability: voltObservability,
+    inputGuardrails: [],
+    outputGuardrails: [],
     eval: {
         scorers: {
         satisfaction: {

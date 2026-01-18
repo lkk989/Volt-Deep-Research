@@ -11,6 +11,7 @@ import { voltObservability } from "../config/observability.js";
 const synthesizerMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/synthesizer-memory.db",
+    logger: voltlogger,
   }),
   workingMemory: {
     enabled: true,
@@ -28,8 +29,10 @@ const synthesizerMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
+  cacheSize: 1000, // optional cache size
+  cacheTTL: 3600000, // optional cache time-to-live in seconds
 });
 
 // Synthesis tools
@@ -355,4 +358,6 @@ export const synthesizerAgent = new Agent({
   markdown: true,
   logger: voltlogger,
   observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 });

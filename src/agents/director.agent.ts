@@ -18,6 +18,7 @@ import { writerAgent } from "./writer.agent.js";
 const directorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: "file:./.voltagent/director-memory.db",
+    logger: voltlogger,
   }),
   workingMemory: {
     enabled: true,
@@ -41,8 +42,10 @@ const directorMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
+  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
   enableCache: true,
+  cacheSize: 1000,
+  cacheTTL: 3600000,
 });
 
 export const directorAgent = new Agent({
