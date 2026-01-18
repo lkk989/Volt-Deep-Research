@@ -161,7 +161,7 @@ export function detectDataFormat(data: string): FormatDetectionResult {
 
   // Check for JSON
   if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-      (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
     try {
       JSON.parse(trimmed)
       format = "json"
@@ -190,8 +190,8 @@ export function detectDataFormat(data: string): FormatDetectionResult {
   if (format === "unknown") {
     const lines = trimmed.split("\n")
     if (lines.length > 1) {
-      const firstLineCommas = (lines[0].match(/,/g) || []).length
-      const secondLineCommas = (lines[1].match(/,/g) || []).length
+      const firstLineCommas = (lines[0].match(/,/g) ?? []).length
+      const secondLineCommas = (lines[1].match(/,/g) ?? []).length
       if (firstLineCommas > 0 && firstLineCommas === secondLineCommas) {
         format = "csv"
         confidence = 0.8
@@ -619,11 +619,11 @@ export const cleanDataTool = createTool({
               changes.push({ index, field: key, action: "filled", oldValue: newItem[key], newValue: defaultValue })
               // Type-safe assignment: only assign if defaultValue is a valid JSON-serializable type
               if (defaultValue === null ||
-                  typeof defaultValue === "string" ||
-                  typeof defaultValue === "number" ||
-                  typeof defaultValue === "boolean" ||
-                  Array.isArray(defaultValue) ||
-                  (typeof defaultValue === "object" && defaultValue !== null)) {
+                typeof defaultValue === "string" ||
+                typeof defaultValue === "number" ||
+                typeof defaultValue === "boolean" ||
+                Array.isArray(defaultValue) ||
+                (typeof defaultValue === "object" && defaultValue !== null)) {
                 // Explicit type assertion since we've validated the type above
                 newItem[key] = defaultValue as string | number | boolean | null | unknown[] | Record<string, unknown>
               }
@@ -649,7 +649,7 @@ export const cleanDataTool = createTool({
         cleaned = cleaned.filter((item, index) => {
           const key = args.duplicateKey ? String(item[args.duplicateKey]) : JSON.stringify(item)
           if (seenKeys.has(key)) {
-            changes.push({ index, field: args.duplicateKey || "*", action: "removed" })
+            changes.push({ index, field: args.duplicateKey ?? "*", action: "removed" })
             return false
           }
           seenKeys.add(key)
@@ -706,10 +706,7 @@ Tips:
 
 // Export individual tools for direct use
 export {
-  normalizeDataTool as normalize_data,
-  detectFormatTool as detect_format,
-  convertFormatTool as convert_format,
-  validateSchemaTool as validate_schema,
   aggregateDataTool as aggregate_data,
-  cleanDataTool as clean_data,
+  cleanDataTool as clean_data, convertFormatTool as convert_format, detectFormatTool as detect_format, normalizeDataTool as normalize_data, validateSchemaTool as validate_schema
 }
+
