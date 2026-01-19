@@ -33,6 +33,12 @@ voltlogger.info("Volt Initilizing");
 const voltOpsClient = new VoltOpsClient({
   publicKey: process.env.VOLTAGENT_PUBLIC_KEY,
   secretKey: process.env.VOLTAGENT_SECRET_KEY,
+  prompts: true,
+  promptCache: {
+    enabled: true,
+    maxSize: 1000,
+    ttl: 3600000, // 1 hour
+  }
 });
 
  // Define the demo workflow's shape: its inputs and final output
@@ -74,8 +80,8 @@ Please generate a list of 3 search queries that would be useful for writing a re
 
 // Initialize OpenTelemetry SDK
 const sdk = new NodeSDK({
-//  traceExporter: VoltAgentExporter,
   instrumentations: [getNodeAutoInstrumentations()],
+  autoDetectResources: true,
 });
 sdk.start();
 
