@@ -9,7 +9,7 @@ const thinkOnlyToolkit: Toolkit = createReasoningTools({
   addInstructions: false,
   think: true,
   addFewShot: false,
-  fewShotExamples: 'This is a custom example.',
+//  fewShotExamples: 'This is a custom example.',
 });
 
 const fullReasoningToolkit: Toolkit = createReasoningTools({
