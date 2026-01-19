@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "noEmit": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
@@ -16,6 +18,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "resolveJsonModule": true,
+    
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -24,6 +27,8 @@
     },
   },
   "include": [
+    "**/*.ts",
+    "**/*.tsx",
     "src",
     "tests",
     "app",
@@ -34,6 +39,8 @@
     "src/**/*.{ts,tsx}",
     "/src/**/*.{ts,tsx}",
     "next-env.d.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
     "next.config.ts",
     "globalSetup.ts",
     "testSetup.ts"

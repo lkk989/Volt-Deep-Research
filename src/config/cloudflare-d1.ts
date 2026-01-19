@@ -38,4 +38,3 @@ export const createWorker = (env: Env) => {
   cacheSize: 1000, // optional cache size
   cacheTTL: 3600000, // optional cache time-to-live in seconds
 });
-

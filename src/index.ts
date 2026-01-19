@@ -25,6 +25,7 @@ import { factCheckSynthesisWorkflow } from "./workflows/fact-check-synthesis.wor
 import { judgeAgent, supportAgent } from "./agents/judge.agent.js";
 import { dataScientistAgent } from "./agents/data-scientist.agent.js";
 import { researchCoordinatorAgent } from "./agents/research-coordinator.agent.js";
+import { deepAgent } from "./agents/plan.agent.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
@@ -94,6 +95,7 @@ export const voltAgent = new VoltAgent({
     "scrapper": scrapperAgent,
     "coding-agent": codingAgent,
     "code-reviewer": codeReviewerAgent,
+    "deep-research-agent": deepAgent,
   },
   workflows: {
     "research-assistant-demo": workflow,
@@ -125,6 +127,7 @@ export const voltAgent = new VoltAgent({
           "scrapper": scrapperAgent,
           "coding-agent": codingAgent,
           "code-reviewer": codeReviewerAgent,
+          "deep-research-agent": deepAgent,
         }
       }
     )
