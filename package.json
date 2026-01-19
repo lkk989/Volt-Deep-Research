@@ -1,6 +1,6 @@
 {
   "name": "mastervolt",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "An advanced AI agent framework built on Voltagent.",
   "author": "ssdeanx",
   "keywords": [
@@ -74,6 +74,7 @@
     "chartjs-plugin-zoom": "^2.2.0",
     "cheerio": "^1.1.2",
     "chromadb": "^3.2.2",
+    "clsx": "^2.1.1",
     "convert-csv-to-json": "^3.20.0",
     "crawlee": "^3.15.3",
     "csv-parse": "^6.1.0",

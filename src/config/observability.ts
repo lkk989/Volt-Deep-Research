@@ -5,9 +5,10 @@ import { voltlogger } from "./logger.js";
 
 export const voltObservability = new VoltAgentObservability({
   serviceName: "VoltMaster", // Optional service metadata
-  serviceVersion: "1.0.0", // Optional service metadata
+  serviceVersion: "0.1.5", // Optional service metadata
   instrumentationScopeName: "ai", // Optional instrumentation scope name
   logger: voltlogger, // Optional logger
+  flushOnFinishStrategy: "auto",
   resourceAttributes: {
     "deployment.environment": "production", // Optional resource attributes
     "host.name": "volt-master-host",
