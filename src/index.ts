@@ -111,7 +111,7 @@ export const voltAgent = new VoltAgent({
       registerCopilotKitRoutes({
         app,
         // Expose specific agent IDs; omit to expose all registered agents.
-        resourceIds: ["assistantAgent", "judgeAgent", "supportAgent",  "writerAgent", "directorAgent", "dataAnalyzerAgent", "factCheckerAgent", "synthesizerAgent", "scrapperAgent", "codingAgent", "codeReviewerAgent"],
+        resourceIds: [],
         // Optional: pass an agents map directly instead of resourceIds.
         agents: {
           "assistant": assistantAgent,

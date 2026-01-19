@@ -113,7 +113,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
     .andThen({
         id: "finalize",
         execute: async ({ data, getStepData }) => {
-            const topic = getStepData("log-start")?.input?.topic || ""
+            const topic = getStepData("log-start")?.input?.topic ?? ""
             const queries = getStepData("generate-queries")?.output?.queries || ""
             const scrapedData = getStepData("scrape-data")?.output?.scrapedData || ""
             const analysis = getStepData("analyze-data")?.output?.analysis || ""

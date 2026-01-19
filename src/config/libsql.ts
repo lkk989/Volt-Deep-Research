@@ -4,7 +4,7 @@ import { google } from "@ai-sdk/google";
 import { AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
 import z from "zod";
 
-export const libsqlMemory = new Memory({
+export const sharedMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
     url: process.env.TURSO_URL!,
     authToken: process.env.TURSO_AUTH_TOKEN!,

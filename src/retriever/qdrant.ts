@@ -179,11 +179,11 @@ async function retrieveDocuments(
 
       // embed may return the embedding directly as number[] or as { embedding: number[] }
       if (Array.isArray(embedResult) && embedResult.every((n) => typeof n === 'number')) {
-        embeddingCandidate = embedResult as number[]
+        embeddingCandidate = embedResult
       } else if (typeof embedResult === 'object' && embedResult !== null) {
         const maybeEmbedding = (embedResult as Record<string, unknown>)['embedding']
         if (Array.isArray(maybeEmbedding) && maybeEmbedding.every((n) => typeof n === 'number')) {
-          embeddingCandidate = maybeEmbedding as number[]
+          embeddingCandidate = maybeEmbedding
         }
       }
     } catch (err: unknown) {
@@ -237,7 +237,7 @@ async function retrieveDocuments(
       const score = typeof scoreValue === 'number' ? scoreValue : 0
 
       results.push({
-        id: idValue as string | number,
+        id: idValue,
         payload,
         score,
       })
@@ -284,14 +284,14 @@ export class QdrantRetriever extends BaseRetriever {
       if (Array.isArray(lastMessage.content)) {
         const textParts = (lastMessage.content as unknown[])
           .filter((part): part is { type: 'text'; text: string } => {
-            if (typeof part !== 'object' || part === null || Array.isArray(part)) return false
+            if (typeof part !== 'object' || part === null || Array.isArray(part)) {return false}
             const obj = part as Record<string, unknown>
             return obj['type'] === 'text' && typeof obj['text'] === 'string'
           })
           .map((part) => part.text)
         searchText = textParts.join(' ')
       } else {
-        searchText = lastMessage.content as string
+        searchText = lastMessage.content
       }
     }
     // Perform semantic search using Qdrant

@@ -27,15 +27,17 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
 })
     .andTap({
         id: "log-start",
-        execute: async ({ data }) => {
-            voltlogger.info(`=== [Director] Starting comprehensive research on: ${data.topic} ===`)
+        execute: (context) => {
+            const data = context.data as { topic?: string }
+            voltlogger.info(`=== [Director] Starting comprehensive research on: ${data.topic ?? "Unknown topic"} ===`)
         },
     })
     .andAgent(
-        async ({ data }) =>
-            `You are the Director. Propose a high-level JSON plan for a comprehensive research workflow on the topic: "${data.topic}". ` +
-            `Do NOT include markdown. Respond ONLY with a JSON object like: ` +
-            `{"steps":["assistant","scrapper","dataAnalyzer","factChecker","synthesizer","writer"]}.`,
+        ({ data }) => {
+            return `You are the Director. Propose a high-level JSON plan for a comprehensive research workflow on the topic: "${data.topic}". ` +
+                `Do NOT include markdown. Respond ONLY with a JSON object like: ` +
+                `{"steps":["assistant","scrapper","dataAnalyzer","factChecker","synthesizer","writer"]}.`
+        },
         directorAgent,
         {
             schema: z.object({
