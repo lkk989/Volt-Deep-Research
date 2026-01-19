@@ -3,6 +3,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { AiSdkEmbeddingAdapter, InMemoryVectorAdapter, Memory } from "@voltagent/core";
 import { google } from "./google.js";
 import { voltlogger } from "./logger.js";
+import z from "zod";
 
 interface Env {
   DB: D1Database;
@@ -10,7 +11,7 @@ interface Env {
 }
 
 export const createWorker = (env: Env) => {
-  export const memory = new Memory({
+  const memory = new Memory({
     storage: new D1MemoryAdapter({
       binding: env.DB,
       tablePrefix: "voltagent_memory",
@@ -19,22 +20,30 @@ export const createWorker = (env: Env) => {
   workingMemory: {
     enabled: true,
     scope: "user", // persist across conversations
-    template: `
-# User Profile
-- Name:
-- Role:
-- Timezone:
-
-# Current Goals
--
-
-# Preferences
--
-`,
+    schema: z.object({
+          profile: z
+            .object({
+              name: z.string().optional(),
+              role: z.string().optional(),
+              timezone: z.string().optional(),
+            })
+            .optional(),
+          preferences: z.array(z.string()).optional(),
+          goals: z.array(z.string()).optional(),
+          researchState: z.object({
+            currentPhase: z.string().optional(),
+            topic: z.string().optional(),
+            depth: z.string().optional(),
+            quality: z.string().optional(),
+          }).optional(),
+        }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
   vector: new InMemoryVectorAdapter(),
   enableCache: true, // optional embedding cache
   cacheSize: 1000, // optional cache size
   cacheTTL: 3600000, // optional cache time-to-live in seconds
-});
+}
+)};
+
+
