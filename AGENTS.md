@@ -8,7 +8,7 @@ AI agents working on this project should use this file as the authoritative sour
 
 ### Key Technologies
 
-- **Framework**: VoltAgent v1.1.35 (TypeScript-based multi-agent orchestration)
+- **Framework**: VoltAgent v2.1.2 (TypeScript-based multi-agent orchestration)
 - **Language**: TypeScript 5.9.3 (ES2022 target, strict mode enabled)
 - **Runtime**: Node.js 18+
 - **Package Manager**: npm
