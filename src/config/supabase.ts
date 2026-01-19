@@ -1,6 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { AiSdkEmbeddingAdapter, InMemoryVectorAdapter, Memory } from "@voltagent/core";
 import { SupabaseMemoryAdapter } from "@voltagent/supabase";
+import z from "zod";
 
 // Using URL and key
 export const supaMemory = new Memory({
@@ -11,18 +12,23 @@ export const supaMemory = new Memory({
   workingMemory: {
     enabled: true,
     scope: "user", // persist across conversations
-    template: `
-# User Profile
-- Name:
-- Role:
-- Timezone:
-
-# Current Goals
--
-
-# Preferences
--
-`,
+   schema: z.object({
+         profile: z
+           .object({
+             name: z.string().optional(),
+             role: z.string().optional(),
+             timezone: z.string().optional(),
+           })
+           .optional(),
+         preferences: z.array(z.string()).optional(),
+         goals: z.array(z.string()).optional(),
+         researchState: z.object({
+           currentPhase: z.string().optional(),
+           topic: z.string().optional(),
+           depth: z.string().optional(),
+           quality: z.string().optional(),
+         }).optional(),
+       }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
   vector: new InMemoryVectorAdapter(),

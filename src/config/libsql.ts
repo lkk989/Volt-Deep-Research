@@ -2,6 +2,7 @@ import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
 import { voltlogger } from "../config/logger.js"
 import { google } from "@ai-sdk/google";
 import { AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
+import z from "zod";
 
 export const libsqlMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
@@ -16,18 +17,24 @@ export const libsqlMemory = new Memory({
   workingMemory: {
     enabled: true,
     scope: "user", // persist across conversations
-    template: `
-# User Profile
-- Name:
-- Role:
-- Timezone:
-
-# Current Goals
--
-
-# Preferences
--
-`,
+    schema: z.object({
+          profile: z
+            .object({
+              name: z.string().optional(),
+              role: z.string().optional(),
+              timezone: z.string().optional(),
+            })
+            .optional(),
+          preferences: z.array(z.string()).optional(),
+          goals: z.array(z.string()).optional(),
+          notes: z.array(z.string()).optional(),
+          researchState: z.object({
+            currentPhase: z.string().optional(),
+            topic: z.string().optional(),
+            depth: z.string().optional(),
+            quality: z.string().optional(),
+          }).optional(),
+        }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
   vector: new LibSQLVectorAdapter({
@@ -38,6 +45,9 @@ export const libsqlMemory = new Memory({
     debug: true,
     maxRetries: 3,
     retryDelayMs: 100,
+    maxVectorDimensions: 3072,
+    cacheSize: 200,
+    batchSize: 100,
   }),
   enableCache: true, // optional embedding cache
   cacheSize: 1000, // optional cache size
