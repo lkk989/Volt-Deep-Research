@@ -92,8 +92,7 @@ export const InlineCitationCardBody = ({
 const CarouselApiContext = createContext<CarouselApi | undefined>(undefined);
 
 const useCarouselApi = () => {
-  const context = useContext(CarouselApiContext);
-  return context;
+  return useContext(CarouselApiContext);
 };
 
 export type InlineCitationCarouselProps = ComponentProps<typeof Carousel>;
@@ -253,13 +252,13 @@ export const InlineCitationSource = ({
   ...props
 }: InlineCitationSourceProps) => (
   <div className={cn("space-y-1", className)} {...props}>
-    {title && (
+    {(Boolean(title)) && (
       <h4 className="truncate font-medium text-sm leading-tight">{title}</h4>
     )}
-    {url && (
+    {(Boolean(url)) && (
       <p className="truncate break-all text-muted-foreground text-xs">{url}</p>
     )}
-    {description && (
+    {(Boolean(description)) && (
       <p className="line-clamp-3 text-muted-foreground text-sm leading-relaxed">
         {description}
       </p>

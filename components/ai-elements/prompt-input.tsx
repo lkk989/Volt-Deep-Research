@@ -74,22 +74,22 @@ import {
 // Provider Context & Types
 // ============================================================================
 
-export type AttachmentsContext = {
-  files: (FileUIPart & { id: string })[];
+export interface AttachmentsContext {
+  files: Array<FileUIPart & { id: string }>;
   add: (files: File[] | FileList) => void;
   remove: (id: string) => void;
   clear: () => void;
   openFileDialog: () => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
-};
+}
 
-export type TextInputContext = {
+export interface TextInputContext {
   value: string;
   setInput: (v: string) => void;
   clear: () => void;
-};
+}
 
-export type PromptInputControllerProps = {
+export interface PromptInputControllerProps {
   textInput: TextInputContext;
   attachments: AttachmentsContext;
   /** INTERNAL: Allows PromptInput to register its file textInput + "open" callback */
@@ -97,7 +97,7 @@ export type PromptInputControllerProps = {
     ref: RefObject<HTMLInputElement | null>,
     open: () => void
   ) => void;
-};
+}
 
 const PromptInputController = createContext<PromptInputControllerProps | null>(
   null
@@ -151,7 +151,7 @@ export function PromptInputProvider({
 
   // ----- attachments state (global when wrapped)
   const [attachmentFiles, setAttachmentFiles] = useState<
-    (FileUIPart & { id: string })[]
+    Array<FileUIPart & { id: string }>
   >([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const openRef = useRef<() => void>(() => {});
@@ -288,7 +288,7 @@ export function PromptInputAttachment({
 }: PromptInputAttachmentProps) {
   const attachments = usePromptInputAttachments();
 
-  const filename = data.filename || "";
+  const filename = data.filename ?? "";
 
   const mediaType =
     data.mediaType?.startsWith("image/") && data.url ? "image" : "file";
@@ -427,10 +427,10 @@ export const PromptInputActionAddAttachments = ({
   );
 };
 
-export type PromptInputMessage = {
+export interface PromptInputMessage {
   text: string;
   files: FileUIPart[];
-};
+}
 
 export type PromptInputProps = Omit<
   HTMLAttributes<HTMLFormElement>,
@@ -477,7 +477,7 @@ export const PromptInput = ({
   const formRef = useRef<HTMLFormElement | null>(null);
 
   // ----- Local attachments (only used when no provider)
-  const [items, setItems] = useState<(FileUIPart & { id: string })[]>([]);
+  const [items, setItems] = useState<Array<FileUIPart & { id: string }>>([]);
   const files = usingProvider ? controller.attachments.files : items;
 
   // Keep a ref to files for cleanup on unmount (avoids stale closure)
@@ -545,7 +545,7 @@ export const PromptInput = ({
             message: "Too many files. Some were not added.",
           });
         }
-        const next: (FileUIPart & { id: string })[] = [];
+        const next: Array<FileUIPart & { id: string }> = [];
         for (const file of capped) {
           next.push({
             id: nanoid(),
@@ -595,7 +595,7 @@ export const PromptInput = ({
 
   // Let provider know about our hidden file input so external menus can call openFileDialog()
   useEffect(() => {
-    if (!usingProvider) return;
+    if (!usingProvider) {return;}
     controller.__registerFileInput(inputRef, () => inputRef.current?.click());
   }, [usingProvider, controller]);
 
@@ -610,8 +610,8 @@ export const PromptInput = ({
   // Attach drop handlers on nearest form and document (opt-in)
   useEffect(() => {
     const form = formRef.current;
-    if (!form) return;
-    if (globalDrop) return // when global drop is on, let the document-level handler own drops
+    if (!form) {return;}
+    if (globalDrop) {return} // when global drop is on, let the document-level handler own drops
 
     const onDragOver = (e: DragEvent) => {
       if (e.dataTransfer?.types?.includes("Files")) {
@@ -635,7 +635,7 @@ export const PromptInput = ({
   }, [add, globalDrop]);
 
   useEffect(() => {
-    if (!globalDrop) return;
+    if (!globalDrop) {return;}
 
     const onDragOver = (e: DragEvent) => {
       if (e.dataTransfer?.types?.includes("Files")) {
@@ -662,7 +662,7 @@ export const PromptInput = ({
     () => () => {
       if (!usingProvider) {
         for (const f of filesRef.current) {
-          if (f.url) URL.revokeObjectURL(f.url);
+          if (f.url) {URL.revokeObjectURL(f.url);}
         }
       }
     },
@@ -727,7 +727,7 @@ export const PromptInput = ({
     // Convert blob URLs to data URLs asynchronously
     Promise.all(
       files.map(async ({ id, ...item }) => {
-        if (item.url && item.url.startsWith("blob:")) {
+        if (item.url?.startsWith("blob:")) {
           const dataUrl = await convertBlobUrlToDataUrl(item.url);
           // If conversion failed, keep the original blob URL
           return {
@@ -837,11 +837,11 @@ export const PromptInputTextarea = ({
       e.preventDefault();
 
       // Check if the submit button is disabled before submitting
-      const form = e.currentTarget.form;
+      const {form} = e.currentTarget;
       const submitButton = form?.querySelector(
         'button[type="submit"]'
       ) as HTMLButtonElement | null;
-      if (submitButton?.disabled) {
+      if ((submitButton?.disabled) ?? false) {
         return;
       }
 
@@ -1058,8 +1058,6 @@ interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
-  start(): void;
-  stop(): void;
   onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
   onend: ((this: SpeechRecognition, ev: Event) => any) | null;
   onresult:
@@ -1068,6 +1066,8 @@ interface SpeechRecognition extends EventTarget {
   onerror:
     | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any)
     | null;
+  start(): void;
+  stop(): void;
 }
 
 interface SpeechRecognitionEvent extends Event {
@@ -1075,23 +1075,23 @@ interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
 }
 
-type SpeechRecognitionResultList = {
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
   readonly length: number;
   item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-};
+}
 
-type SpeechRecognitionResult = {
-  readonly length: number;
-  item(index: number): SpeechRecognitionAlternative;
+interface SpeechRecognitionResult {
   [index: number]: SpeechRecognitionAlternative;
   isFinal: boolean;
-};
+  readonly length: number;
+  item(index: number): SpeechRecognitionAlternative;
+}
 
-type SpeechRecognitionAlternative = {
+interface SpeechRecognitionAlternative {
   transcript: string;
   confidence: number;
-};
+}
 
 interface SpeechRecognitionErrorEvent extends Event {
   error: string;

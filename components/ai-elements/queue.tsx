@@ -11,25 +11,25 @@ import { cn } from "@/lib/utils";
 import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 
-export type QueueMessagePart = {
+export interface QueueMessagePart {
   type: string;
   text?: string;
   url?: string;
   filename?: string;
   mediaType?: string;
-};
+}
 
-export type QueueMessage = {
+export interface QueueMessage {
   id: string;
   parts: QueueMessagePart[];
-};
+}
 
-export type QueueTodo = {
+export interface QueueTodo {
   id: string;
   title: string;
   description?: string;
   status?: "pending" | "completed";
-};
+}
 
 export type QueueItemProps = ComponentProps<"li">;
 
@@ -75,7 +75,7 @@ export const QueueItemContent = ({
 }: QueueItemContentProps) => (
   <span
     className={cn(
-      "line-clamp-1 grow break-words",
+      "line-clamp-1 grow wrap-break-word",
       completed
         ? "text-muted-foreground/50 line-through"
         : "text-muted-foreground",
