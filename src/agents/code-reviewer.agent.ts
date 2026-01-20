@@ -12,6 +12,7 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { voltObservability } from "../config/observability.js";
 import z from "zod";
 import * as crypto from "node:crypto";
+import { sharedMemory } from "../config/libsql.js";
 
 // Agent Memory Setup
 const reviewerMemory = new Memory({
@@ -47,7 +48,7 @@ export const codeReviewerAgent = new Agent({
   }),
   tools: [],
   toolkits: [codeAnalysisToolkit, filesystemToolkit, gitToolkit, testToolkit, thinkOnlyToolkit],
-  memory: reviewerMemory,
+  memory: sharedMemory,
   hooks: {
     onStart: ({ context }) => {
       const opId = crypto.randomUUID();

@@ -2,6 +2,7 @@ import { Agent, buildScorer } from "@voltagent/core";
 import { z } from "zod";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { sharedMemory } from "../config/libsql.js";
 
 export const judgeAgent = new Agent({
     id: "satisfaction-judge",
@@ -50,6 +51,7 @@ export const supportAgent = new Agent({
     tools: [],
     toolkits: [],
     maxOutputTokens: 64000,
+    memory: sharedMemory,
     temperature: 0.3,
     logger: voltlogger,
     observability: voltObservability,
@@ -71,8 +73,6 @@ export const supportAgent = new Agent({
                     },
                     feedbackSourceType: "model",
                     createdAt: new Date().toISOString(),
-
-
                 });
             },
         },

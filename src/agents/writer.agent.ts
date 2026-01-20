@@ -4,6 +4,7 @@ import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite
 const writerMemory = new Memory({
@@ -179,7 +180,7 @@ export const writerAgent = new Agent({
     },
     tools: [],
     toolkits: [],
-    memory: writerMemory,
+    memory: sharedMemory,
     retriever: undefined,
     markdown: true,
     maxSteps: 50,

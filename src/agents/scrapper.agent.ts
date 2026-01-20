@@ -6,6 +6,7 @@ import { webScraperToolkit } from "../tools/web-scraper-toolkit.js";
 import z from "zod";
 import { scrapperPrompt } from "./prompts.js";
 import { voltObservability } from "../config/observability.js";
+import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for scrapper
 const scrapperMemory = new Memory({
@@ -51,7 +52,7 @@ export const scrapperAgent = new Agent({
   }),
   tools: [],
   toolkits: [webScraperToolkit],
-  memory: scrapperMemory,
+  memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,

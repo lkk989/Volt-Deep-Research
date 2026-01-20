@@ -8,6 +8,7 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { reportGenerationToolkit } from "../tools/report-generation-toolkit.js"
 import z from "zod"
 import { voltObservability } from "../config/observability.js"
+import { sharedMemory } from "../config/libsql.js"
 
 const researchCoordinatorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/research-coordinator-memory.db", logger: voltlogger }),
@@ -96,7 +97,7 @@ Research Methodology:
   },
   tools: [],
   toolkits: [thinkOnlyToolkit],
-  memory: researchCoordinatorMemory,
+  memory: sharedMemory,
   maxHistoryEntries: 100,
   temperature: 0.3,
   maxOutputTokens: 64000,

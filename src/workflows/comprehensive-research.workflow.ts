@@ -6,7 +6,6 @@ import { dataAnalyzerAgent } from "../agents/data-analyzer.agent.js"
 import { factCheckerAgent } from "../agents/fact-checker.agent.js"
 import { synthesizerAgent } from "../agents/synthesizer.agent.js"
 import { scrapperAgent } from "../agents/scrapper.agent.js"
-import { directorAgent } from "../agents/director.agent.js"
 import { voltlogger } from "../config/logger.js"
 
 /**
@@ -32,8 +31,12 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
 })
     .andTap({
         id: "log-start",
-        execute: async ({ data }) => {
+        inputSchema: z.object({
+            topic: z.string(),
+        }),
+        execute: ({ data }) => {
             voltlogger.info(`=== Starting comprehensive research on: ${data.topic} ===`)
+            return Promise.resolve()
         },
     })
 
@@ -45,7 +48,7 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             const result = await assistantAgent.generateText(
                 `Generate 5 diverse search queries for research on: ${data.topic}`
             )
-            return { queries: result.text }
+            return { topic: data.topic, queries: result.text }
         },
     })
 
@@ -55,9 +58,13 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
         execute: async ({ data }) => {
             voltlogger.info("Step 2: Scraping web data...")
             const result = await scrapperAgent.generateText(
-                `Search and scrape relevant data for these queries:\n${data.queries}\n\nTopic: ${data.queries}`
+                `Search and scrape relevant data for these queries:\n${data.queries}\n\nTopic: ${data.topic}`
             )
-            return { scrapedData: result.text }
+            return {
+                topic: data.topic,
+                queries: data.queries,
+                scrapedData: result.text,
+            }
         },
     })
 
@@ -69,7 +76,12 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             const result = await dataAnalyzerAgent.generateText(
                 `Analyze this scraped data:\n${data.scrapedData}`
             )
-            return { analysis: result.text }
+            return {
+                topic: data.topic,
+                queries: data.queries,
+                scrapedData: data.scrapedData,
+                analysis: result.text,
+            }
         },
     })
 
@@ -81,7 +93,13 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             const result = await factCheckerAgent.generateText(
                 `Fact-check these findings:\n${data.analysis}`
             )
-            return { factCheck: result.text }
+            return {
+                topic: data.topic,
+                queries: data.queries,
+                scrapedData: data.scrapedData,
+                analysis: data.analysis,
+                factCheck: result.text,
+            }
         },
     })
 
@@ -93,7 +111,14 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             const result = await synthesizerAgent.generateText(
                 `Synthesize this fact-checked analysis:\n${data.factCheck}`
             )
-            return { synthesis: result.text }
+            return {
+                topic: data.topic,
+                queries: data.queries,
+                scrapedData: data.scrapedData,
+                analysis: data.analysis,
+                factCheck: data.factCheck,
+                synthesis: result.text,
+            }
         },
     })
 
@@ -105,31 +130,33 @@ export const comprehensiveResearchWorkflow = createWorkflowChain({
             const result = await writerAgent.generateText(
                 `Write a comprehensive research report based on:\n${data.synthesis}`
             )
-            return { finalReport: result.text }
+            return {
+                topic: data.topic,
+                queries: data.queries,
+                scrapedData: data.scrapedData,
+                analysis: data.analysis,
+                factCheck: data.factCheck,
+                synthesis: data.synthesis,
+                finalReport: result.text,
+            }
         },
     })
 
     // Step 7: Assemble final result
     .andThen({
         id: "finalize",
-        execute: async ({ data, getStepData }) => {
-            const topic = getStepData("log-start")?.input?.topic ?? ""
-            const queries = getStepData("generate-queries")?.output?.queries || ""
-            const scrapedData = getStepData("scrape-data")?.output?.scrapedData || ""
-            const analysis = getStepData("analyze-data")?.output?.analysis || ""
-            const factCheck = getStepData("fact-check")?.output?.factCheck || ""
-            const synthesis = getStepData("synthesize")?.output?.synthesis || ""
-
+        execute: async ({ data }) => {
+            await Promise.resolve()
             voltlogger.info("=== Research workflow complete ===")
 
             return {
-                topic,
-                queries,
-                scrapedData,
-                analysis,
-                factCheck,
-                synthesis,
-                finalReport: data.finalReport,
+                topic: data.topic,
+                queries: data.queries ?? "",
+                scrapedData: data.scrapedData ?? "",
+                analysis: data.analysis ?? "",
+                factCheck: data.factCheck ?? "",
+                synthesis: data.synthesis ?? "",
+                finalReport: data.finalReport ?? "",
             }
         },
     })

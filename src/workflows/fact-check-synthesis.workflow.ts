@@ -23,10 +23,16 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
 })
   .andTap({
     id: "log-start",
-    execute: async ({ data }) => {
+    inputSchema: z.object({
+      topic: z.string(),
+      claims: z.string(),
+      sources: z.string(),
+    }),
+    execute: ({ data }) => {
       voltlogger.info(
         `=== [FactCheckSynthesis] Starting fact-check for topic: ${data.topic} ===`
       );
+      return Promise.resolve();
     },
   })
   .andThen({
@@ -60,17 +66,17 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
 
       return {
         topic: data.topic,
+        claims: data.claims,
+        sources: data.sources,
         factCheckReport: result.text,
       };
     },
   })
   .andThen({
     id: "synthesize",
-    execute: async ({ data, getStepData }) => {
-      const factCheckReport =
-        getStepData("fact-check")?.output?.factCheckReport?.toString() ?? "";
-      const topic =
-        getStepData("fact-check")?.output?.topic?.toString() ?? data.topic;
+    execute: async ({ data }) => {
+      const factCheckReport = data.factCheckReport ?? "";
+      const topic = data.topic;
 
       const prompt = [
         "You are a synthesis specialist.",
@@ -90,20 +96,18 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
 
       return {
         topic,
+        factCheckReport,
         synthesis: result.text,
       };
     },
   })
   .andThen({
     id: "finalize",
-    execute: async ({ data, getStepData }) => {
-      const topic =
-        getStepData("synthesize")?.output?.topic?.toString() ?? data.topic;
+    execute: async ({ data }) => {
+      const topic = data.topic;
 
-      const factCheckReport =
-        getStepData("fact-check")?.output?.factCheckReport?.toString() ?? "";
-      const synthesis =
-        getStepData("synthesize")?.output?.synthesis?.toString() ?? "";
+      const factCheckReport = data.factCheckReport ?? "";
+      const synthesis = data.synthesis ?? "";
 
       const combinedText = `${factCheckReport}\n\n${synthesis}`;
 
@@ -127,17 +131,17 @@ export const factCheckSynthesisWorkflow = createWorkflowChain({
         riskLevel = "LOW";
       } else if (/\bHIGH RISK\b/.test(normalized)) {
         riskLevel = "HIGH";
-      } else if (/\BMEDIUM RISK\b/.test(normalized)) {
+      } else if (/\bMEDIUM RISK\b/.test(normalized)) {
         riskLevel = "MEDIUM";
       } else if (/\bLOW RISK\b/.test(normalized)) {
         riskLevel = "LOW";
       }
 
-      return {
+      return Promise.resolve({
         topic,
         factCheckReport,
         synthesis,
         riskLevel,
-      };
+      });
     },
   });

@@ -27,20 +27,42 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
 })
     .andTap({
         id: "log-start",
-        execute: (context) => {
-            const data = context.data as { topic?: string }
+        inputSchema: z.object({
+            topic: z.string(),
+        }),
+        execute: ({ data }) => {
             voltlogger.info(`=== [Director] Starting comprehensive research on: ${data.topic ?? "Unknown topic"} ===`)
+            return Promise.resolve()
         },
     })
-    .andAgent(
-        ({ data }) => {
-            return `You are the Director. Propose a high-level JSON plan for a comprehensive research workflow on the topic: "${data.topic}". ` +
+    .andThen({
+        id: "propose-plan",
+        execute: async ({ data }) => {
+            // Ask the Director agent for a high-level JSON plan and parse/validate it.
+            const prompt = `You are the Director. Propose a high-level JSON plan for a comprehensive research workflow on the topic: "${data?.topic ?? ""}". ` +
                 `Do NOT include markdown. Respond ONLY with a JSON object like: ` +
                 `{"steps":["assistant","scrapper","dataAnalyzer","factChecker","synthesizer","writer"]}.`
-        },
-        directorAgent,
-        {
-            schema: z.object({
+
+            const res = await directorAgent.generateText(prompt)
+            const raw = (res?.text ?? "").trim()
+
+            // Attempt to extract JSON object from the response, tolerant to extra text.
+            let jsonText = raw
+            const start = raw.indexOf("{")
+            const end = raw.lastIndexOf("}")
+            if (start !== -1 && end !== -1 && end > start) {
+                jsonText = raw.slice(start, end + 1)
+            }
+
+            let parsed: unknown = undefined
+            try {
+                parsed = JSON.parse(jsonText) as unknown
+            } catch (err) {
+                voltlogger.warn(`[Director] Failed to parse plan JSON: ${String(err)}. Response was: ${raw}`)
+                parsed = { steps: [] }
+            }
+
+            const schema = z.object({
                 steps: z.array(
                     z.enum([
                         "assistant",
@@ -51,21 +73,30 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                         "writer",
                     ])
                 ),
-            }),
-        }
-    )
+            })
+
+            const validated = schema.safeParse(parsed)
+            if (!validated.success || !validated.data.steps.length) {
+                voltlogger.warn(`[Director] Invalid or empty plan from director; falling back to default pipeline.`)
+                return { steps: ["assistant", "scrapper", "dataAnalyzer", "factChecker", "synthesizer", "writer"] }
+            }
+
+            return validated.data
+        },
+    })
     .andThen({
         id: "execute-plan",
         execute: async ({ data, getStepData }) => {
-            const plan = getStepData("step-2")?.output
             // Fallback to canonical pipeline if plan missing/invalid
             const steps =
-                plan?.steps && plan.steps.length > 0
-                    ? plan.steps
+                data.steps && data.steps.length > 0
+                    ? data.steps
                     : ["assistant", "scrapper", "dataAnalyzer", "factChecker", "synthesizer", "writer"]
 
             const usedAgents: string[] = []
-            const topic = (getStepData("log-start")?.input as { topic?: string })?.topic ?? (data as any)?.topic ?? "Unknown topic"
+            const topic =
+                (getStepData("log-start")?.input as { topic?: string })?.topic ??
+                "Unknown topic"
             let contextText = `Topic: ${topic}\n`
 
             for (const step of steps) {

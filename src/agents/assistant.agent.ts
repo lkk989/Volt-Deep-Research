@@ -6,6 +6,7 @@ import { assistantPrompt } from "./prompts.js";
 import z from "zod";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { voltObservability } from "../config/observability.js";
+import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite
 const assistantMemory = new Memory({
@@ -137,7 +138,7 @@ export const assistantAgent = new Agent({
   }),
   tools: [getWeatherTool],
   toolkits: [thinkOnlyToolkit],
-  memory: assistantMemory,
+  memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,
