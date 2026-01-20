@@ -6,6 +6,7 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 import { dataProcessingToolkit } from "../tools/data-processing-toolkit.js"
 import z from "zod"
 import { voltObservability } from "../config/observability.js"
+import { sharedMemory } from "../config/libsql.js"
 
 const dataScientistMemory = new Memory({
   storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/data-scientist-memory.db", logger: voltlogger }),
@@ -103,7 +104,7 @@ Statistical Methodology:
   },
   tools: [],
   toolkits: [thinkOnlyToolkit, dataProcessingToolkit],
-  memory: dataScientistMemory,
+  memory: sharedMemory,
   maxHistoryEntries: 100,
   temperature: 0.2,
   maxOutputTokens: 64000,

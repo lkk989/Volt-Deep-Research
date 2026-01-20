@@ -24,10 +24,14 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
 })
   .andTap({
     id: "log-start",
-    execute: async ({ data }) => {
+    inputSchema: z.object({
+      text: z.string(),
+    }),
+    execute: ({ data }) => {
       voltlogger.info(
         `=== [DataPatternAnalyzer] Starting analysis === Characters: ${data.text.length}`
       );
+      return Promise.resolve();
     },
   })
   .andThen({
@@ -52,16 +56,16 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
       const result = await dataAnalyzerAgent.generateText(prompt);
 
       return {
+        text: data.text,
         agentRaw: result.text,
       };
     },
   })
   .andThen({
     id: "finalize",
-    execute: async ({ state, getStepData }) => {
-      const inputText = state.input?.text ?? "";
-      const agentOutput =
-        getStepData("agent-analysis")?.output?.agentRaw?.toString() ?? "";
+    execute: ({ data }) => {
+      const inputText = data.text ?? "";
+      const agentOutput = data.agentRaw ?? "";
 
       // Deterministic metrics based solely on input text
       const characters = inputText.length;
@@ -75,15 +79,15 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
 
       const sentences = inputText
         .split(/[.!?]+/)
-        .map((s: string) => s.trim())
-        .filter((s: string | any[]) => s.length > 0).length;
+        .map((segment) => segment.trim())
+        .filter((segment) => segment.length > 0).length;
 
       // Derive summary and findings from agent output using simple parsing,
       // without depending on strict formats.
       const linesOut = agentOutput
         .split(/\r?\n/)
-        .map((l: string) => l.trim())
-        .filter((l: string | any[]) => l.length > 0);
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
 
       let summary = "";
       const findings: string[] = [];
@@ -107,7 +111,7 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
         findings.push(agentOutput);
       }
 
-      return {
+      return Promise.resolve({
         summary,
         metrics: {
           characters,
@@ -116,7 +120,7 @@ export const dataPatternAnalyzerWorkflow = createWorkflowChain({
           sentences,
         },
         findings,
-      };
+      });
     },
 });
 

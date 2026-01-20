@@ -1,4 +1,4 @@
-import { createWorkflowChain, andThen } from "@voltagent/core"
+import { createWorkflowChain } from "@voltagent/core"
 import { z } from "zod"
 import { assistantAgent } from "../agents/assistant.agent.js"
 import { scrapperAgent } from "../agents/scrapper.agent.js"

@@ -6,6 +6,7 @@ import z from "zod";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt, synthesizerPrompt } from "./prompts.js";
 import { voltObservability } from "../config/observability.js";
+import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for synthesizer
 const synthesizerMemory = new Memory({
@@ -319,7 +320,7 @@ export const synthesizerAgent = new Agent({
   }),
   tools: [synthesizeInformationTool, resolveContradictionsTool, createUnifiedNarrativeTool],
   toolkits: [thinkOnlyToolkit],
-  memory: synthesizerMemory,
+  memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,

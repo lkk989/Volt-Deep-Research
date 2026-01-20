@@ -10,6 +10,9 @@ The `src/` directory contains all production code for the Mastervolt Deep Resear
 - **config/** - Centralized configuration for logging, MCP, storage, and external services
 - **tools/** - Custom AI tools and toolkits for agents to use
 - **a2a/** - Agent-to-Agent communication infrastructure
+- **retriever/** - Vector DB retriever integrations
+- **workflows/** - Workflow chain definitions
+- **experiments/** - Eval/experiment configs
 
 ## Key Patterns by Directory
 
@@ -31,7 +34,7 @@ All agents follow the same configuration pattern. When creating or modifying age
 2. **Memory Setup** (always required):
    - Use LibSQL adapter: `new LibSQLMemoryAdapter({ url: "file:./.voltagent/{agent-id}-memory.db" })`
    - Enable working memory with user scope and Zod schema
-   - Use Google embedding: `google.textEmbedding("gemini-embedding-001")`
+   - Use Google embedding: `google.embedding("text-embedding-004")`
    - Enable cache: `enableCache: true`
 
 3. **Agent Configuration** (always required fields):
@@ -48,6 +51,16 @@ All agents follow the same configuration pattern. When creating or modifying age
    - `assistant.agent.ts` - Query generation and search coordination
    - `writer.agent.ts` - Report synthesis and composition
    - `director.agent.ts` - Supervisor managing sub-agents
+   - `data-analyzer.agent.ts` - Data analysis and summarization
+   - `data-scientist.agent.ts` - Deep analysis and modeling assistance
+   - `fact-checker.agent.ts` - Source validation and verification
+   - `synthesizer.agent.ts` - Cross-source synthesis
+   - `scrapper.agent.ts` - Web scraping and extraction
+   - `coding.agent.ts` - Coding assistance
+   - `code-reviewer.agent.ts` - Code review assistance
+   - `judge.agent.ts` - Evaluation/judging
+   - `research-coordinator.agent.ts` - Orchestration and planning
+   - `plan.agent.ts` - Deep research planning
    - `prompts.ts` - Shared prompt templates and utilities
 
 ### src/config/ - Configuration Modules
@@ -119,6 +132,14 @@ When creating tools:
 4. **Files**:
    - `reasoning-tool.ts` - Reasoning toolkits (think, analyze)
    - `debug-tool.ts` - Debugging and context inspection
+   - `filesystem-toolkit.ts` - File access tools
+   - `web-scraper-toolkit.ts` - Web scraping helpers
+   - `data-processing-toolkit.ts` - Data processing helpers
+   - `knowledge-graph-toolkit.ts` - Graph tools
+   - `api-integration-toolkit.ts` - API integration helpers
+   - `code-analysis-toolkit.ts` - Code analysis tools
+   - `rag-toolkit.ts` - Retrieval-augmented generation
+   - `test-toolkit.ts` - Testing helpers
 
 ### src/a2a/ - Agent-to-Agent Communication
 
@@ -177,7 +198,7 @@ npx vitest run -t "agent name"
 
 ### Function Naming
 
-- Tool functions: PascalCase (e.g., `export const DebugTool = createTool({...})`)
+- Tool functions: camelCase (e.g., `export const debugTool = createTool({...})`)
 - Utility functions: camelCase (e.g., `getAgentConfig()`, `validateSchema()`)
 
 ### Constants
@@ -416,7 +437,7 @@ When creating workflows in `src/index.ts`:
 
 ---
 
-**Last Updated**: October 2025
+**Last Updated**: January 2026
 **Scope**: src/ and all subdirectories
-**Framework**: VoltAgent v1.1.35
+**Framework**: VoltAgent v2.1.3
 **Language**: TypeScript 5.9.3

@@ -11,25 +11,7 @@ import { factCheckerAgent } from './fact-checker.agent.js';
 import { synthesizerAgent } from './synthesizer.agent.js';
 import { scrapperAgent } from './scrapper.agent.js';
 import { thinkOnlyToolkit } from '../tools/reasoning-tool.js';
-
-const deepAgentMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/deep-research-memory.db", logger: voltlogger }),
-  workingMemory: {
-    enabled: true,
-    scope: "user",
-    schema: z.object({
-      profile: z.object({ name: z.string().optional(), role: z.string().optional(), timezone: z.string().optional() }).optional(),
-      preferences: z.array(z.string()).optional(),
-      goals: z.array(z.string()).optional(),
-      currentProject: z.object({ topic: z.string(), status: z.string(), subtasks: z.array(z.string()) }).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
-  enableCache: true,
-  cacheSize: 1000,
-  cacheTTL: 3600000,
-})
+import { sharedMemory } from '../config/libsql.js';
 
 const researchInstructions = [
   "You are an expert researcher. Your job is to conduct thorough research and then write a polished report.",
@@ -47,7 +29,7 @@ export const deepAgent = new PlanAgent({
     model: "github-copilot/gpt-5-mini",
     tools: [],
     toolkits: [thinkOnlyToolkit],
-    memory: deepAgentMemory,
+    memory: sharedMemory,
     maxSteps: 100,
     logger: voltlogger,
     maxOutputTokens: 64000,

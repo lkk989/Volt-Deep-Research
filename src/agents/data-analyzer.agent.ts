@@ -6,6 +6,7 @@ import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt } from "./prompts.js";
+import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for data analyzer
 const dataAnalyzerMemory = new Memory({
@@ -196,7 +197,7 @@ export const dataAnalyzerAgent = new Agent({
   }),
   tools: [analyzeDataTool, extractInsightsTool],
   toolkits: [thinkOnlyToolkit],
-  memory: dataAnalyzerMemory,
+  memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,

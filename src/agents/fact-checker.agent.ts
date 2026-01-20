@@ -6,6 +6,7 @@ import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { factCheckerPrompt } from "./prompts.js";
+import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for fact checker
 const factCheckerMemory = new Memory({
@@ -300,7 +301,7 @@ export const factCheckerAgent = new Agent({
   }),
   tools: [verifyClaimTool, crossReferenceSourcesTool, detectBiasTool],
   toolkits: [thinkOnlyToolkit],
-  memory: factCheckerMemory,
+  memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,

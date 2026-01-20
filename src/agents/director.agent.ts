@@ -13,6 +13,7 @@ import { agentPrompt } from "./prompts.js"; // kept single import
 import { scrapperAgent } from "./scrapper.agent.js";
 import { synthesizerAgent } from "./synthesizer.agent.js";
 import { writerAgent } from "./writer.agent.js";
+import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for director
 const directorMemory = new Memory({
@@ -70,7 +71,7 @@ export const directorAgent = new Agent({
   }),
   tools: [],
   toolkits: [thinkOnlyToolkit],
-  memory: directorMemory,
+  memory: sharedMemory,
   retriever: undefined,
   subAgents: [assistantAgent, writerAgent, dataAnalyzerAgent, factCheckerAgent, synthesizerAgent, scrapperAgent],
   supervisorConfig: {

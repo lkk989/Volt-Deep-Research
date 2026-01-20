@@ -8,14 +8,15 @@ AI agents working on this project should use this file as the authoritative sour
 
 ### Key Technologies
 
-- **Framework**: VoltAgent v2.1.2 (TypeScript-based multi-agent orchestration)
+- **Framework**: VoltAgent v2.1.3 (TypeScript-based multi-agent orchestration)
 - **Language**: TypeScript 5.9.3 (ES2022 target, strict mode enabled)
 - **Runtime**: Node.js 18+
 - **Package Manager**: npm
-- **Testing**: Vitest 4.0.1 with jsdom environment
+- **Testing**: Vitest 4.0.17 with jsdom environment
 - **AI Models**: Google Gemini (primary), OpenAI support, Vertex AI support
 - **Memory**: LibSQL (SQLite-based) with semantic embeddings
 - **Server**: Hono web framework via @voltagent/server-hono
+- **UI**: Next.js 16.x (app/ directory)
 
 ## Project Structure
 
@@ -29,16 +30,25 @@ src/
 │   └── prompts.ts           # Shared prompt templates
 ├── config/                  # Configuration modules
 │   ├── logger.ts            # Pino-based logging setup
-│   ├── mcp.ts               # Model Context Protocol server configuration
+│   ├── mcp.ts               # MCP client configuration
+│   ├── mcpserver.ts         # MCP server configuration
 │   ├── retriever.ts         # Data retrieval configuration
 │   ├── scorers.ts           # Evaluation & scoring setup
 │   └── supabase.ts          # Supabase client initialization
 ├── tools/                   # Custom tools and toolkits
 │   ├── reasoning-tool.ts    # Reasoning toolkits (think, analyze)
-│   └── debug-tool.ts        # Debugging & context inspection
+│   ├── debug-tool.ts        # Debugging & context inspection
+│   └── ...                  # Additional toolkits
 └── a2a/                     # Agent-to-Agent communication
     ├── server.ts            # A2A server implementation
     └── store.ts             # Shared state management
+
+app/                         # Next.js application
+└── chat/                    # UI routes/components
+
+src/retriever/               # Vector DB retriever integrations
+src/workflows/               # Workflow chain definitions
+src/experiments/             # Eval/experiment configs
 
 .voltagent/                 # Runtime directory (auto-created)
 ├── {agent-id}-memory.db     # Per-agent LibSQL memory database
@@ -85,7 +95,7 @@ cp .env.example .env
 npm run dev
 ```
 
-- Runs with `tsx watch` for automatic recompilation on file changes
+- Runs with `tsx watch --env-file=.env` for automatic recompilation on file changes
 - Loads environment variables from `.env` file
 - Watches TypeScript and JavaScript files in `src/`
 - Suitable for local development and testing
@@ -96,7 +106,7 @@ npm run dev
 npm run build
 ```
 
-- Compiles TypeScript to JavaScript
+- Compiles TypeScript to JavaScript (via `dotenvx run -- tsc`)
 - Output directory: `dist/`
 - Uses tsconfig.json settings (ES2022 target, strict mode)
 - All type checking runs during build
@@ -107,7 +117,7 @@ npm run build
 npm start
 ```
 
-- Runs compiled output from `dist/index.js`
+- Runs compiled output from `dist/index.js` (via `dotenvx run -- node dist/index.js`)
 - Requires `npm run build` first
 - No watch mode
 
@@ -121,7 +131,7 @@ npx eslint .
 
 - Runs ESLint with caching enabled
 - Uses cache location: `.eslintcache`
-- Checks all TypeScript and JavaScript files matching eslint.config.cjs
+- Checks all TypeScript and JavaScript files matching eslint.config.js
 - Fix issues: `npm run lint -- --fix`
 
 #### Type Checking
@@ -135,10 +145,10 @@ npx eslint .
 ### Run All Tests
 
 ```bash
-npx vitest run
+npm test
 ```
 
-- Runs Vitest in run mode (not watch)
+- Runs Vitest in run mode (not watch) via `dotenvx run -- npx vitest run`
 - Test timeout: 10 seconds per test
 - Environment: jsdom (DOM simulation)
 - Output: JSON report in `tests/test-results/test-results.json`
@@ -235,8 +245,8 @@ export const toolName = createTool({...})
 
 - **Tab Width**: 4 spaces
 - **Trailing Commas**: ES5 style
-- **Semicolons**: Off (no semicolons)
-- **Quotes**: Single quotes
+- **Semicolons**: On
+- **Quotes**: Double quotes
 - See `prettier.config.js` for full config
 
 ### Code Organization
@@ -452,21 +462,20 @@ const observability = new VoltAgentObservability({
 
 ### Available MCP Servers
 
-Defined in `src/config/mcp.ts`:
+Defined in `src/config/mcp.ts` (client) and `src/config/mcpserver.ts` (server):
 
-- **Exa Search** (stdio): `https://mcp.exa.ai/mcp?exaApiKey=${process.env.EXA_API_KEY}`
-- **Hugging Face** (HTTP): `https://huggingface.co/mcp` with Bearer token auth
 - **Filesystem** (stdio): Local file system access
+- **Hugging Face** (HTTP): `https://huggingface.co/mcp` with Bearer token auth
 
 ### Using MCP Tools
 
 ```typescript
 const mcpConfig = new MCPConfiguration({
   servers: {
-    exa: {
+    filesystem: {
       type: "stdio",
       command: "npx",
-      args: ["-y", "mcp-remote", `https://mcp.exa.ai/mcp?exaApiKey=${process.env.EXA_API_KEY}`],
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "<path>"]
     },
   },
 })
@@ -578,11 +587,13 @@ Traces are stored in `.voltagent/observability.db`. The VoltOps dashboard will d
 
 ```bash
 npm run dev          # Start development server (watch mode)
-npx vitest --watch  # Run tests in watch mode
+npx vitest --watch          # Run tests in watch mode
 npx vitest run -t "pattern"  # Run specific tests
-npx vitest run         # Run all tests
-npx vitest run --coverage         # Run all with coverage
-npm run eval         # Run evaluations with viteval
+npm test                    # Run all tests
+npx vitest run --coverage   # Run all with coverage
+npm run next                # Start Next.js dev server
+npm run build:next          # Build Next.js app
+npm run volt                # Run VoltAgent CLI
 ```
 
 ### Key Patterns
@@ -605,16 +616,16 @@ npm run eval         # Run evaluations with viteval
 ## Version Information
 
 | Component | Version | Purpose |
-|-----------|---------|---------|
+| --- | --- | --- |
 | TypeScript | 5.9.3 | Language and compilation |
 | Node.js | 18+ | Runtime environment |
-| VoltAgent | 1.1.35 | Multi-agent orchestration |
-| Vitest | 4.0.1 | Testing framework |
-| Google AI SDK | 2.0.23 | Gemini model integration |
-| OpenAI SDK | 2.0.53 | OpenAI model integration |
-| Zod | 4.1.12 | Schema validation |
-| Prettier | 3.6.2 | Code formatting |
-| ESLint | 9.38.0 | Code linting |
+| VoltAgent | 2.1.3 | Multi-agent orchestration |
+| Vitest | 4.0.17 | Testing framework |
+| Google AI SDK | 3.0.10 | Gemini model integration |
+| OpenAI SDK | 3.0.12 | OpenAI model integration |
+| Zod | 4.1.13 | Schema validation |
+| Prettier | 3.8.0 | Code formatting |
+| ESLint | 9.39.2 | Code linting |
 
 ## Additional Resources
 
@@ -626,7 +637,7 @@ npm run eval         # Run evaluations with viteval
 
 ---
 
-**Last Updated**: October 2025
+**Last Updated**: January 2026
 **Project**: Mastervolt Deep Research
-**Framework**: VoltAgent v1.1.35
+**Framework**: VoltAgent v2.1.3
 **Language**: TypeScript 5.9.3

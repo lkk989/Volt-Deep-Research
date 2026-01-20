@@ -7,6 +7,7 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { sentimentBiasToolkit } from "../tools/sentiment-bias-toolkit.js"
 import z from "zod"
 import { voltObservability } from "../config/observability.js"
+import { sharedMemory } from "../config/libsql.js"
 
 const contentCuratorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/content-curator-memory.db", logger: voltlogger }),
@@ -116,7 +117,7 @@ Curation Methodology:
     return baseTools
   },
   toolkits: [thinkOnlyToolkit],
-  memory: contentCuratorMemory,
+  memory: sharedMemory,
   maxHistoryEntries: 100,
   temperature: 0.4,
   maxOutputTokens: 64000,
