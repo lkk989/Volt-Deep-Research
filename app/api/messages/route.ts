@@ -1,4 +1,4 @@
-import { sharedMemory } from "@/src/config/libsql.js";
+import { sharedMemory } from "@/voltagent/config/libsql.js";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

@@ -1,6 +1,6 @@
 import { getResumableStreamAdapter } from "@/lib/resumable-stream";
 // Import the agent instance
-import { agents } from "@/src/index.js";
+import { agents } from "@/voltagent/index.js";
 import { safeStringify } from "@voltagent/internal/utils";
 import { createResumableChatSession } from "@voltagent/resumable-streams";
 
