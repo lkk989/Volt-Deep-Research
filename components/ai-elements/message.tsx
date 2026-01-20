@@ -86,7 +86,7 @@ export const MessageAction = ({
   const button = (
     <Button size={size} type="button" variant={variant} {...props}>
       {children}
-      <span className="sr-only">{label || tooltip}</span>
+      <span className="sr-only">{label ?? tooltip}</span>
     </Button>
   );
 
@@ -106,14 +106,14 @@ export const MessageAction = ({
   return button;
 };
 
-type MessageBranchContextType = {
+interface MessageBranchContextType {
   currentBranch: number;
   totalBranches: number;
   goToPrevious: () => void;
   goToNext: () => void;
   branches: ReactElement[];
   setBranches: (branches: ReactElement[]) => void;
-};
+}
 
 const MessageBranchContext = createContext<MessageBranchContextType | null>(
   null
@@ -333,7 +333,7 @@ export function MessageAttachment({
   onRemove,
   ...props
 }: MessageAttachmentProps) {
-  const filename = data.filename || "";
+  const filename = data.filename ?? "";
   const mediaType =
     data.mediaType?.startsWith("image/") && data.url ? "image" : "file";
   const isImage = mediaType === "image";

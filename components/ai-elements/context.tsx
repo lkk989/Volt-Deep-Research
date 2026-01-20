@@ -20,12 +20,12 @@ const ICON_STROKE_WIDTH = 2;
 
 type ModelId = string;
 
-type ContextSchema = {
+interface ContextSchema {
   usedTokens: number;
   maxTokens: number;
   usage?: LanguageModelUsage;
   modelId?: ModelId;
-};
+}
 
 const ContextContext = createContext<ContextSchema | null>(null);
 
@@ -196,7 +196,7 @@ export const ContextContentFooter = ({
   ...props
 }: ContextContentFooterProps) => {
   const { modelId, usage } = useContextValue();
-  const costUSD = modelId
+  const costUSD = (modelId)
     ? getUsage({
         modelId,
         usage: {
