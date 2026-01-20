@@ -18,7 +18,6 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "resolveJsonModule": true,
-    
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -29,14 +28,14 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "src",
+    "voltagent",
     "tests",
     "app",
     "app/**/*.{ts,tsx}",
     "prettier.config.js",
     "vitest.config.ts",
     "eslint.config.js",
-    "src/**/*.{ts,tsx}",
+    "voltagent/**/*.{ts,tsx}",
     "/src/**/*.{ts,tsx}",
     "next-env.d.ts",
     ".next/types/**/*.ts",
