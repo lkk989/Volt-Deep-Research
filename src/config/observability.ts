@@ -8,7 +8,6 @@ export const voltObservability = new VoltAgentObservability({
   serviceVersion: "0.1.5", // Optional service metadata
   instrumentationScopeName: "ai", // Optional instrumentation scope name
   logger: voltlogger, // Optional logger
-  flushOnFinishStrategy: "auto",
   resourceAttributes: {
     "deployment.environment": "production", // Optional resource attributes
     "host.name": "volt-master-host",
@@ -44,7 +43,6 @@ export const voltObservability = new VoltAgentObservability({
       publicKey: process.env.LANGFUSE_PUBLIC_KEY,
       secretKey: process.env.LANGFUSE_SECRET_KEY,
       baseUrl: process.env.LANGFUSE_BASE_URL, // Optional for self-hosted
-      debug: true,
     }),
   ],
 });
