@@ -196,7 +196,7 @@ export const ContextContentFooter = ({
   ...props
 }: ContextContentFooterProps) => {
   const { modelId, usage } = useContextValue();
-  const costUSD = (modelId)
+  const costUSD = modelId
     ? getUsage({
         modelId,
         usage: {

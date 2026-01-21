@@ -1,13 +1,13 @@
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
-import { voltlogger } from "./logger.js"
 import { google } from "@ai-sdk/google";
 import { AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
+import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
+import { voltlogger } from "./logger.js";
 
 export const sharedMemory = new Memory({
   storage: new LibSQLMemoryAdapter({
-    url: process.env.TURSO_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN!,
+    url: process.env.TURSO_URL ?? "",
+    authToken: process.env.TURSO_AUTH_TOKEN ?? "",
     logger: voltlogger,
     debug: true,
     tablePrefix: "voltagent_memory",
@@ -18,23 +18,23 @@ export const sharedMemory = new Memory({
     enabled: true,
     scope: "user", // persist across conversations
     schema: z.object({
-          profile: z
-            .object({
-              name: z.string().optional(),
-              role: z.string().optional(),
-              timezone: z.string().optional(),
-            })
-            .optional(),
-          preferences: z.array(z.string()).optional(),
-          goals: z.array(z.string()).optional(),
-          notes: z.array(z.string()).optional(),
-          researchState: z.object({
-            currentPhase: z.string().optional(),
-            topic: z.string().optional(),
-            depth: z.string().optional(),
-            quality: z.string().optional(),
-          }).optional(),
-        }),
+      profile: z
+        .object({
+          name: z.string().optional(),
+          role: z.string().optional(),
+          timezone: z.string().optional(),
+        })
+        .optional(),
+      preferences: z.array(z.string()).optional(),
+      goals: z.array(z.string()).optional(),
+      notes: z.array(z.string()).optional(),
+      researchState: z.object({
+        currentPhase: z.string().optional(),
+        topic: z.string().optional(),
+        depth: z.string().optional(),
+        quality: z.string().optional(),
+      }).optional(),
+    }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
   vector: new LibSQLVectorAdapter({

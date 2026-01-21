@@ -300,8 +300,8 @@ Alternatively, use the [VoltOps Platform](https://console.voltagent.dev) for wor
 - `extract_key_insights` - Insight extraction with focus areas
 - Reasoning Toolkit (think-only mode)
 - ArXiv Toolkit:
-    - `arxiv_search` - Academic paper search via arXiv API
-    - `arxiv_pdf_extract` - PDF text extraction with page limits
+  - `arxiv_search` - Academic paper search via arXiv API
+  - `arxiv_pdf_extract` - PDF text extraction with page limits
 
 **Key Features**:
 

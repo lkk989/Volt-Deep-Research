@@ -1,5 +1,9 @@
 import { VoltAgent, VoltOpsClient, createTriggers } from "@voltagent/core";
 
+import {
+  createResumableStreamAdapter,
+  createResumableStreamVoltOpsStore,
+} from "@voltagent/resumable-streams";
 import { voltlogger } from "./config/logger.js";
 import { assistantAgent } from "./agents/assistant.agent.js";
 import { writerAgent } from "./agents/writer.agent.js";
@@ -28,6 +32,10 @@ import { deepAgent } from "./agents/plan.agent.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
+
+
+const streamStore = await createResumableStreamVoltOpsStore();
+const resumableStreamAdapter = await createResumableStreamAdapter({ streamStore });
 
 const voltOpsClient = new VoltOpsClient({
   publicKey: process.env.VOLTAGENT_PUBLIC_KEY,
@@ -75,6 +83,7 @@ export const voltAgent = new VoltAgent({
   server: honoServer({
     port: 3141,
     enableSwaggerUI: true,
+    resumableStream: { adapter: resumableStreamAdapter },
   }),
   logger: voltlogger,
   enableSwaggerUI: true, // Enable Swagger UI for API documentation
@@ -105,28 +114,30 @@ export const voltAgent = new VoltAgent({
       console.log("Hourly cron triggered:", payload);
       console.log("Cron event handled by agents:", agents);
     });
-
+    // Other GitHub events can be added similarly using on.github.<event_name>
+    //github.pull_request, "github.pull_request_review", "github.pull_request_review_comment", "github.push", "github.watch"
+    //"github.status", "github.repository", "github.pull_request_review_comment", "github.commit_comment", "github.check_run"
     // Gmail integration
-    on.gmail.newEmail(({ payload, agents }) => {
-      console.log("Gmail email received:", payload);
-      console.log("Gmail email received by agents:", agents);
-    });
+//    on.gmail.newEmail(({ payload, agents }) => {
+//      console.log("Gmail email received:", payload);
+//      console.log("Gmail email received by agents:", agents);
+//    });
 
     // Google Drive integration
-    on.googleDrive.fileChanged(({ payload, agents }) => {
-      console.log("Google Drive file changed:", payload);
-      console.log("Google Drive file changed handled by agents:", agents);
-    });
-    on.googleDrive.folderChanged(({ payload, agents }) => {
-      console.log("Google Drive file created:", payload);
-      console.log("Google Drive file created handled by agents:", agents);
-    });
+//    on.googleDrive.fileChanged(({ payload, agents }) => {
+//      console.log("Google Drive file changed:", payload);
+//      console.log("Google Drive file changed handled by agents:", agents);
+//    });
+//    on.googleDrive.folderChanged(({ payload, agents }) => {
+//      console.log("Google Drive file created:", payload);
+//      console.log("Google Drive file created handled by agents:", agents);
+//    });
 
     // Google Calendar integration
-    on.googleCalendar.eventCreated(({ payload, agents }) => {
-      console.log("Google Calendar event created:", payload);
-      console.log("Google Calendar event created handled by agents:", agents);
-    });
+//    on.googleCalendar.eventCreated(({ payload, agents }) => {
+//      console.log("Google Calendar event created:", payload);
+//      console.log("Google Calendar event created handled by agents:", agents);
+//    });
 
     // Webhook integration
    // on.webhook.received(({ payload, agents }) => {

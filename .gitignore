@@ -51,3 +51,6 @@ node_modules
 .roo
 .windsurf
 .cursor
+.ralph-tui/ralph.lock
+.ralph-tui/session-meta.json
+nul
