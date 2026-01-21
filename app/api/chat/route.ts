@@ -19,12 +19,59 @@ export async function POST(req: Request) {
     const messages = Array.isArray(body.messages) ? (body.messages as UIMessage[]) : [];
     const message = body.message as UIMessage | string | undefined;
     const input = body.input as UIMessage[] | string | undefined;
-    const options = (isRecord(body.options)) ? body.options : undefined;
+    const options = isRecord(body.options) ? body.options : undefined;
     const conversationIdParam = getString(options, "conversationId");
     const userIdParam = getString(options, "userId");
     const conversationId = conversationIdParam.trim();
+    // Hoisted helpers (declare here so they are available for the calls above)
+    function isRecord(value: unknown): value is Record<string, unknown> {
+      return typeof value === "object" && value !== null && !Array.isArray(value);
+    }
+
+    function getString(record: unknown, key: string): string {
+      if (!isRecord(record)) {return "";}
+      const v = record[key];
+      return typeof v === "string" ? v : "";
+    }
+
+    // userIdParam is now guaranteed to be a string (getString returns string), so .trim() is safe
     const userId = userIdParam.trim();
-    const parsedInput = resolveInput(input, message, messages);
+    // Resolve the final input in a type-safe way
+    const parsedInput: string | UIMessage[] | null = resolveInput(input, message, messages);
+
+    function resolveInput(
+      providedInput?: string | UIMessage[],
+      maybeMessage?: string | UIMessage,
+      messagesParam?: UIMessage[]
+    ): string | UIMessage[] | null {
+      // 1) explicit `input` takes precedence if non-empty
+      if (typeof providedInput === "string") {
+      const s = providedInput.trim();
+      if (s.length > 0) {return s;}
+      } else if (Array.isArray(providedInput) && providedInput.length > 0) {
+      return providedInput;
+      }
+
+      // 2) single `message` next
+      if (typeof maybeMessage === "string") {
+      const s = maybeMessage.trim();
+      if (s.length > 0) {return s;}
+      } else if (isUIMessageLike(maybeMessage)) {
+      return [maybeMessage];
+      }
+
+      // 3) fallback to messages array
+      if (Array.isArray(messagesParam) && messagesParam.length > 0) {
+      return messagesParam;
+      }
+
+      // nothing to stream
+      return null;
+    }
+
+    function isUIMessageLike(obj: unknown): obj is UIMessage {
+      return typeof obj === "object" && obj !== null && ("role" in obj || "content" in obj);
+    }
 
     if (conversationId.length === 0) {
       return jsonError(400, "options.conversationId is required");
@@ -58,7 +105,22 @@ export async function POST(req: Request) {
     }
 
     // Stream text from the supervisor agent with proper context
-    // The agent accepts UIMessage[] directly
+    // Validate input type to satisfy TypeScript and avoid unsafe argument errors.
+    function isUIMessage(obj: unknown): obj is UIMessage {
+      return typeof obj === "object" && obj !== null && ("role" in obj || "content" in obj);
+    }
+
+    function isStreamInput(v: unknown): v is string | UIMessage[] {
+      return (
+        typeof v === "string" ||
+        (Array.isArray(v) && v.every(isUIMessage))
+      );
+    }
+
+    if (!isStreamInput(parsedInput)) {
+      return jsonError(400, "Invalid input type");
+    }
+
     const result = await deepAgent.streamText(parsedInput, {
       userId,
       conversationId,
@@ -69,6 +131,7 @@ export async function POST(req: Request) {
       onFinish: session.onFinish,
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("[API] Chat error:", error);
     return jsonError(500, "Internal server error");
   }

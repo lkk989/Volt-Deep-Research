@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check, Terminal, Zap, Shield, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 
 const PLANS = [
@@ -69,18 +70,16 @@ export function PricingCommandCenter() {
       <div className="flex justify-center">
         <div className="p-1 rounded-xl bg-white/5 border border-white/10 flex gap-1">
           {["monthly", "yearly"].map((cycle) => (
-            <button
+            <Button
               key={cycle}
+              size="sm"
+              variant={billingCycle === cycle ? "default" : "ghost"}
               onClick={() => setBillingCycle(cycle as any)}
-              className={cn(
-                "px-6 py-2 rounded-lg text-xs font-mono transition-all duration-300",
-                billingCycle === cycle 
-                    ? "bg-emerald-600 text-white shadow-lg" 
-                    : "text-slate-500 hover:text-white"
-              )}
+              aria-pressed={billingCycle === cycle}
+              className={cn("px-6 py-2 rounded-lg text-xs font-mono transition-all duration-300", billingCycle === cycle ? "shadow-lg" : "")}
             >
               {cycle.toUpperCase()}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

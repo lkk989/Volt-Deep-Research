@@ -2,9 +2,17 @@
 
 ## Current Focus
 
-**Memory Bank Initialization** - Setting up the memory bank system for context persistence across sessions.
+**Landing Page Overhaul & UI/UX Optimization** - Developing a high-performance, interactive landing page demonstrating agent orchestration and research capabilities.
 
 ## Recent Changes
+
+### 2026-01-21
+
+- **Landing Page Overhaul**: Significant update to hero, feature, and showcase components.
+- **Scroll Sync**: Integrated Lenis smooth scrolling with GSAP ScrollTrigger for production-grade animations.
+- **Interactive UI**: Added `use-magnetic.ts` hook for interactive cursor behaviors.
+- **Component Refinement**: Production-grade implementations of `MissionControlHero`, `DomainSwitcher`, `OrchestrationLayers`, and `StyleNodeEditor`.
+- **Infrastructure**: Standardized on Tailwind v4 patterns and `@gsap/react` for complex orchestrations.
 
 ### 2025-11-27
 
@@ -14,13 +22,24 @@
 
 ## Active Decisions
 
-### 1. Memory Bank Structure
+### 1. Frontend Animation Stack
+
+- **GSAP + @gsap/react**: Primary engine for complex, high-performance UI animations.
+- **Lenis**: Used for smooth scrolling, synchronized with GSAP ScrollTrigger via the global ticker.
+- **Tailwind v4**: Utilizing the latest CSS-first approach for styling and utility management.
+
+### 2. UI Primitive Strategy
+
+- **Interactive Hooks**: Custom hooks like `use-magnetic` for consistent interactive polish.
+- **Node-based Visualization**: Using `@xyflow/react` for visualizing agent orchestration and data flows.
+
+### 3. Memory Bank Structure
 
 - Using `/memory-bank/` folder for global context
 - Feature-specific context goes in `/memory-bank/<feature>/`
 - Following Kiro-Lite workflow: PRD → Design → Tasks → Code
 
-### 2. Agent Configuration
+### 4. Agent Configuration
 
 - Director agent supervises all sub-agents
 - Each agent has specialized tools and memory
@@ -51,4 +70,4 @@
 
 ---
 
-*Last Updated: 2025-11-27
+*Last Updated: 2026-01-21

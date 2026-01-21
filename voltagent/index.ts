@@ -1,5 +1,4 @@
-import { registerCopilotKitRoutes } from "@voltagent/ag-ui";
-import { VoltAgent, VoltOpsClient } from "@voltagent/core";
+import { VoltAgent, VoltOpsClient, createTriggers } from "@voltagent/core";
 
 import { voltlogger } from "./config/logger.js";
 import { assistantAgent } from "./agents/assistant.agent.js";
@@ -83,5 +82,56 @@ export const voltAgent = new VoltAgent({
   voltOpsClient, // enables automatic forwarding
   mcpServers: {mcpServer},
   a2aServers: {a2aServer},
+  triggers: createTriggers((on) => {
+    // Airtable integration
+  //  on.airtable.recordCreated(({ payload, agents }) => {
+  //    console.log("New Airtable record:", payload);
+  //  });
+    // GitHub integration
+    on.github.create(({ payload, agents }) => {
+      console.log("New GitHub issue:", payload);
+      console.log("GitHub issue created by agents:", agents);
+    });
+    on.github.any(({ payload, agents }) => {
+      console.log("GitHub event received:", payload);
+      console.log("GitHub event received by agents:", agents);
+    });
+    on.github.fork(({ payload, agents }) => {
+      console.log("GitHub fork event received:", payload);
+      console.log("GitHub fork event received by agents:", agents);
+    });
+    // Cron integration
+    on.cron.schedule(({ payload, agents }) => {
+      console.log("Hourly cron triggered:", payload);
+      console.log("Cron event handled by agents:", agents);
+    });
+
+    // Gmail integration
+    on.gmail.newEmail(({ payload, agents }) => {
+      console.log("Gmail email received:", payload);
+      console.log("Gmail email received by agents:", agents);
+    });
+
+    // Google Drive integration
+    on.googleDrive.fileChanged(({ payload, agents }) => {
+      console.log("Google Drive file changed:", payload);
+      console.log("Google Drive file changed handled by agents:", agents);
+    });
+    on.googleDrive.folderChanged(({ payload, agents }) => {
+      console.log("Google Drive file created:", payload);
+      console.log("Google Drive file created handled by agents:", agents);
+    });
+
+    // Google Calendar integration
+    on.googleCalendar.eventCreated(({ payload, agents }) => {
+      console.log("Google Calendar event created:", payload);
+      console.log("Google Calendar event created handled by agents:", agents);
+    });
+
+    // Webhook integration
+   // on.webhook.received(({ payload, agents }) => {
+   //   console.log("Webhook received:", payload);
+   // });
+  }),
 });
 

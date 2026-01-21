@@ -28,6 +28,11 @@
         "./*"
       ]
     },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "**/*.ts",
@@ -38,6 +43,7 @@
     "app/**/*.{ts,tsx}",
     "prettier.config.js",
     "vitest.config.ts",
+    "postcss.config.mjs",
     "eslint.config.js",
     "voltagent/**/*.{ts,tsx}",
     "/src/**/*.{ts,tsx}",

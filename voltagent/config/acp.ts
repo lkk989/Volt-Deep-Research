@@ -16,7 +16,7 @@ export const ACPgemini = createACPProvider({
         name: 'filesystem',
         command: 'npx',
         args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'],
-      },
+      } as any,
     ],
   },
 });

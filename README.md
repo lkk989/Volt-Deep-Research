@@ -39,56 +39,57 @@ Mastervolt Deep Research is a sophisticated multi-agent orchestration system bui
 
 ### Key Features
 
-- **🤖 Multi-Agent Orchestration** - Director-supervised coordination of 7 specialized agents
+- **🤖 Multi-Agent Orchestration** - PlanAgent-supervised coordination of 14+ specialized agents
 - **🧠 Semantic Memory** - LibSQL-backed vector storage with Google text embeddings
 - **🔍 Custom Web Scraping** - Purpose-built web scraper toolkit for research data collection
 - **📊 Data Analysis** - ArXiv integration, data conversion, filesystem operations, and visualization
 - **✅ Fact Checking** - Automated verification with custom claim checking and bias detection tools
 - **📝 Report Generation** - PhD-level research reports with citations and structured formatting
+- **🎨 Rich AI UI System** - Specialized `ai-elements` for visualizing agent thoughts, tool executions, and artifacts
+- **👨‍💻 Expanded Agent Suite** - New specialized agents for Coding, Data Science, and Content Curation
+- **💬 Interactive Chat Interface** - Built-in Next.js chat interface for real-time agent interaction
 - **🔄 A2A Communication** - Agent-to-agent message passing and shared state management
 - **📈 Observability** - OpenTelemetry tracing with VoltOps platform integration
 - **🎯 Type Safety** - Zod schema validation throughout the workflow chain
 
 ## Architecture
 
-
 ### Multi-Agent Workflow
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'background': 'transparent', 'primaryColor': '#8B5CF6', 'lineColor': '#3B82F6', 'primaryTextColor': '#ffffff', 'nodeBkg': '#0b0b0d', 'clusterBkg': 'transparent', 'edgeLabelBackground': 'transparent', 'sectionBkgColor': 'transparent', 'altSectionBkgColor': 'transparent', 'textColor': '#ffffff', 'fontFamily':'"Inter", Arial, sans-serif', 'stroke': '#3B82F6' }}}%%
 graph TB
-    User[User] -->|Submits Research Topic| Director[Director Agent]
-    Director -->|Generates Queries| Assistant[Assistant Agent]
-    Director -->|Scrapes Web Data| Scrapper[Scrapper Agent]
-    Director -->|Analyzes Data| DataAnalyzer[Data Analyzer Agent]
-    Director -->|Verifies Facts| FactChecker[Fact Checker Agent]
-    Director -->|Synthesizes Info| Synthesizer[Synthesizer Agent]
-    Director -->|Writes Report| Writer[Writer Agent]
-    
+    User[User] -->|Submits Research Topic| PlanAgent[Plan Agent]
+    PlanAgent -->|Generates Queries| Assistant[Assistant Agent]
+    PlanAgent -->|Scrapes Web Data| Scrapper[Scrapper Agent]
+    PlanAgent -->|Analyzes Data| DataAnalyzer[Data Analyzer Agent]
+    PlanAgent -->|Verifies Facts| FactChecker[Fact Checker Agent]
+    PlanAgent -->|Synthesizes Info| Synthesizer[Synthesizer Agent]
+    PlanAgent -->|Writes Report| Writer[Writer Agent]
+
     Scrapper -->|Web Content| DataAnalyzer
     DataAnalyzer -->|Insights| Synthesizer
     FactChecker -->|Verified Claims| Synthesizer
     Synthesizer -->|Structured Data| Writer
     Writer -->|Final Report| User
-    
+
     subgraph "Memory Layer"
         Memory[(LibSQL Memory)]
         Vector[(Vector Store)]
     end
-    
-    Director -.->|Stores Context| Memory
+
+    PlanAgent -.->|Stores Context| Memory
     Assistant -.->|Embeddings| Vector
     Writer -.->|Retrieves| Memory
-    
+
     subgraph "Observability"
         VoltOps[VoltOps Platform]
         Telemetry[(Traces DB)]
     end
-    
-    Director -.->|Metrics| Telemetry
+
+    PlanAgent -.->|Metrics| Telemetry
     Telemetry -.->|Syncs| VoltOps
 ```
-
 
 ### Tool & Service Integration
 
@@ -98,13 +99,13 @@ graph LR
     subgraph "Agents Layer"
         A1[Assistant Agent]
         A2[Writer Agent]
-        A3[Director Agent]
+        A3[Plan Agent]
         A4[Data Analyzer]
         A5[Fact Checker]
         A6[Synthesizer]
         A7[Scrapper]
     end
-    
+
     subgraph "Tools & Toolkits"
         T1[Reasoning Toolkit]
         T2[Debug Tool]
@@ -114,13 +115,13 @@ graph LR
         T6[Filesystem Toolkit]
         T7[Visualization Toolkit]
     end
-    
+
     subgraph "External Services"
         E1[Google AI / Gemini]
         E2[OpenAI]
         E3[MCP]
     end
-    
+
     A1 --> T1
     A1 --> T2
     A3 --> T1
@@ -129,7 +130,7 @@ graph LR
     A4 --> T7
     A7 --> T4
     A7 --> T6
-    
+
     A1 --> E1
     A2 --> E1
     A3 --> E1
@@ -137,7 +138,7 @@ graph LR
     A5 --> E1
     A6 --> E1
     A7 --> E1
-    
+
     A4 --> E2
     A3 --> E3
 ```
@@ -180,8 +181,11 @@ GOOGLE_GENERATIVE_AI_API_KEY='your_google_generative_ai_api_key_here'
 ### Running the System
 
 ```bash
-# Development mode with auto-reload
+# Development mode with auto-reload (Agents)
 npm run dev
+
+# Start Next.js UI (Chat Interface)
+npm run next
 
 # Build for production
 npm run build
@@ -192,30 +196,63 @@ npm start
 
 ### Interacting with Agents
 
-1. Open the [VoltOps Platform](https://console.voltagent.dev)
-2. Navigate to **Workflows** → **Research Assistant Workflow**
-3. Submit a research topic:
-   - "Latest breakthroughs in quantum computing"
-   - "Impact of generative AI on software development"
-   - "Advances in sustainable energy storage"
-   - "Future of edge computing architectures"
+You can interact with the agents through the built-in Chat Interface:
+
+1. Start the Next.js application: `npm run next`
+2. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. Use the chat interface to submit research topics
+
+Alternatively, use the [VoltOps Platform](https://console.voltagent.dev) for workflow management.
 
 ## Agent Capabilities
 
-### Director Agent
+### Plan Agent (Deep Research Agent)
 
-**Purpose**: Orchestrates the entire research workflow and coordinates all specialized agents
+**Purpose**: Orchestrates the entire research workflow and coordinates all specialized agents. Replaces the previous Director Agent.
 
 **Tools**:
 
 - Reasoning Toolkit (think-only mode)
+- Filesystem Toolkit (ls, read, write, edit, grep)
 
 **Key Features**:
 
-- Supervises 6 sub-agents
+- Supervises 6+ sub-agents
 - Custom handoff guidelines for workflow optimization
 - Full stream event forwarding for real-time monitoring
-- Lower temperature (0.3) for consistent orchestration decisions
+- Manages research tasks and subtasks
+
+### Coding Agent
+
+**Purpose**: Implements code features, fixes bugs, and refactors code with a focus on TypeScript and VoltAgent patterns.
+
+**Tools**:
+
+- `code_analysis_toolkit` - Structural analysis of codebase
+- `filesystem_toolkit` - File operations
+- `git_toolkit` - Version control operations
+- `test_toolkit` - Test execution and validation
+
+**Key Features**:
+
+- Low temperature (0.2) for precision
+- Specialized prompts for implementation tasks
+- Lifecycle hooks for operation tracking
+
+### Data Scientist Agent
+
+**Purpose**: Performs statistical analysis, exploratory data analysis (EDA), and generates data-driven hypotheses.
+
+**Tools**:
+
+- `data_processing_toolkit` - Data cleaning, normalization, and aggregation
+- `think_only_toolkit` - Reasoning capabilities
+
+**Key Features**:
+
+- Dynamic model selection (Flash vs. Preview) based on complexity
+- Statistical methodology enforcement (p-values, effect sizes)
+- Automated data quality assessment
 
 ### Assistant Agent
 
@@ -263,8 +300,8 @@ npm start
 - `extract_key_insights` - Insight extraction with focus areas
 - Reasoning Toolkit (think-only mode)
 - ArXiv Toolkit:
-  - `arxiv_search` - Academic paper search via arXiv API
-  - `arxiv_pdf_extract` - PDF text extraction with page limits
+    - `arxiv_search` - Academic paper search via arXiv API
+    - `arxiv_pdf_extract` - PDF text extraction with page limits
 
 **Key Features**:
 
@@ -329,39 +366,37 @@ npm start
 
 ```bash
 src/
-├── index.ts              # VoltAgent initialization & workflow setup
-├── agents/               # Multi-agent system
-│   ├── assistant.agent.ts     # Query generation (get_weather tool, reasoning)
-│   ├── writer.agent.ts        # Report composition
-│   ├── director.agent.ts      # Orchestration (reasoning toolkit)
-│   ├── data-analyzer.agent.ts # Data analysis (analyze_data_patterns, extract_key_insights, arxiv)
-│   ├── fact-checker.agent.ts  # Verification (verify_claim, cross_reference_sources, detect_bias)
-│   ├── synthesizer.agent.ts   # Synthesis (synthesize_information, resolve_contradictions, create_unified_narrative)
-│   ├── scrapper.agent.ts      # Web scraping (web_scraper_toolkit)
-│   └── prompts.ts
-├── config/               # Configuration modules
-│   ├── logger.ts
-│   ├── mcp.ts           # Filesystem & Hugging Face MCP
-│   ├── mcpserver.ts
-│   ├── google.ts
-│   ├── scorers.ts
-│   └── supabase.ts
-├── tools/                # Custom tools & toolkits
-│   ├── reasoning-tool.ts        # Multiple reasoning toolkit variants
-│   ├── debug-tool.ts            # Context inspection (log_debug_info)
-│   ├── arxiv-toolkit.ts         # arXiv search & PDF extraction
-│   ├── web-scraper-toolkit.ts   # Comprehensive web scraping (5 tools)
-│   ├── data-conversion-toolkit.ts  # CSV/JSON/XML conversion
-│   ├── filesystem-toolkit.ts    # Glob, batch read, file stats
-│   └── visualization-toolkit.ts # Excalidraw, SVG, JSON conversion
-├── a2a/                  # Agent-to-agent communication
-│   ├── server.ts        # A2A server setup
-│   └── store.ts         # Supabase-backed task storage
-├── workflows/            # Workflow definitions
-└── experiments/          # Evaluation experiments
-    ├── research-regression.experiment.ts
-    ├── synthesis-quality.experiment.ts
-    └── scorers/
+├── app/                  # Next.js App Router (UI)
+│   ├── api/              # API Routes (Chat, Health, Messages)
+│   ├── dashboard/        # User Dashboard & Protected Routes
+│   ├── documentation/    # Project Documentation
+│   └── ...               # Feature pages (About, Pricing, Features)
+├── components/           # React Components
+│   ├── ai-elements/      # AI UI System (Conversation, Tools, Artifacts)
+│   ├── ui/               # Design System (Shadcn/Radix primitives)
+│   └── chat-interface.tsx # Main Chat Interface
+├── lib/                  # Shared Utilities
+│   ├── resumable-stream.ts # Resumable stream adapters
+│   └── utils.ts          # Common helpers
+├── voltagent/            # Multi-agent system (Backend)
+│   ├── index.ts          # VoltAgent initialization
+│   ├── agents/           # 14+ Specialized Agents
+│   │   ├── plan.agent.ts          # Deep Research Orchestrator
+│   │   ├── coding.agent.ts        # Coding & Implementation
+│   │   ├── data-scientist.agent.ts # Data Analysis & Modeling
+│   │   ├── judge.agent.ts         # Quality Evaluation
+│   │   └── ... (assistant, writer, scrapper, etc.)
+│   ├── config/           # Configuration
+│   │   ├── mcp.ts           # MCP Client Config
+│   │   ├── observability.ts # OpenTelemetry Setup
+│   │   └── ...
+│   ├── tools/            # 15+ Domain Toolkits
+│   │   ├── web-scraper-toolkit.ts
+│   │   ├── knowledge-graph-toolkit.ts
+│   │   ├── code-analysis-toolkit.ts
+│   │   └── ...
+│   ├── workflows/        # Workflow Chains
+│   └── experiments/      # Live Evals & Regression Tests
 ```
 
 ## Development
@@ -395,21 +430,23 @@ npm run eval
 
 ## Key Technologies
 
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| **VoltAgent Core** | 1.1.37 | Multi-agent orchestration framework |
-| **TypeScript** | 5.9.3 | Type-safe language with strict mode |
-| **AI SDK** | 5.0.81 | Multi-model AI provider abstraction |
-| **Google AI SDK** | 2.0.24 | Gemini model integration (primary) |
-| **OpenAI SDK** | 2.0.53 | GPT model integration (optional) |
-| **LibSQL** | 1.0.10 | SQLite-based memory & vector storage |
-| **Zod** | 4.1.12 | Runtime schema validation |
-| **Vitest** | 4.0.3 | Testing framework |
-| **OpenTelemetry** | 0.207.0 | Observability & tracing |
-| **Cheerio** | 1.1.2 | HTML parsing for web scraping |
-| **JSDOM** | 27.0.1 | DOM simulation |
-| **Turndown** | 7.2.2 | HTML to Markdown conversion |
-| **fast-xml-parser** | 5.3.0 | XML parsing and building |
+| Technology          | Version | Purpose                              |
+| ------------------- | ------- | ------------------------------------ |
+| **VoltAgent Core**  | ^2.1.5  | Multi-agent orchestration framework  |
+| **TypeScript**      | 5.9.3   | Type-safe language with strict mode  |
+| **AI SDK**          | ^6.0.42 | Multi-model AI provider abstraction  |
+| **Google AI SDK**   | ^3.0.10 | Gemini model integration (primary)   |
+| **OpenAI SDK**      | ^3.0.12 | GPT model integration (optional)     |
+| **LibSQL**          | ^2.0.2  | SQLite-based memory & vector storage |
+| **Zod**             | 4.1.13  | Runtime schema validation            |
+| **Vitest**          | 4.0.17  | Testing framework                    |
+| **OpenTelemetry**   | 0.210.0 | Observability & tracing              |
+| **Cheerio**         | 1.1.2   | HTML parsing for web scraping        |
+| **JSDOM**           | 27.4.0  | DOM simulation                       |
+| **Turndown**        | 7.2.2   | HTML to Markdown conversion          |
+| **fast-xml-parser** | 5.3.3   | XML parsing and building             |
+| **Next.js**         | 16.1.4  | React Framework for UI               |
+| **React**           | 19.2.3  | UI Library                           |
 
 ## Advanced Features
 
@@ -448,25 +485,57 @@ Type-safe workflow composition with Zod schemas:
 
 ```typescript
 const workflow = createWorkflowChain({
-  id: "research-assistant",
-  name: "Research Assistant Workflow",
-  purpose: "Comprehensive research automation",
-  input: z.object({ topic: z.string() }),
-  result: z.object({ text: z.string() }),
+    id: 'research-assistant',
+    name: 'Research Assistant Workflow',
+    purpose: 'Comprehensive research automation',
+    input: z.object({ topic: z.string() }),
+    result: z.object({ text: z.string() }),
 })
-  .andThen({ id: "research", execute: async ({ data }) => { /* ... */ } })
-  .andThen({ id: "writing", execute: async ({ data, getStepData }) => { /* ... */ } })
+    .andThen({
+        id: 'research',
+        execute: async ({ data }) => {
+            /* ... */
+        },
+    })
+    .andThen({
+        id: 'writing',
+        execute: async ({ data, getStepData }) => {
+            /* ... */
+        },
+    })
 ```
 
 ### Custom Tools Overview
 
 #### Web Scraper Toolkit (5 tools)
 
+- **Lightweight Stack**: Uses JSDOM, Cheerio, and Turndown (no headless browser required)
 - Full webpage to Markdown conversion
 - Code block extraction with context
 - Structured data extraction (headings, links, tables, lists)
 - Clean text extraction
 - Batch scraping with recursive link following
+
+#### Data Processing Toolkit (6 tools)
+
+- **normalize_data**: Flatten nested structures
+- **detect_format**: Auto-detect JSON/CSV/XML/YAML
+- **convert_format**: Format conversion
+- **validate_schema**: Schema validation with error reporting
+- **aggregate_data**: Grouping and statistics
+- **clean_data**: Handling missing values and duplicates
+
+#### Code Analysis Toolkit
+
+- TypeScript structural analysis (via `ts-morph`)
+- Python code analysis
+- Symbol extraction and reference finding
+
+#### Knowledge Graph Toolkit
+
+- Graph creation and management
+- Relationship mapping
+- Centrality and community detection analysis
 
 #### Data Analysis Tools (2 tools)
 

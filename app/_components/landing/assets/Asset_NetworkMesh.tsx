@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -13,14 +13,28 @@ interface AssetProps {
 export const Asset_NetworkMesh = React.memo(({ className, color = "emerald" }: AssetProps) => {
   const svgRef = useRef<SVGSVGElement>(null);
   
-  // Generate random nodes deterministically
-  const nodes = useMemo(() => {
-    return Array.from({ length: 6 }).map((_, i) => ({
-      x: 20 + Math.random() * 60,
-      y: 20 + Math.random() * 60,
-      r: 3 + Math.random() * 3,
-      id: i
-    }));
+  // Use deterministic fixed nodes for SSR to avoid any randomness in server-rendered markup.
+  const INITIAL_NODES = [
+    { x: 38.673, y: 20.543, r: 3.297, id: 0 },
+    { x: 32.171, y: 24.921, r: 3.595, id: 1 },
+    { x: 51.881, y: 35.518, r: 4.368, id: 2 },
+    { x: 26.408, y: 40.077, r: 3.435, id: 3 },
+    { x: 37.881, y: 77.099, r: 5.021, id: 4 },
+    { x: 33.879, y: 45.992, r: 3.581, id: 5 },
+  ];
+
+  const [nodes, setNodes] = useState(INITIAL_NODES);
+
+  useEffect(() => {
+    // Only randomize positions on the client after mount to keep SSR output consistent.
+    setNodes((prev) =>
+      prev.map((n) => ({
+        ...n,
+        x: Number((n.x + (Math.random() - 0.5) * 20).toFixed(3)),
+        y: Number((n.y + (Math.random() - 0.5) * 20).toFixed(3)),
+        r: Number((3 + Math.random() * 3).toFixed(3)),
+      }))
+    );
   }, []);
 
   useGSAP(() => {
