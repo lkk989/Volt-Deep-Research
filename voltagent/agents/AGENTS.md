@@ -1,81 +1,41 @@
 # AGENTS.md - src/agents
 
-This file documents all agents defined in `src/agents` and their roles in the Mastervolt Deep Research system.
+This file documents all agents defined in `src/agents` and their roles.
 
 ## Overview
 
-The `agents` directory contains specialized VoltAgent agents that collaborate in a multi-agent workflow.
-
-All agents:
-
-- Use Google Gemini models by default.
-- Use LibSQL-backed memory (per-agent + shared vector store).
-- Follow strict TypeScript + Zod validation patterns.
-- Log via `voltlogger` and integrate with observability where configured.
+The `agents` directory contains specialized VoltAgent agents.
 
 ## Agents
 
-### assistant.agent.ts (`assistantAgent`)
+### Core Research Agents
 
-- id: `assistant`
-- Role: Generates effective search queries, interprets user intents, and coordinates initial research tasks.
-- Key:
-  - Uses reasoning toolkit.
-  - Example `get_weather` tool for demonstration.
+- **assistant.agent.ts**: Generates search queries, coordinates initial research.
+- **writer.agent.ts**: Produces long-form research reports.
+- **director.agent.ts**: Supervisor/orchestrator for the full workflow.
+- **data-analyzer.agent.ts**: Analyzes datasets and text for patterns.
+- **fact-checker.agent.ts**: Verifies claims and detects bias.
+- **synthesizer.agent.ts**: Synthesizes multi-source information.
+- **scrapper.agent.ts**: Web data acquisition.
 
-### writer.agent.ts (`writerAgent`)
+### Specialized Agents
 
-- id: `writer`
-- Role: Produces long-form, high-quality research reports in markdown based on curated inputs.
-- Key:
-  - Strong style/quality constraints; no conversational filler.
-  - Uses dedicated LibSQL memory for writing context.
+- **coding.agent.ts**: Coding assistance.
+- **code-reviewer.agent.ts**: Code review.
+- **judge.agent.ts**: Evaluation/judging.
+- **research-coordinator.agent.ts**: Orchestration and planning.
+- **plan.agent.ts**: Deep research planning.
+- **content-curator.agent.ts**: Content curation.
+- **data-scientist.agent.ts**: Deep analysis and modeling.
 
-### director.agent.ts (`directorAgent`)
+### Utilities
 
-- id: `director`
-- Role: Supervisor/orchestrator for the full research workflow.
-- Key:
-  - Manages sub-agents: Assistant, Writer, Data Analyzer, Fact Checker, Synthesizer, Scrapper.
-  - Applies custom guidelines for routing tasks between agents.
-
-### data-analyzer.agent.ts (`dataAnalyzerAgent`)
-
-- id: `data-analyzer`
-- Role: Analyzes datasets and textual inputs for patterns, trends, correlations, and anomalies.
-- Key tools:
-  - `analyze_data_patterns`
-  - `extract_key_insights`
-
-### fact-checker.agent.ts (`factCheckerAgent`)
-
-- id: `fact-checker`
-- Role: Verifies claims, cross-references sources, and detects bias.
-- Key tools:
-  - `verify_claim`
-  - `cross_reference_sources`
-  - `detect_bias`
-
-### synthesizer.agent.ts (`synthesizerAgent`)
-
-- id: `synthesizer`
-- Role: Synthesizes multi-source information, resolves contradictions, and creates unified narratives.
-- Key tools:
-  - `synthesize_information`
-  - `resolve_contradictions`
-  - `create_unified_narrative`
-
-### scrapper.agent.ts (`scrapperAgent`)
-
-- id: `scrapper`
-- Role: Dedicated web data acquisition agent using the web scraper toolkit.
-- Key:
-  - Responsible for ethical, structured scraping; feeds other agents.
+- **copilot.ts**: Integration with Copilot features.
+- **agentHooks.ts**: Lifecycle hooks for agents.
+- **prompts.ts**: Shared prompt templates.
 
 ## Usage Notes
 
-- New agents in this folder must:
-  - Follow the patterns from `assistant.agent.ts` and `director.agent.ts`.
-  - Use LibSQL memory with `.voltagent/{agent-id}-memory.db`.
-  - Use Zod for working memory schemas.
-  - Register with orchestration (e.g., via `directorAgent` or workflows) explicitly.
+- New agents must follow the patterns from `assistant.agent.ts`.
+- Use LibSQL memory with `.voltagent/{agent-id}-memory.db`.
+- Register with orchestration explicitly.

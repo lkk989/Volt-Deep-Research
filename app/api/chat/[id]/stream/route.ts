@@ -1,6 +1,6 @@
 import { getResumableStreamAdapter } from "@/lib/resumable-stream";
-// Import the agent instance
-import { agents } from "@/voltagent/index.js";
+import { deepAgent } from "@/voltagent/agents/plan.agent";
+import { voltlogger } from "@/voltagent/config/logger.js";
 import { safeStringify } from "@voltagent/internal/utils";
 import { createResumableChatSession } from "@voltagent/resumable-streams";
 
@@ -16,12 +16,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return jsonError(400, "conversationId is required");
   }
 
-  const userId = new URL(request.url).searchParams.get("userId");
-  if (!userId) {
+  const userIdParam = new URL(request.url).searchParams.get("userId");
+  if (userIdParam === null || userIdParam.trim().length === 0) {
     return jsonError(400, "userId is required");
   }
-  // Actual agent ID from the imported agent
-  const agentId = agents.id;
+  const userId = userIdParam.trim();
+  const agentId: string = deepAgent.id;
   const resumableStream = await getResumableStreamAdapter();
   const session = createResumableChatSession({
     adapter: resumableStream,
@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     return await session.resumeResponse();
   } catch (error) {
-    console.error("[API] Failed to resume stream:", error);
+    voltlogger.error("[API] Failed to resume stream", { error });
     return new Response(null, { status: 204 });
   }
 }

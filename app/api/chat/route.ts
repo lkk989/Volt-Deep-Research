@@ -1,8 +1,10 @@
 import { getResumableStreamAdapter } from "@/lib/resumable-stream";
-import { agent } from "@/voltagent";
+import { deepAgent } from "@/voltagent/agents/plan.agent";
+import { voltlogger } from "@/voltagent/config/logger.js";
 import { setWaitUntil } from "@voltagent/core";
 import { safeStringify } from "@voltagent/internal/utils";
 import { createResumableChatSession } from "@voltagent/resumable-streams";
+import type { UIMessage } from "ai";
 import { after } from "next/server";
 
 const jsonError = (status: number, message: string) =>
@@ -13,28 +15,26 @@ const jsonError = (status: number, message: string) =>
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const messages = Array.isArray(body?.messages) ? body.messages : [];
-    const message = body?.message;
-    const options =
-      body?.options && typeof body.options === "object"
-        ? (body.options as Record<string, unknown>)
-        : undefined;
-    const conversationId =
-      typeof options?.conversationId === "string" ? options.conversationId : undefined;
-    const userId = typeof options?.userId === "string" ? options.userId : undefined;
-    const input =
-      message !== undefined ? (typeof message === "string" ? message : [message]) : messages;
+    const body = (await req.json()) as Record<string, unknown>;
+    const messages = Array.isArray(body.messages) ? (body.messages as UIMessage[]) : [];
+    const message = body.message as UIMessage | string | undefined;
+    const input = body.input as UIMessage[] | string | undefined;
+    const options = (isRecord(body.options)) ? body.options : undefined;
+    const conversationIdParam = getString(options, "conversationId");
+    const userIdParam = getString(options, "userId");
+    const conversationId = conversationIdParam.trim();
+    const userId = userIdParam.trim();
+    const parsedInput = resolveInput(input, message, messages);
 
-    if (!conversationId) {
+    if (conversationId.length === 0) {
       return jsonError(400, "options.conversationId is required");
     }
 
-    if (!userId) {
+    if (userId.length === 0) {
       return jsonError(400, "options.userId is required");
     }
 
-    if (isEmptyInput(input)) {
+    if (isEmptyInput(parsedInput)) {
       return jsonError(400, "Message input is required");
     }
 
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // This ensures spans are flushed in the background without blocking the response
     setWaitUntil(after);
 
-    const agentId = agent.id;
+    const agentId = deepAgent.id;
     const resumableStream = await getResumableStreamAdapter();
     const session = createResumableChatSession({
       adapter: resumableStream,
@@ -54,12 +54,12 @@ export async function POST(req: Request) {
     try {
       await session.clearActiveStream();
     } catch (error) {
-      console.error("[API] Failed to clear active resumable stream:", error);
+      voltlogger.error("[API] Failed to clear active resumable stream", { error });
     }
 
     // Stream text from the supervisor agent with proper context
     // The agent accepts UIMessage[] directly
-    const result = await agent.streamText(input, {
+    const result = await deepAgent.streamText(parsedInput, {
       userId,
       conversationId,
     });
