@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import React, { useRef } from "react";
+import { Badge } from "@/components/ui/badge";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -62,12 +63,7 @@ export function AboutTimeline() {
         )}>
           {/* Content */}
           <div className="flex-1 text-center md:text-left md:px-12">
-            <div className={cn(
-              "inline-block px-4 py-1 rounded-full text-xs font-mono mb-4 border",
-              m.color === "emerald" ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" : "border-blue-500/30 bg-blue-500/5 text-blue-400"
-            )}>
-              {m.year}
-            </div>
+            <Badge variant="ghost" className={cn("px-4 py-1 text-xs font-mono mb-4", m.color === "emerald" ? "text-emerald-400" : "text-blue-400")}>{m.year}</Badge>
             <h3 className="text-3xl font-bold text-white mb-4 tracking-tight">{m.title}</h3>
             <p className="text-slate-400 leading-relaxed max-w-md mx-auto md:mx-0">
               {m.description}

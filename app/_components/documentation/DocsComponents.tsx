@@ -5,6 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Terminal, Code2, BookOpen, ChevronRight, Search, Zap, Network } from "lucide-react";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 
 const DOCS_NAV = [
   {
@@ -43,10 +45,10 @@ export function DocsSidebar({ activeSection }: { activeSection: string }) {
         <div className="p-4">
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                <input 
-                    type="text" 
-                    placeholder="Search docs..." 
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-xs font-mono focus:outline-none focus:border-emerald-500/50"
+                <Input 
+                    type="text"
+                    placeholder="Search docs..."
+                    className="w-full pl-9 pr-4 text-xs font-mono"
                 />
             </div>
         </div>
@@ -88,10 +90,12 @@ export function DocsSidebar({ activeSection }: { activeSection: string }) {
 
 export function DocCard({ title, text, icon: Icon }: any) {
     return (
-        <div className="p-6 rounded-2xl border border-white/5 bg-white/5 space-y-3 hover:border-white/20 transition-all group">
-            <div className="text-emerald-500 group-hover:scale-110 transition-transform"><Icon size={20} /></div>
-            <h4 className="font-bold text-white">{title}</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">{text}</p>
-        </div>
+        <Card className="p-6 space-y-3 hover:border-white/20 transition-all">
+            <CardContent className="p-0">
+                <div className="text-emerald-500 group-hover:scale-110 transition-transform"><Icon size={20} /></div>
+                <h4 className="font-bold text-white">{title}</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">{text}</p>
+            </CardContent>
+        </Card>
     )
 }

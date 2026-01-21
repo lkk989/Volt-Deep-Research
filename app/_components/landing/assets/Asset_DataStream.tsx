@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -12,6 +12,13 @@ interface AssetProps {
 
 export const Asset_DataStream = React.memo(({ className, color = "emerald" }: AssetProps) => {
   const svgRef = useRef<SVGSVGElement>(null);
+
+  const [bits, setBits] = useState<string[]>(() => Array.from({ length: 12 }, () => "0"));
+
+  useEffect(() => {
+    // Populate with random bits only after mount to avoid SSR/client mismatch
+    setBits(Array.from({ length: 12 }, () => (Math.random() > 0.5 ? "1" : "0")));
+  }, []);
 
   useGSAP(() => {
     if (!svgRef.current) return;
@@ -54,7 +61,8 @@ export const Asset_DataStream = React.memo(({ className, color = "emerald" }: As
         <rect width="100" height="100" fill="url(#smallGrid)" />
 
         {/* Data Bits */}
-        {Array.from({ length: 12 }).map((_, i) => (
+        {/* Initial render uses deterministic placeholder bits to avoid hydration mismatch. */}
+        {bits.map((b, i) => (
             <text
                 key={i}
                 className="data-bit font-mono text-[8px]"
@@ -63,10 +71,10 @@ export const Asset_DataStream = React.memo(({ className, color = "emerald" }: As
                 fill={colorHex}
                 opacity="0"
             >
-                {Math.random() > 0.5 ? "1" : "0"}
+                {b}
             </text>
         ))}
-         {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
             <rect
                 key={`rect-${i}`}
                 className="data-bit"

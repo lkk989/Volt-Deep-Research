@@ -7,7 +7,7 @@ import { LandingFooter } from "./_components/landing/LandingFooter";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col bg-black">
+    <main className="flex min-h-screen flex-col bg-background text-foreground">
       <LandingNavbar />
       
       <MissionControlHero />

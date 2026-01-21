@@ -38,11 +38,11 @@ export const voltObservability = new VoltAgentObservability({
     scheduledDelayMillis: 4000,
     exportTimeoutMillis: 30000,
   },
-  spanProcessors: [
-    createLangfuseSpanProcessor({
-      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-      secretKey: process.env.LANGFUSE_SECRET_KEY,
-      baseUrl: process.env.LANGFUSE_BASE_URL, // Optional for self-hosted
-    }),
-  ],
+ // spanProcessors: [
+   // createLangfuseSpanProcessor({
+  //    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+   //   secretKey: process.env.LANGFUSE_SECRET_KEY,
+  //    baseUrl: process.env.LANGFUSE_BASE_URL, // Optional for self-hosted
+   // }),
+//  ],
 });

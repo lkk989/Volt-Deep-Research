@@ -70,7 +70,28 @@ new Agent({
 })
 ```
 
-### 2. Workflow Chain Pattern
+### 2. Frontend Animation Orchestration (New)
+
+Synchronizing smooth scrolling with complex animations using GSAP and Lenis.
+
+```typescript
+// Pattern: Lenis + GSAP Sync in SmoothScroll.tsx
+const lenis = new Lenis({...});
+lenis.on("scroll", ScrollTrigger.update);
+gsap.ticker.add((time) => lenis.raf(time * 1000));
+```
+
+### 3. Interactive UI Primitives
+
+Encapsulating interactive behaviors into reusable hooks.
+
+```typescript
+// Pattern: useMagnetic for interactive elements
+const ref = useMagnetic(strength);
+// Uses gsap.quickTo for high-performance position updates
+```
+
+### 4. Workflow Chain Pattern
 
 Type-safe workflow composition with Zod schemas:
 
@@ -115,7 +136,7 @@ workingMemory: {
 ## Component Relationships
 
 | Component | Depends On | Used By |
-|-----------|------------|---------|
+| --- | --- | --- |
 | Director | All agents, Reasoning | VoltAgent |
 | Assistant | Reasoning, Debug | Director |
 | Writer | Memory | Director |
@@ -160,4 +181,4 @@ workingMemory: {
 
 ---
 
-*Last Updated: 2025-11-27
+*Last Updated: 2026-01-21
