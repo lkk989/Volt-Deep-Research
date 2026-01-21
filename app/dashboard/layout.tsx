@@ -1,37 +1,14 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
-import "../globals.css";
+import { Sidebar } from './_components/sidebar'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "VoltAgent AI Elements Dashboard",
-  description: "AI Elements chat UI with VoltAgent and Next.js",
-};
-
-export default function Layout({
-  children,
+export default function DashboardLayout({
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode
 }>) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
-        {children}
-        <Toaster position="top-center" richColors />
-      </body>
-    </html>
-  );
+    return (
+        <div className="flex h-screen bg-background">
+            <Sidebar />
+            <main className="flex-1 overflow-hidden">{children}</main>
+        </div>
+    )
 }
