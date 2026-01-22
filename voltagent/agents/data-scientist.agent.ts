@@ -1,12 +1,12 @@
-import { Agent, Memory, AiSdkEmbeddingAdapter, createHooks } from "@voltagent/core"
 import { google } from "@ai-sdk/google"
+import { Agent, AiSdkEmbeddingAdapter, createHooks, Memory } from "@voltagent/core"
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
-import { voltlogger } from "../config/logger.js"
-import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
-import { dataProcessingToolkit } from "../tools/data-processing-toolkit.js"
 import z from "zod"
-import { voltObservability } from "../config/observability.js"
 import { sharedMemory } from "../config/libsql.js"
+import { voltlogger } from "../config/logger.js"
+import { voltObservability } from "../config/observability.js"
+import { dataProcessingToolkit } from "../tools/data-processing-toolkit.js"
+import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 
 const dataScientistMemory = new Memory({
   storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/data-scientist-memory.db", logger: voltlogger }),
@@ -68,11 +68,9 @@ export const dataScientistAgent = new Agent({
   name: "Data Scientist",
   purpose: "Perform statistical analysis, extract insights from datasets, and generate data-driven hypotheses",
   model: ({ context }) => {
-    const complexity = context?.get("complexity") ?? "standard"
-    if (complexity === "high") {
-      return google("gemini-2.5-flash-preview-06-2025")
-    }
-    return google("gemini-2.5-flash-lite-preview-06-2025")
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
   },
   instructions: ({ context }) => {
     const analysisType = context?.get("analysisType") ?? "exploratory"

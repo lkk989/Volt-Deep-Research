@@ -5,6 +5,7 @@ import { sharedMemory } from '@/voltagent/config/libsql.js'
 import { setWaitUntil } from '@voltagent/core'
 import { safeStringify } from '@voltagent/internal/utils'
 import { createResumableChatSession } from '@voltagent/resumable-streams'
+import { messageHelpers } from '@voltagent/core'
 import type { UIMessage } from 'ai'
 import { generateId } from 'ai'
 import { after } from 'next/server'
@@ -162,7 +163,17 @@ export async function POST(req: Request) {
             await sharedMemory.addMessage(userMessage, userId, conversationId)
         } else if (Array.isArray(parsedInput) && parsedInput.length > 0) {
             // Save all messages (user input + context)
-            await sharedMemory.addMessages(parsedInput, userId, conversationId)
+            // Use message helpers to ensure proper message format
+            const validMessages = parsedInput.filter((msg) =>
+                messageHelpers.hasContent(msg)
+            )
+            if (validMessages.length > 0) {
+                await sharedMemory.addMessages(
+                    validMessages,
+                    userId,
+                    conversationId
+                )
+            }
         }
 
         const result = await deepAgent.streamText(parsedInput, {

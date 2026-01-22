@@ -2,11 +2,11 @@ import { google } from "@ai-sdk/google";
 import { Agent, AiSdkEmbeddingAdapter, createTool, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
+import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { factCheckerPrompt } from "./prompts.js";
-import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for fact checker
 const factCheckerMemory = new Memory({
@@ -290,7 +290,11 @@ export const factCheckerAgent = new Agent({
   id: "fact-checker",
   name: "Fact Checker",
   purpose: "Verify information accuracy, detect bias, and ensure research integrity",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   instructions: factCheckerPrompt({
     standard: "multiple credible sources",
     sourceRequirements: "authoritative, recent, unbiased",
