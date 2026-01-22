@@ -1,12 +1,12 @@
-import { Agent, Memory, AiSdkEmbeddingAdapter, createTool } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
+import { Agent, AiSdkEmbeddingAdapter, createTool, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { voltlogger } from "../config/logger.js";
 import z from "zod";
+import { sharedMemory } from "../config/libsql.js";
+import { voltlogger } from "../config/logger.js";
+import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt, synthesizerPrompt } from "./prompts.js";
-import { voltObservability } from "../config/observability.js";
-import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for synthesizer
 const synthesizerMemory = new Memory({
@@ -309,7 +309,11 @@ export const synthesizerAgent = new Agent({
   id: "synthesizer",
   name: "Synthesizer",
   purpose: "Combine multiple research streams, resolve contradictions, and create unified narratives",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   instructions: synthesizerPrompt({
     method: "thematic integration",
     resolution: "evidence-based reconciliation",

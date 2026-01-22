@@ -3,6 +3,7 @@ import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
 
+import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
@@ -13,7 +14,6 @@ import { agentPrompt } from "./prompts.js"; // kept single import
 import { scrapperAgent } from "./scrapper.agent.js";
 import { synthesizerAgent } from "./synthesizer.agent.js";
 import { writerAgent } from "./writer.agent.js";
-import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for director
 const directorMemory = new Memory({
@@ -53,7 +53,11 @@ export const directorAgent = new Agent({
   id: "director",
   name: "Director",
   purpose: "Orchestrate comprehensive research projects using specialized agents for optimal results",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   // Use a string representation of the PromptCreator to satisfy the expected instructions type
   instructions: agentPrompt({
     agentName: "Director",

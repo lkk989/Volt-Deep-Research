@@ -2,11 +2,11 @@ import { google } from "@ai-sdk/google";
 import { Agent, AiSdkEmbeddingAdapter, createTool, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
+import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt } from "./prompts.js";
-import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite for data analyzer
 const dataAnalyzerMemory = new Memory({
@@ -186,7 +186,11 @@ export const dataAnalyzerAgent = new Agent({
   id: "data-analyzer",
   name: "Data Analyzer",
   purpose: "Analyze research data, extract patterns and insights, and provide data-driven conclusions",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   instructions: dataAnalyzerPrompt({
     dataType: "research data",
     focus: "patterns and insights",

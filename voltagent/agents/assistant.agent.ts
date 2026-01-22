@@ -1,12 +1,12 @@
-import { Agent, Memory,  createTool, AiSdkEmbeddingAdapter } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
+import { Agent, AiSdkEmbeddingAdapter, Memory, createTool } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { voltlogger } from "../config/logger.js";
-import { assistantPrompt } from "./prompts.js";
 import z from "zod";
-import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { voltObservability } from "../config/observability.js";
 import { sharedMemory } from "../config/libsql.js";
+import { voltlogger } from "../config/logger.js";
+import { voltObservability } from "../config/observability.js";
+import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import { assistantPrompt } from "./prompts.js";
 
 // Local SQLite
 const assistantMemory = new Memory({
@@ -128,7 +128,11 @@ export const assistantAgent = new Agent({
   id: "assistant",
   name: "Assistant",
   purpose: "Generate effective search queries and coordinate research tasks",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   instructions: assistantPrompt({
     topic: "general research",
     strategy: "comprehensive",
@@ -180,7 +184,10 @@ export const assistantAgent = new Agent({
   stopWhen: undefined,
   markdown: false,
   voice: undefined,
-  context: undefined,
+  context: {
+    provider: 'google',
+    model: 'gemini-2.5-flash-lite-preview-09-2025',
+  },
   eval: {
     scorers: {},
   },

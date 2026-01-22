@@ -2,9 +2,9 @@ import { google } from "@ai-sdk/google";
 import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
+import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
-import { sharedMemory } from "../config/libsql.js";
 
 // Local SQLite
 const writerMemory = new Memory({
@@ -35,10 +35,10 @@ const writerMemory = new Memory({
 });
 
 export const writerAgent = new Agent({
-    id: "writer",
-    name: "Writer",
-    purpose: "To write comprehensive and accurate reports based on provided instructions and research. Also, to refine and structure information for clarity and impact.",
-    instructions: `You are a master writer with 15+ years experience. Your task is to write a comprehensive and accurate report based on the provided instructions and research.
+  id: "writer",
+  name: "Writer",
+  purpose: "To write comprehensive and accurate reports based on provided instructions and research. Also, to refine and structure information for clarity and impact.",
+  instructions: `You are a master writer with 15+ years experience. Your task is to write a comprehensive and accurate report based on the provided instructions and research.
     Ensure the report is well-structured, clear, and engaging.
 
     ## Instructions:
@@ -149,43 +149,47 @@ export const writerAgent = new Agent({
             - Style: Academic, Research-oriented, Comprehensiveness
     </patterns>
     `,
-    model: google("gemini-2.5-flash-preview-09-2025"),
-    hooks: {
-      onStart: ({ context }) => {
-        const opId = crypto.randomUUID();
-        context.context.set('opId', opId);
-        voltlogger.info(`[${opId}] Writer starting`);
-      },
-      onToolStart: ({ tool, context }) => {
-        const opId = context.context.get('opId') as string;
-        voltlogger.info(`[${opId}] tool: ${tool.name}`);
-      },
-      onToolEnd: ({ tool, error, context }) => {
-        const opId = context.context.get('opId') as string;
-        if (error) {
-          voltlogger.error(`[${opId}] tool ${tool.name} failed`);
-        }
-      },
-      onEnd: ({ output, error, context }) => {
-        const opId = context.context.get('opId') as string;
-        if (error) {
-          voltlogger.error(`[${opId}] Writer error: ${error.message}`);
-        } else if (output) {
-          voltlogger.info(`[${opId}] Writer completed`);
-        }
-      },
-      onPrepareMessages: ({ messages }) => {
-        return { messages };
-      },
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
+  hooks: {
+    onStart: ({ context }) => {
+      const opId = crypto.randomUUID();
+      context.context.set('opId', opId);
+      voltlogger.info(`[${opId}] Writer starting`);
     },
-    tools: [],
-    toolkits: [],
-    memory: sharedMemory,
-    retriever: undefined,
-    markdown: true,
-    maxSteps: 50,
-    logger: voltlogger,
-    observability: voltObservability,
-    inputGuardrails: [],
-    outputGuardrails: [],
+    onToolStart: ({ tool, context }) => {
+      const opId = context.context.get('opId') as string;
+      voltlogger.info(`[${opId}] tool: ${tool.name}`);
+    },
+    onToolEnd: ({ tool, error, context }) => {
+      const opId = context.context.get('opId') as string;
+      if (error) {
+        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+      }
+    },
+    onEnd: ({ output, error, context }) => {
+      const opId = context.context.get('opId') as string;
+      if (error) {
+        voltlogger.error(`[${opId}] Writer error: ${error.message}`);
+      } else if (output) {
+        voltlogger.info(`[${opId}] Writer completed`);
+      }
+    },
+    onPrepareMessages: ({ messages }) => {
+      return { messages };
+    },
+  },
+  tools: [],
+  toolkits: [],
+  memory: sharedMemory,
+  retriever: undefined,
+  markdown: true,
+  maxSteps: 50,
+  logger: voltlogger,
+  observability: voltObservability,
+  inputGuardrails: [],
+  outputGuardrails: [],
 });

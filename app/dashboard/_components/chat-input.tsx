@@ -156,7 +156,7 @@ export function ChatInput({
                         <PromptInputTextarea
                             ref={textareaRef}
                             placeholder="Ask about your research..."
-                            className="min-h-[60px] max-h-[200px] w-full resize-none bg-transparent text-sm placeholder:text-muted-foreground focus-visible:outline-none"
+                            className="min-h-15 max-h-50 w-full resize-none bg-transparent text-sm placeholder:text-muted-foreground focus-visible:outline-none"
                         />
                     </PromptInputBody>
 
@@ -316,7 +316,7 @@ export function ChatInput({
 
                                 <ModelSelectorContent
                                     title="Select Model"
-                                    className="max-h-[400px] max-w-md"
+                                    className="max-h-100 max-w-md"
                                 >
                                     <ModelSelectorDialog
                                         open={showModelSelector}
@@ -400,7 +400,7 @@ export function ChatInput({
                                                     }
                                                     className="size-3.5"
                                                 />
-                                                <span className="truncate max-w-[120px]">
+                                                <span className="truncate max-w-30">
                                                     {selectedModelConfig.name}
                                                 </span>
                                             </Button>

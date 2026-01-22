@@ -1,13 +1,13 @@
-import { Agent, Memory, AiSdkEmbeddingAdapter, createHooks } from "@voltagent/core"
 import { google } from "@ai-sdk/google"
+import { Agent, AiSdkEmbeddingAdapter, createHooks, Memory } from "@voltagent/core"
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
 import { voltlogger } from "../config/logger.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
 //import { sentimentBiasToolkit } from "../tools/sentiment-bias-toolkit.js"
 import z from "zod"
-import { voltObservability } from "../config/observability.js"
 import { sharedMemory } from "../config/libsql.js"
+import { voltObservability } from "../config/observability.js"
 
 const contentCuratorMemory = new Memory({
   storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/content-curator-memory.db", logger: voltlogger }),
@@ -65,7 +65,11 @@ export const contentCuratorAgent = new Agent({
   id: "content-curator",
   name: "Content Curator",
   purpose: "Evaluate, organize, and recommend content based on quality, relevance, and user preferences",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   instructions: ({ context }) => {
     const userPrefs = context?.get("userPreferences") as Record<string, unknown> | undefined
     const contentType = context?.get("contentType") ?? "general"

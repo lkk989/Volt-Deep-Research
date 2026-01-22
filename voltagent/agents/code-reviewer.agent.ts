@@ -1,18 +1,17 @@
-import { Agent, Memory } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
+import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { AiSdkEmbeddingAdapter } from "@voltagent/core";
+import * as crypto from "node:crypto";
+import z from "zod";
+import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
-import { codeReviewerPrompt } from "./prompts.js";
+import { voltObservability } from "../config/observability.js";
 import { codeAnalysisToolkit } from "../tools/code-analysis-toolkit.js";
 import { filesystemToolkit } from "../tools/filesystem-toolkit.js";
 import { gitToolkit } from "../tools/git-toolkit.js";
-import { testToolkit } from "../tools/test-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { voltObservability } from "../config/observability.js";
-import z from "zod";
-import * as crypto from "node:crypto";
-import { sharedMemory } from "../config/libsql.js";
+import { testToolkit } from "../tools/test-toolkit.js";
+import { codeReviewerPrompt } from "./prompts.js";
 
 // Agent Memory Setup
 const reviewerMemory = new Memory({
@@ -42,7 +41,11 @@ export const codeReviewerAgent = new Agent({
   id: "code-reviewer",
   name: "Code Reviewer",
   purpose: "Review code for quality, bugs, and security issues",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   instructions: codeReviewerPrompt({
     task: "Review the provided code changes",
   }),

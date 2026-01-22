@@ -1,5 +1,6 @@
 'use client'
 
+import React, { useState } from 'react'
 import {
     Artifact,
     ArtifactAction,
@@ -22,6 +23,26 @@ interface ArtifactPanelProps {
     content?: string
     language?: string
     type?: 'code' | 'markdown' | 'text'
+    onUse?: () => void
+    onDownload?: (fileName?: string) => void
+    onRegenerate?: () => void
+}
+
+function getExtension(language: string | undefined, type: string) {
+    if (type === 'markdown') return 'md'
+    const map: Record<string, string> = {
+        typescript: 'ts',
+        javascript: 'js',
+        python: 'py',
+        go: 'go',
+        java: 'java',
+        html: 'html',
+        css: 'css',
+        json: 'json',
+    }
+    if (!language) return 'txt'
+    const key = language.toLowerCase()
+    return map[key] ?? key.split(/[\s/+-]/)[0] ?? 'txt'
 }
 
 export function ArtifactPanel({
@@ -32,11 +53,58 @@ export function ArtifactPanel({
     content = '',
     language = 'typescript',
     type = 'code',
+    onUse,
+    onDownload,
+    onRegenerate,
 }: ArtifactPanelProps) {
+    const [copied, setCopied] = useState(false)
+
     if (!isOpen) return null
 
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(content)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+        } catch (e) {
+            console.error('Copy failed', e)
+        }
+    }
+
+    const handleDownload = () => {
+        if (onDownload) return onDownload(`${title}.${getExtension(language, type)}`)
+
+        const blob = new Blob([content || ''], { type: 'text/plain;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        const ext = getExtension(language, type)
+        a.href = url
+        a.download = `${title || 'artifact'}.${ext}`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
+
+    const handleRegenerate = () => {
+        if (onRegenerate) return onRegenerate()
+        console.warn('Regenerate action not provided')
+    }
+
+    const handleUse = async () => {
+        if (onUse) return onUse()
+        try {
+            await navigator.clipboard.writeText(content)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+            onClose()
+        } catch (e) {
+            console.error('Use (copy) failed', e)
+        }
+    }
+
     return (
-        <div className="h-full w-[400px] border-l bg-background transition-all duration-300 ease-in-out">
+        <div className="h-full w-100 border-l bg-background transition-all duration-300 ease-in-out">
             <Artifact className="h-full border-0 rounded-none shadow-none">
                 <ArtifactHeader>
                     <div className="flex flex-col gap-1">
@@ -48,22 +116,17 @@ export function ArtifactPanel({
                         )}
                     </div>
                     <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" onClick={handleUse} className="mr-1">
+                            Use
+                        </Button>
                         <ArtifactActions>
                             <ArtifactAction
-                                tooltip="Copy content"
+                                tooltip={copied ? 'Copied!' : 'Copy content'}
                                 icon={CopyIcon}
-                                onClick={() =>
-                                    navigator.clipboard.writeText(content)
-                                }
+                                onClick={handleCopy}
                             />
-                            <ArtifactAction
-                                tooltip="Download"
-                                icon={DownloadIcon}
-                            />
-                            <ArtifactAction
-                                tooltip="Regenerate"
-                                icon={RefreshCwIcon}
-                            />
+                            <ArtifactAction tooltip="Download" icon={DownloadIcon} onClick={handleDownload} />
+                            <ArtifactAction tooltip="Regenerate" icon={RefreshCwIcon} onClick={handleRegenerate} />
                         </ArtifactActions>
                         <ArtifactClose onClick={onClose} />
                     </div>

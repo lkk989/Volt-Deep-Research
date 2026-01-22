@@ -1,12 +1,12 @@
-import { Agent, Memory, AiSdkEmbeddingAdapter } from "@voltagent/core";
 import { google } from "@ai-sdk/google";
+import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
 import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import { voltlogger } from "../config/logger.js";
-import { webScraperToolkit } from "../tools/web-scraper-toolkit.js";
 import z from "zod";
-import { scrapperPrompt } from "./prompts.js";
-import { voltObservability } from "../config/observability.js";
 import { sharedMemory } from "../config/libsql.js";
+import { voltlogger } from "../config/logger.js";
+import { voltObservability } from "../config/observability.js";
+import { webScraperToolkit } from "../tools/web-scraper-toolkit.js";
+import { scrapperPrompt } from "./prompts.js";
 
 // Local SQLite for scrapper
 const scrapperMemory = new Memory({
@@ -40,7 +40,11 @@ export const scrapperAgent = new Agent({
   id: "scrapper",
   name: "Scrapper",
   purpose: "Extract and collect data from web sources for research and analysis",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: ({ context }) => {
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
+    return `${provider}/${model}`;
+  },
   instructions: scrapperPrompt({
     sources: "web pages, APIs, structured data",
     format: "markdown, structured data, clean text",
