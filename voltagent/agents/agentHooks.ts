@@ -2,7 +2,7 @@ import {
     createHooks,
     messageHelpers,
     type AgentTool,
-    VoltAgentError,
+
     type OnStartHookArgs,
     type OnEndHookArgs,
     type OnPrepareMessagesHookArgs,
@@ -37,7 +37,7 @@ const defaultAgentHooks = createHooks({
     onPrepareMessages: (args: OnPrepareMessagesHookArgs) => {
         const { messages, rawMessages, context } = args
         if (!messages || messages.length === 0) {
-            throw new VoltAgentError('No messages to prepare for LLM')
+            throw new Error('No messages to prepare for LLM')
         }
         voltlogger.info(
             `Preparing ${messages.length} sanitized messages for LLM`
@@ -74,7 +74,7 @@ const defaultAgentHooks = createHooks({
                 modelMessages: [
                     {
                         role: 'system',
-                        content: 'Operate within safety budget',
+                        content: 'You are a highly intelligent AI assistant. Provide detailed and thoughtful responses.',
                         providerOptions: {
                             google: {
                                 thinkingConfig: {
