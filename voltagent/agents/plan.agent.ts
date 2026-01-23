@@ -1,13 +1,13 @@
 import { google } from '@ai-sdk/google'
 import {
-    AiSdkEmbeddingAdapter,
-    Memory,
     NodeFilesystemBackend,
     PlanAgent,
     PlanAgentTodoStatus,
+    PlanAgentTodoItem,
+    PlanAgentState,
+    PlanAgentSubagentDefinition
 } from '@voltagent/core'
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from '@voltagent/libsql'
-import { z } from 'zod'
+
 import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
@@ -19,6 +19,7 @@ import { scrapperAgent } from './scrapper.agent.js'
 import { synthesizerAgent } from './synthesizer.agent.js'
 import { writerAgent } from './writer.agent.js'
 import { defaultAgentHooks } from './agentHooks.js'
+import { chromaRetriever } from '../retriever/chroma.js'
 
 const generalInstructions = [
     'You are a Master Planner and Orchestrator. Your goal is to solve complex problems by breaking them down into manageable subtasks and delegating them to the most appropriate specialized agents.',
@@ -64,6 +65,7 @@ export const deepAgent = new PlanAgent({
     maxOutputTokens: 64000,
     observability: voltObservability,
     hooks: defaultAgentHooks,
+    retriever: chromaRetriever,
     subagents: [
         assistantAgent,
         writerAgent,
@@ -78,7 +80,7 @@ export const deepAgent = new PlanAgent({
             'You are a strategic task manager. Break down complex objectives into atomic, delegatable tasks. Monitor progress and adjust the plan as needed.',
         taskDescription:
             'Execute the assigned complex task by coordinating specialized sub-agents.',
-        maxSteps: 50,
+        maxSteps: 100,
         supervisorConfig: {
             includeAgentsMemory: true,
             fullStreamEventForwarding: {
@@ -86,12 +88,29 @@ export const deepAgent = new PlanAgent({
                     'tool-call',
                     'tool-result',
                     'text-delta',
+                    'tool-input-start',
+                    'tool-input-end',
+                    'tool-input-delta',
                     'reasoning-start',
                     'reasoning-delta',
                     'reasoning-end',
                     'source',
                     'error',
                     'finish',
+                    'file',
+                    'error',
+                    'abort',
+                    'source',
+                    'tool-error',
+                    'tool-approval-request',
+                    'tool-output-denied',
+                    'text-start',
+                    'text-end',
+                    'start-step',
+                    'finish-step',
+                    'start',
+                    'finish',
+                    'raw'
                 ],
             },
         },
@@ -125,10 +144,10 @@ export const deepAgent = new PlanAgent({
             globInfo:
                 'Use this to search for files matching a specific pattern. This is useful for finding related research documents.',
         },
-        toolTokenLimitBeforeEvict: 40000,
+        toolTokenLimitBeforeEvict: 24000,
     },
     toolResultEviction: {
         enabled: true,
-        tokenLimit: 20000,
+        tokenLimit: 24000,
     },
 })

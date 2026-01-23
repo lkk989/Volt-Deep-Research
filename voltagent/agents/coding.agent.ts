@@ -1,6 +1,6 @@
 import { google } from "@ai-sdk/google";
-import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
+import { Agent } from "@voltagent/core";
+
 import * as crypto from "node:crypto";
 import z from "zod";
 import { sharedMemory } from "../config/libsql.js";

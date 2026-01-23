@@ -7,6 +7,7 @@ import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { webScraperToolkit } from "../tools/web-scraper-toolkit.js";
 import { scrapperPrompt } from "./prompts.js";
+
 export const scrapperAgent = new Agent({
   id: "scrapper",
   name: "Scrapper",
