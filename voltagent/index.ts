@@ -29,6 +29,7 @@ import { judgeAgent, supportAgent } from "./agents/judge.agent.js";
 import { dataScientistAgent } from "./agents/data-scientist.agent.js";
 import { researchCoordinatorAgent } from "./agents/research-coordinator.agent.js";
 import { deepAgent } from "./agents/plan.agent.js";
+import { sharedMemory } from "./config/libsql.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
@@ -84,6 +85,95 @@ export const voltAgent = new VoltAgent({
     port: 3141,
     enableSwaggerUI: true,
     resumableStream: { adapter: resumableStreamAdapter },
+    // Configure app with custom memory endpoints
+    configureApp: (app) => {
+      voltlogger.info("Registering custom memory endpoints...");
+
+      // ============================================================================
+      // CUSTOM ENDPOINTS - Simple examples
+      // ============================================================================
+
+      /**
+       * List all conversations for a user
+       * Example: GET /api/conversations?userId=user-123
+       */
+      app.get("/api/conversations", async (c) => {
+        try {
+          const userId = c.req.query("userId");
+
+          if (!userId) {
+            return c.json(
+              {
+                success: false,
+                error: "userId query parameter is required",
+              },
+              400,
+            );
+          }
+
+          // Get conversations from memory adapter
+          const conversations = await sharedMemory.queryConversations({
+            userId,
+            orderBy: "updated_at",
+            orderDirection: "DESC",
+          });
+
+          return c.json({
+            success: true,
+            data: conversations,
+          });
+        } catch (error: any) {
+          voltlogger.error("Error fetching conversations:", error);
+          return c.json(
+            {
+              success: false,
+              error: error.message || "Internal server error",
+            },
+            500,
+          );
+        }
+      });
+
+      /**
+       * Get messages for a specific conversation
+       * Example: GET /api/conversations/:conversationId/messages?userId=user-123
+       */
+      app.get("/api/conversations/:conversationId/messages", async (c) => {
+        try {
+          const conversationId = c.req.param("conversationId");
+          const userId = c.req.query("userId");
+
+          if (!userId) {
+            return c.json(
+              {
+                success: false,
+                error: "userId query parameter is required",
+              },
+              400,
+            );
+          }
+
+          // Get messages from memory adapter
+          const messages = await sharedMemory.getMessages(userId, conversationId);
+
+          return c.json({
+            success: true,
+            data: messages,
+          });
+        } catch (error: any) {
+          voltlogger.error("Error fetching messages:", error);
+          return c.json(
+            {
+              success: false,
+              error: error.message || "Internal server error",
+            },
+            500,
+          );
+        }
+      });
+
+      voltlogger.info("Custom memory endpoints registered successfully");
+    },
   }),
   logger: voltlogger,
   enableSwaggerUI: true, // Enable Swagger UI for API documentation
@@ -146,3 +236,11 @@ export const voltAgent = new VoltAgent({
   }),
 });
 
+a2aServer.initialize({
+ // Provide an agent registry object with the methods A2A expects
+ agentRegistry: {
+     getAgent: (id: string) => voltAgent.getAgent(id),
+     getAllAgents: () => voltAgent.getAgents(),
+ },
+ //  taskStore: redisTaskStore,
+});

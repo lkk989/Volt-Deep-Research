@@ -1,22 +1,20 @@
 'use client'
 
-import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    LayoutDashboard,
-    MessageSquare,
-    Search,
-    Workflow,
-    FileText,
-    Bot,
-    Database,
-    Zap,
-    ScrollText,
-    Settings,
-    ChevronRight,
-} from 'lucide-react'
-
+    MastervoltLogo,
+    NavOverviewIcon,
+    NavChatIcon,
+    NavResearchIcon,
+    NavWorkflowIcon,
+    NavReportsIcon,
+    NavAgentsIcon,
+    NavMemoryIcon,
+    NavObservabilityIcon,
+    NavLogsIcon,
+    NavSettingsIcon,
+} from './nav-icons'
 import {
     Sidebar,
     SidebarContent,
@@ -39,12 +37,12 @@ const navMain = [
             {
                 title: 'Overview',
                 url: '/dashboard',
-                icon: LayoutDashboard,
+                icon: NavOverviewIcon,
             },
             {
                 title: 'Chat',
                 url: '/dashboard/chat',
-                icon: MessageSquare,
+                icon: NavChatIcon,
             },
         ],
     },
@@ -54,17 +52,17 @@ const navMain = [
             {
                 title: 'New Research',
                 url: '/dashboard/research',
-                icon: Search,
+                icon: NavResearchIcon,
             },
             {
                 title: 'Workflows',
                 url: '/dashboard/workflows',
-                icon: Workflow,
+                icon: NavWorkflowIcon,
             },
             {
                 title: 'Reports',
                 url: '/dashboard/reports',
-                icon: FileText,
+                icon: NavReportsIcon,
             },
         ],
     },
@@ -74,22 +72,22 @@ const navMain = [
             {
                 title: 'Agents',
                 url: '/dashboard/agents',
-                icon: Bot,
+                icon: NavAgentsIcon,
             },
             {
                 title: 'Memory',
                 url: '/dashboard/memory',
-                icon: Database,
+                icon: NavMemoryIcon,
             },
             {
                 title: 'Observability',
                 url: '/dashboard/observability',
-                icon: Zap,
+                icon: NavObservabilityIcon,
             },
             {
                 title: 'Logs',
                 url: '/dashboard/logs',
-                icon: ScrollText,
+                icon: NavLogsIcon,
             },
         ],
     },
@@ -105,12 +103,12 @@ export function DashboardSidebar() {
                     href="/dashboard"
                     className="flex items-center gap-2 px-4 group-data-[collapsible=icon]:px-0"
                 >
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                        <Bot className="size-4" />
+                    <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all hover:scale-105 active:scale-95">
+                        <MastervoltLogo className="size-7" animate />
                     </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                        <span className="truncate font-semibold text-lg">
-                            Mastervolt
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden ml-1">
+                        <span className="truncate font-black text-xl bg-linear-to-br from-white via-emerald-300 to-emerald-500 bg-clip-text text-transparent tracking-tighter">
+                            MASTERVOLT
                         </span>
                     </div>
                 </Link>
@@ -118,7 +116,7 @@ export function DashboardSidebar() {
             <SidebarContent>
                 {navMain.map((group) => (
                     <SidebarGroup key={group.title}>
-                        <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                        <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                             {group.title}
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
@@ -130,15 +128,17 @@ export function DashboardSidebar() {
                                             isActive={pathname === item.url}
                                             tooltip={item.title}
                                             className={cn(
-                                                'transition-all duration-200',
+                                                'transition-all duration-300 h-10',
                                                 pathname === item.url
-                                                    ? 'bg-primary/10 text-primary'
-                                                    : 'text-muted-foreground hover:text-foreground'
+                                                    ? 'bg-emerald-500/10 text-emerald-500 shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]'
+                                                    : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/5'
                                             )}
                                         >
-                                            <Link href={item.url}>
-                                                <item.icon className="size-4" />
-                                                <span>{item.title}</span>
+                                            <Link href={item.url} className="flex items-center gap-3">
+                                                <item.icon className="size-4.5 opacity-80" />
+                                                <span className="font-medium tracking-tight">
+                                                    {item.title}
+                                                </span>
                                             </Link>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
@@ -155,10 +155,16 @@ export function DashboardSidebar() {
                             asChild
                             isActive={pathname === '/settings'}
                             tooltip="Settings"
+                            className={cn(
+                                'transition-all duration-300',
+                                pathname === '/settings' ? 'text-emerald-500' : 'text-muted-foreground hover:text-emerald-400'
+                            )}
                         >
-                            <Link href="/settings">
-                                <Settings className="size-4" />
-                                <span>Settings</span>
+                            <Link href="/settings" className="flex items-center gap-3">
+                                <NavSettingsIcon className="size-4.5" />
+                                <span className="font-medium tracking-tight">
+                                    Settings
+                                </span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
