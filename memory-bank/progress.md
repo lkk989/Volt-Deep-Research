@@ -73,6 +73,7 @@
 - [ ] Evaluation experiments for quality metrics
 - [ ] Error recovery strategies
 - [ ] Rate limiting for external APIs
+- [ ] Sync agent lifecycle hooks / presets and add tests (see memory-bank/gap-improve/agents-hooks-sync.md)
 
 ### Medium Priority
 

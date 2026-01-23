@@ -10,25 +10,6 @@ import z from "zod"
 import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
 
-const researchCoordinatorMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/research-coordinator-memory.db", logger: voltlogger }),
-  workingMemory: {
-    enabled: true,
-    scope: "user",
-    schema: z.object({
-      profile: z.object({ name: z.string().optional(), role: z.string().optional(), timezone: z.string().optional() }).optional(),
-      preferences: z.array(z.string()).optional(),
-      goals: z.array(z.string()).optional(),
-      currentProject: z.object({ topic: z.string(), status: z.string(), subtasks: z.array(z.string()) }).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
-  enableCache: true,
-  cacheSize: 1000,
-  cacheTTL: 3600000,
-})
-
 const researchCoordinatorHooks = createHooks({
   onStart: ({ agent, context }) => {
     const opId = crypto.randomUUID()

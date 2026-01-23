@@ -1,10 +1,10 @@
-import { google } from "@ai-sdk/google";
-import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
+
+import { Agent } from "@voltagent/core";
+
 import * as crypto from "node:crypto";
-import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
+import { defaultAgentHooks } from "./agentHooks.js"
 import { voltObservability } from "../config/observability.js";
 import { codeAnalysisToolkit } from "../tools/code-analysis-toolkit.js";
 import { filesystemToolkit } from "../tools/filesystem-toolkit.js";
@@ -12,30 +12,6 @@ import { gitToolkit } from "../tools/git-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { testToolkit } from "../tools/test-toolkit.js";
 import { codeReviewerPrompt } from "./prompts.js";
-
-// Agent Memory Setup
-const reviewerMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({
-    url: "file:./.voltagent/reviewer-memory.db",
-    logger: voltlogger,
-  }),
-  workingMemory: {
-    enabled: true,
-    schema: z.object({
-      filesReviewed: z.array(z.string()).optional(),
-      issuesFound: z.array(z.object({
-        file: z.string(),
-        issue: z.string(),
-        severity: z.enum(["critical", "warning", "info"])
-      })).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
-  enableCache: true,
-  cacheSize: 1000,
-  cacheTTL: 3600000,
-});
 
 export const codeReviewerAgent = new Agent({
   id: "code-reviewer",

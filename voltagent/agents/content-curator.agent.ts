@@ -9,29 +9,6 @@ import z from "zod"
 import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
 
-const contentCuratorMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/content-curator-memory.db", logger: voltlogger }),
-  workingMemory: {
-    enabled: true,
-    scope: "user",
-    schema: z.object({
-      profile: z.object({ name: z.string().optional(), role: z.string().optional(), timezone: z.string().optional() }).optional(),
-      preferences: z.object({
-        topics: z.array(z.string()).optional(),
-        qualityThreshold: z.number().optional(),
-        sources: z.array(z.string()).optional(),
-      }).optional(),
-      goals: z.array(z.string()).optional(),
-      curationHistory: z.array(z.object({ contentId: z.string(), action: z.string(), timestamp: z.string() })).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
-  enableCache: true,
-  cacheSize: 1000,
-  cacheTTL: 3600000,
-})
-
 const contentCuratorHooks = createHooks({
   onStart: ({ agent, context }) => {
     const opId = crypto.randomUUID()

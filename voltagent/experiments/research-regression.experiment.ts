@@ -1,6 +1,6 @@
 import { createExperiment } from '@voltagent/evals'
 import { scorers } from '@voltagent/scorers'
-import { directorAgent } from '../agents/director.agent.js'
+import { deepAgent } from '../agents/plan.agent.js'
 import {
   researchComprehensiveScorer,
   synthesisQualityScorer,
@@ -50,7 +50,7 @@ export default createExperiment({
 
   runner: async ({ item }: { item: ResearchItem }) => {
     try {
-      const result = await directorAgent.generateText(item.input)
+      const result = await deepAgent.generateText(item.input)
       return {
         output: result.text || 'No output generated',
         metadata: {

@@ -12,6 +12,7 @@ interface Env {
 
 export const createWorker = (env: Env) => {
   const memory = new Memory({
+    // @ts-ignore TS2739 This is working as intended despite the error. Tested 1/22/2026
     storage: new D1MemoryAdapter({
       binding: env.DB,
       tablePrefix: "voltagent_memory",

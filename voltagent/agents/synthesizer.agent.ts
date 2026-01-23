@@ -4,37 +4,10 @@ import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
-import { voltObservability } from "../config/observability.js";
+import { voltObservability } from "../config/observability.js"
+import { defaultAgentHooks } from "./agentHooks.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { dataAnalyzerPrompt, synthesizerPrompt } from "./prompts.js";
-
-// Local SQLite for synthesizer
-const synthesizerMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({
-    url: "file:./.voltagent/synthesizer-memory.db",
-    logger: voltlogger,
-  }),
-  workingMemory: {
-    enabled: true,
-    scope: "user",
-    schema: z.object({
-      profile: z
-        .object({
-          name: z.string().optional(),
-          role: z.string().optional(),
-          timezone: z.string().optional(),
-        })
-        .optional(),
-      preferences: z.array(z.string()).optional(),
-      goals: z.array(z.string()).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
-  enableCache: true,
-  cacheSize: 1000, // optional cache size
-  cacheTTL: 3600000, // optional cache time-to-live in seconds
-});
+import { synthesizerPrompt } from "./prompts.js";
 
 // Synthesis tools
 const synthesizeInformationTool = createTool({
