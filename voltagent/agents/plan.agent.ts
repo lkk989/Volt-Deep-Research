@@ -144,10 +144,10 @@ export const deepAgent = new PlanAgent({
             globInfo:
                 'Use this to search for files matching a specific pattern. This is useful for finding related research documents.',
         },
-        toolTokenLimitBeforeEvict: 24000,
+        toolTokenLimitBeforeEvict: 12000,
     },
     toolResultEviction: {
         enabled: true,
-        tokenLimit: 24000,
+        tokenLimit: 12000,
     },
 })
