@@ -141,4 +141,4 @@ export class ChromaRetriever extends BaseRetriever {
   }
 }
 
-export const retriever = new ChromaRetriever();
+export const chromaRetriever = new ChromaRetriever();

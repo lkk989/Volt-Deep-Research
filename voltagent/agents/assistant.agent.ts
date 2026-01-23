@@ -8,97 +8,7 @@ import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { assistantPrompt } from "./prompts.js";
 import { defaultAgentHooks } from "./agentHooks.js";
-
-//const AImemory = new Memory({
-//  storage: new InMemoryStorageAdapter(),
-//});
-
-const getWeatherTool = createTool({
-  name: "get_weather",
-  description:
-    "Get normalized daily OHLCV data for a symbol using Alpha Vantage TIME_SERIES_DAILY. Use only when financial time series is required.",
-  parameters: z.object({
-    symbol: z.string().min(1).describe("Asset symbol, e.g. 'AAPL', 'MSFT', 'SPY'").trim(),
-    outputSize: z
-      .enum(["compact", "full"])
-      .optional()
-      .default("compact")
-      .describe("'compact' (last ~100 points) or 'full' (full history)"),
-  }),
-  execute: async ({ symbol, outputSize }, context) => {
-    if (!context?.isActive) {
-      throw new Error("Operation has been cancelled")
-    }
-
-    const apiKey = process.env.ALPHA_VANTAGE_API_KEY
-    if (!apiKey) {
-      throw new Error("Missing ALPHA_VANTAGE_API_KEY environment variable")
-    }
-
-    try {
-      const url = new URL("https://www.alphavantage.co/query")
-      url.searchParams.set("function", "TIME_SERIES_DAILY")
-      url.searchParams.set("symbol", symbol)
-      url.searchParams.set("outputsize", outputSize ?? "compact")
-      url.searchParams.set("datatype", "json")
-      url.searchParams.set("apikey", apiKey)
-
-      voltlogger.info(`Alpha Vantage (assistant/get_weather): TIME_SERIES_DAILY for ${symbol}`, {
-        operationId: context.operationId,
-      })
-
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`Alpha Vantage HTTP ${response.status} ${response.statusText}`)
-      }
-
-      const data = (await response.json()) as {
-        "Time Series (Daily)"?: Record<
-          string,
-          {
-            "1. open": string
-            "2. high": string
-            "3. low": string
-            "4. close": string
-            "5. volume": string
-          }
-        >
-        Note?: string
-        "Error Message"?: string
-      }
-
-      if (data["Error Message"]) {
-        throw new Error(`Alpha Vantage error: ${data["Error Message"]}`)
-      }
-
-      const series = data["Time Series (Daily)"]
-      if (!series) {
-        throw new Error(data.Note ?? "Missing 'Time Series (Daily)' in response")
-      }
-
-      const points = Object.entries(series).map(([date, v]) => ({
-        date,
-        open: Number(v["1. open"]),
-        high: Number(v["2. high"]),
-        low: Number(v["3. low"]),
-        close: Number(v["4. close"]),
-        volume: Number(v["5. volume"]),
-      }))
-
-      return {
-        symbol,
-        outputSize: outputSize ?? "compact",
-        pointCount: points.length,
-        points,
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      voltlogger.error(`assistant/get_weather failed: ${message}`)
-      throw new Error(`Failed to fetch Alpha Vantage data: ${message}`)
-    }
-  },
-});
-
+import { getForecastOpenMeteo, getWeatherTool } from "../tools/weather-toolkit.js";
 export const assistantAgent = new Agent({
   id: "assistant",
   name: "Assistant",
@@ -115,7 +25,7 @@ export const assistantAgent = new Agent({
     expertise: "intermediate",
     task: "Generate search queries for the research topic",
   }),
-  tools: [getWeatherTool],
+  tools: [getWeatherTool, getForecastOpenMeteo],
   toolkits: [thinkOnlyToolkit],
   memory: sharedMemory,
   retriever: undefined,

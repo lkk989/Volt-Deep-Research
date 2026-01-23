@@ -19,7 +19,7 @@ function formatError(err: unknown): string {
 /**
  * Tool to fetch weather data using wttr.in (no API key required).
  */
-const getWeatherTool = createTool({
+export const getWeatherTool = createTool({
   name: "get_weather",
   description: "Get the weather for a location",
   parameters: z.object({
@@ -34,7 +34,7 @@ const getWeatherTool = createTool({
       // Use format=3 for a short single-line summary
       const url = `https://wttr.in/${encodeURIComponent(location)}?format=3&lang=en`;
 
-      const response = await axios.get<string>(url, {
+      const response = await http.get<string>(url, {
         timeout: 10000,
         headers: { Accept: "text/plain" },
         responseType: "text",
