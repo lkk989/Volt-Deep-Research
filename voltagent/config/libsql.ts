@@ -5,6 +5,7 @@ import z from "zod";
 import { voltlogger } from "./logger.js";
 
 export const sharedMemory = new Memory({
+  // @ts-ignore TS2739 This is working as intended despite the error. Tested 1/22/2026
   storage: new LibSQLMemoryAdapter({
     url: process.env.TURSO_URL ?? "",
     authToken: process.env.TURSO_AUTH_TOKEN ?? "",

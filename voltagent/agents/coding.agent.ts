@@ -10,29 +10,9 @@ import { codeAnalysisToolkit } from "../tools/code-analysis-toolkit.js";
 import { filesystemToolkit } from "../tools/filesystem-toolkit.js";
 import { gitToolkit } from "../tools/git-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import { defaultAgentHooks } from "./agentHooks.js"
 import { testToolkit } from "../tools/test-toolkit.js";
 import { codingAgentPrompt } from "./prompts.js";
-
-// Agent Memory Setup
-const codingMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({
-    url: "file:./.voltagent/coding-memory.db",
-    logger: voltlogger,
-  }),
-  workingMemory: {
-    enabled: true,
-    schema: z.object({
-      currentTask: z.string().optional(),
-      filesModified: z.array(z.string()).optional(),
-      implementationPlan: z.array(z.string()).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
-  enableCache: true,
-  cacheSize: 1000,
-  cacheTTL: 3600000,
-});
 
 export const codingAgent = new Agent({
   id: "coding-agent",

@@ -1,7 +1,7 @@
 import { createWorkflowChain } from "@voltagent/core"
 import { z } from "zod"
 import { voltlogger } from "../config/logger.js"
-import { directorAgent } from "../agents/director.agent.js"
+import { deepAgent } from "../agents/plan.agent.js"
 import { assistantAgent } from "../agents/assistant.agent.js"
 import { scrapperAgent } from "../agents/scrapper.agent.js"
 import { dataAnalyzerAgent } from "../agents/data-analyzer.agent.js"
@@ -10,8 +10,8 @@ import { synthesizerAgent } from "../agents/synthesizer.agent.js"
 import { writerAgent } from "../agents/writer.agent.js"
 
 /**
- * Advanced Director-Orchestrated Workflow
- * Uses directorAgent as a meta-orchestrator for comprehensive research.
+ * Advanced Planner-Orchestrated Workflow
+ * Uses PlanAgent (deepAgent) as the meta-orchestrator for comprehensive research.
  */
 export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
     id: "comprehensive-research-director",
@@ -43,7 +43,7 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                 `Do NOT include markdown. Respond ONLY with a JSON object like: ` +
                 `{"steps":["assistant","scrapper","dataAnalyzer","factChecker","synthesizer","writer"]}.`
 
-            const res = await directorAgent.generateText(prompt)
+            const res = await deepAgent.generateText(prompt)
             const raw = (res?.text ?? "").trim()
 
             // Attempt to extract JSON object from the response, tolerant to extra text.
@@ -58,7 +58,7 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
             try {
                 parsed = JSON.parse(jsonText) as unknown
             } catch (err) {
-                voltlogger.warn(`[Director] Failed to parse plan JSON: ${String(err)}. Response was: ${raw}`)
+                voltlogger.warn(`[PlanAgent] Failed to parse plan JSON: ${String(err)}. Response was: ${raw}`)
                 parsed = { steps: [] }
             }
 
@@ -168,7 +168,7 @@ export const comprehensiveResearchDirectorWorkflow = createWorkflowChain({
                     : contextText.trim()
 
             voltlogger.info(
-                `=== [Director] Completed comprehensive research on: ${topic} using agents: ${usedAgents.join(
+                `=== [PlanAgent] Completed comprehensive research on: ${topic} using agents: ${usedAgents.join(
                     ", "
                 )} ===`
             )

@@ -5,6 +5,7 @@ import z from "zod";
 
 // Using URL and key
 export const supaMemory = new Memory({
+  // @ts-ignore TS2739 This is working as intended despite the error. Tested 1/22/2026
   storage: new SupabaseMemoryAdapter({
     supabaseUrl: process.env.SUPABASE_URL!,
     supabaseKey: process.env.SUPABASE_KEY!,

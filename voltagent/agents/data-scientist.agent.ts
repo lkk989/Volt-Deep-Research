@@ -8,25 +8,6 @@ import { voltObservability } from "../config/observability.js"
 import { dataProcessingToolkit } from "../tools/data-processing-toolkit.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 
-const dataScientistMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({ url: "file:./.voltagent/data-scientist-memory.db", logger: voltlogger }),
-  workingMemory: {
-    enabled: true,
-    scope: "user",
-    schema: z.object({
-      profile: z.object({ name: z.string().optional(), role: z.string().optional(), timezone: z.string().optional() }).optional(),
-      preferences: z.array(z.string()).optional(),
-      goals: z.array(z.string()).optional(),
-      analysisHistory: z.array(z.object({ datasetId: z.string(), analysisType: z.string(), timestamp: z.string() })).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }),
-  enableCache: true,
-  cacheSize: 1000,
-  cacheTTL: 3600000,
-})
-
 const dataScientistHooks = createHooks({
   onStart: ({ agent, context }) => {
     const opId = crypto.randomUUID()

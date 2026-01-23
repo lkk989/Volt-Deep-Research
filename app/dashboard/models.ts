@@ -58,21 +58,6 @@ export const GOOGLE_MODELS: Record<string, ModelConfig> = {
         contextWindow: 1000000,
         maxOutputTokens: 64000,
     },
-    'google/gemini-3-pro-thinking': {
-        id: 'google/gemini-3-pro-thinking',
-        name: 'Gemini 3 Pro Thinking',
-        provider: 'google',
-        capabilities: [
-            'text',
-            'reasoning',
-            'code',
-            'vision',
-            'streaming',
-            'tools',
-        ],
-        contextWindow: 2000000,
-        maxOutputTokens: 128000,
-    },
     // Gemini 2.5 Series (Previous generation)
     'google/gemini-2-5-pro': {
         id: 'google/gemini-2-5-pro',

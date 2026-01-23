@@ -5,34 +5,7 @@ import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
-
-// Local SQLite
-const writerMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({
-    url: "file:./.voltagent/writer-memory.db", // or ":memory:" for ephemeral
-    logger: voltlogger,
-  }),
-  workingMemory: {
-    enabled: true,
-    scope: "user", // persist across conversations
-    schema: z.object({
-      profile: z
-        .object({
-          name: z.string().optional(),
-          role: z.string().optional(),
-          timezone: z.string().optional(),
-        })
-        .optional(),
-      preferences: z.array(z.string()).optional(),
-      goals: z.array(z.string()).optional(),
-    }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("text-embedding-004")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db", logger: voltlogger }), // or InMemoryVectorAdapter() for dev
-  enableCache: true, // optional embedding cache
-  cacheSize: 1000, // optional cache size
-  cacheTTL: 3600000, // optional cache time-to-live in seconds
-});
+import { defaultAgentHooks } from "./agentHooks.js";
 
 export const writerAgent = new Agent({
   id: "writer",
