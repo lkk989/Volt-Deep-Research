@@ -4,13 +4,13 @@ import { Agent } from "@voltagent/core";
 import * as crypto from "node:crypto";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
-import { defaultAgentHooks } from "./agentHooks.js"
 import { voltObservability } from "../config/observability.js";
 import { codeAnalysisToolkit } from "../tools/code-analysis-toolkit.js";
 import { filesystemToolkit } from "../tools/filesystem-toolkit.js";
 import { gitToolkit } from "../tools/git-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { testToolkit } from "../tools/test-toolkit.js";
+import { defaultAgentHooks } from "./agentHooks.js";
 import { codeReviewerPrompt } from "./prompts.js";
 
 export const codeReviewerAgent = new Agent({
@@ -38,11 +38,13 @@ export const codeReviewerAgent = new Agent({
       const opId = String(context.context.get('opId'));
       voltlogger.info(`[${opId}] tool: ${String(tool.name)}`);
     },
-    onToolEnd: ({ tool, error, context }) => {
+    onToolEnd: async ({ tool, error, context }) => {
       const opId = String(context.context.get('opId'));
       if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+        const errMsg = error instanceof Error ? `${error.message}${error.stack ? `\n${error.stack}` : ""}` : String(error);
+        voltlogger.error(`[${opId}] tool ${String(tool.name)} failed: ${errMsg}`);
       }
+      return;
     },
     onEnd: ({ output, error, context }) => {
       const opId = String(context.context.get('opId'));

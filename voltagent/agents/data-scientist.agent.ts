@@ -22,7 +22,7 @@ const dataScientistHooks = createHooks({
     context.context.set(`tool_${tool.name}_start`, toolStart)
     voltlogger.info(`[${opId}] Tool starting: ${tool.name}`, { toolArgs: JSON.stringify(toolArgs) })
   },
-  onToolEnd: ({ tool, output, error, context }) => {
+  onToolEnd: async ({ tool, error, context }) => {
     const opId = context.context.get("operationId") as string
     const toolStart = context.context.get(`tool_${tool.name}_start`) as string
     const duration = toolStart ? new Date().getTime() - new Date(toolStart).getTime() : 0
@@ -35,7 +35,7 @@ const dataScientistHooks = createHooks({
       voltlogger.info(`[${opId}] Tool completed: ${tool.name} (${duration}ms)`)
     }
   },
-  onEnd: ({ agent, output, error, context }) => {
+  onEnd: ({ context }) => {
     const opId = context.context.get("operationId") as string
     const startTime = context.context.get("startTime") as string
     const duration = new Date().getTime() - new Date(startTime).getTime()

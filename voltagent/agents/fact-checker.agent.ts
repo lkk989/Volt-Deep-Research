@@ -4,11 +4,11 @@ import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
-import { voltObservability } from "../config/observability.js"
-import { defaultAgentHooks } from "./agentHooks.js";
-import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { factCheckerPrompt } from "./prompts.js";
+import { voltObservability } from "../config/observability.js";
 import { crossReferenceSourcesTool, detectBiasTool, verifyClaimTool } from "../tools/analyze-data-tool.js";
+import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import { defaultAgentHooks } from "./agentHooks.js";
+import { factCheckerPrompt } from "./prompts.js";
 
 export const factCheckerAgent = new Agent({
   id: "fact-checker",
@@ -35,34 +35,43 @@ export const factCheckerAgent = new Agent({
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: ({ context }) => {
-      const opId = crypto.randomUUID();
-      context.context.set('opId', opId);
-      voltlogger.info(`[${opId}] FactChecker starting`);
+      onStart: ({ context }) => {
+        const opId = crypto.randomUUID();
+        context.context.set('opId', opId);
+        voltlogger.info(`[${opId}] FactChecker starting`);
+      },
+
+      onToolStart: ({ tool, context }) => {
+        const opId = context.context.get('opId') as string;
+        voltlogger.info(`[${opId}] tool: ${tool.name}`);
+      },
+
+      onToolEnd: async ({ tool, error, context }) => {
+        const opId = context.context.get('opId') as string;
+        if (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          voltlogger.error(`[${opId}] tool ${tool.name} failed: ${errorMessage}`);
+          if (error instanceof Error && error.stack) {
+            voltlogger.debug(`[${opId}] tool ${tool.name} stack: ${error.stack}`);
+          }
+        } else {
+          voltlogger.info(`[${opId}] tool ${tool.name} completed`);
+        }
+      },
+
+      onEnd: ({ output, error, context }) => {
+        const opId = context.context.get('opId') as string;
+        if (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          voltlogger.error(`[${opId}] FactChecker error: ${errorMessage}`);
+        } else if (output) {
+          voltlogger.info(`[${opId}] FactChecker completed`);
+        }
+      },
+      onPrepareMessages: ({ messages }) => {
+        return { messages };
+      },
     },
-    onEnd: ({ output, error, context }) => {
-      const opId = context.context.get('opId') as string;
-      if (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        voltlogger.error(`[${opId}] FactChecker error: ${errorMessage}`);
-      } else if (output) {
-        voltlogger.info(`[${opId}] FactChecker completed`);
-      }
-    },
-    onToolStart: ({ tool, context }) => {
-      const opId = context.context.get('opId') as string;
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
-    },
-    onToolEnd: ({ tool, error, context }) => {
-      const opId = context.context.get('opId') as string;
-      if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
-      }
-    },
-    onPrepareMessages: ({ messages }) => {
-      return { messages };
-    },
-  },
   temperature: 0.2, // Very low temperature for factual consistency
   maxOutputTokens: 64000,
   maxSteps: 25,

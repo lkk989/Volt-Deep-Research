@@ -5,9 +5,9 @@ import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { analyzeDataTool, extractInsightsTool } from "../tools/analyze-data-tool.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { dataAnalyzerPrompt } from "./prompts.js";
-import { analyzeDataTool, extractInsightsTool } from "../tools/analyze-data-tool.js";
 
 
 export const dataAnalyzerAgent = new Agent({
@@ -47,8 +47,10 @@ export const dataAnalyzerAgent = new Agent({
     onToolEnd: ({ tool, error, context }) => {
       const opId = context.context.get('opId') as string;
       if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+        voltlogger.error(`[${opId}] tool ${String(tool.name)} failed`);
       }
+      // Return undefined explicitly to satisfy the hook's expected return type
+      return undefined;
     },
     onEnd: ({ output, error, context }) => {
       const opId = context.context.get('opId') as string;
