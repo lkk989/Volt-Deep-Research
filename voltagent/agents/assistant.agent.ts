@@ -6,9 +6,9 @@ import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { assistantPrompt } from "./prompts.js";
-import { defaultAgentHooks } from "./agentHooks.js";
 import { getForecastOpenMeteo, getWeatherTool } from "../tools/weather-toolkit.js";
+import { defaultAgentHooks } from "./agentHooks.js";
+import { assistantPrompt } from "./prompts.js";
 export const assistantAgent = new Agent({
   id: "assistant",
   name: "Assistant",
@@ -37,16 +37,22 @@ export const assistantAgent = new Agent({
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Assistant starting`);
+      return undefined;
     },
     onToolStart: ({ tool, context }) => {
       const opId = String(context.context.get('opId'));
-      voltlogger.info(`[${opId}] tool: ${String(tool.name)}`);
+      voltlogger.info(`[${opId}] tool: ${String(tool.name)} starting`);
+      return undefined;
     },
-    onToolEnd: ({ tool, error, context }) => {
+    onToolEnd: async ({ tool, error, context }) => {
       const opId = String(context.context.get('opId'));
       if (error) {
-        voltlogger.error(`[${opId}] tool ${String(tool.name)} failed`);
+        const errMsg = error instanceof Error ? (error.stack || error.message) : String(error);
+        voltlogger.error(`[${opId}] tool ${String(tool.name)} failed: ${errMsg}`);
+      } else {
+        voltlogger.info(`[${opId}] tool ${String(tool.name)} completed`);
       }
+      return undefined;
     },
     onPrepareMessages: ({ messages }) => {
       return { messages };
@@ -58,7 +64,10 @@ export const assistantAgent = new Agent({
         voltlogger.error(`[${opId}] Assistant error: ${errorMessage}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Assistant completed`);
+      } else {
+        voltlogger.info(`[${opId}] Assistant ended without output`);
       }
+      return undefined;
     },
   },
   inputGuardrails: [],

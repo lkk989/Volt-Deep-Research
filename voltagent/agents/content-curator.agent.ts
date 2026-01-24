@@ -15,26 +15,55 @@ const contentCuratorHooks = createHooks({
     context.context.set("operationId", opId)
     context.context.set("startTime", new Date().toISOString())
     context.context.set("curationDecisions", [])
-    voltlogger.info(`[${opId}] Content Curator starting`, { agent: agent.name })
+    voltlogger.info(`[${opId}] Content Curator starting`, { agent: agent?.name })
   },
   onToolStart: ({ tool, context, args }) => {
-    const opId = context.context.get("operationId") as string
-    voltlogger.info(`[${opId}] Tool starting: ${String(tool.name)}`, { args: JSON.stringify(args) })
+    const opId = String(context.context.get("operationId") ?? "unknown")
+    let argsString: string
+    try {
+      argsString = JSON.stringify(args)
+    } catch {
+      argsString = String(args)
+    }
+    voltlogger.info(`[${opId}] Tool starting: ${String(tool?.name)}`, { args: argsString })
   },
-  onToolEnd: ({ tool, output, error, context }) => {
-    const opId = context.context.get("operationId") as string
+  onToolEnd: async ({ tool, error, context }) => {
+    const opId = String(context.context.get("operationId") ?? "unknown")
     if (error) {
-      voltlogger.error(`[${opId}] Tool failed: ${String(tool.name)}`, { error })
+      voltlogger.error(`[${opId}] Tool failed: ${String(tool?.name)}`, { error })
     } else {
-      voltlogger.info(`[${opId}] Tool completed: ${String(tool.name)}`)
+      voltlogger.info(`[${opId}] Tool completed: ${String(tool?.name)}`)
     }
   },
   onEnd: ({ agent, output, error, context }) => {
-    const opId = String(context.context.get("operationId"))
-    const startTime = String(context.context.get("startTime"))
-    const duration = new Date().getTime() - new Date(startTime).getTime()
-    const decisions = context.context.get("curationDecisions") as any[]
-    voltlogger.info(`[${opId}] Content Curator completed in ${duration}ms`, { decisions })
+    const opId = String(context.context.get("operationId") ?? "unknown")
+    const startTimeStr = String(context.context.get("startTime") ?? new Date().toISOString())
+    const duration = new Date().getTime() - new Date(startTimeStr).getTime()
+    const decisions = (context.context.get("curationDecisions") as any[]) ?? []
+    if (error) {
+      voltlogger.error(`[${opId}] Content Curator ended with error in ${duration}ms`, {
+        agent: agent?.name,
+        error,
+        output,
+        decisions,
+      })
+    } else {
+      const outputSummary = (() => {
+        if (typeof output === "string") {
+          const str = output as string
+          return str.length > 240 ? `${str.slice(0, 240)}...` : str
+        }
+        if (output !== undefined && output !== null) {
+          return "non-string output"
+        }
+        return null
+      })()
+      voltlogger.info(`[${opId}] Content Curator completed in ${duration}ms`, {
+        agent: agent?.name,
+        outputSummary,
+        decisions,
+      })
+    }
   },
 })
 

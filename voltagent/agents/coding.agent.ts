@@ -10,8 +10,8 @@ import { codeAnalysisToolkit } from "../tools/code-analysis-toolkit.js";
 import { filesystemToolkit } from "../tools/filesystem-toolkit.js";
 import { gitToolkit } from "../tools/git-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { defaultAgentHooks } from "./agentHooks.js"
 import { testToolkit } from "../tools/test-toolkit.js";
+import { defaultAgentHooks } from "./agentHooks.js";
 import { codingAgentPrompt } from "./prompts.js";
 
 export const codingAgent = new Agent({
@@ -42,19 +42,23 @@ export const codingAgent = new Agent({
     onEnd: ({ output, error, context }) => {
       const opId = String(context.context.get('opId'));
       if (error) {
-        voltlogger.error(`[${opId}] Coding Agent error: ${error.message}`);
+        const msg = error instanceof Error ? error.message : String(error);
+        voltlogger.error(`[${opId}] Coding Agent error: ${msg}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Coding Agent completed`);
       }
     },
     onToolStart: ({ tool, context }) => {
-      const opId = String(context.context.get('opId'))
+      const opId = String(context.context.get('opId'));
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
     },
-    onToolEnd: ({ tool, error, context }) => {
+    onToolEnd: async ({ tool, error, context }) => {
       const opId = String(context.context.get('opId'));
       if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+        const msg = error instanceof Error ? error.message : String(error);
+        voltlogger.error(`[${opId}] tool ${tool.name} failed: ${msg}`);
+      } else {
+        voltlogger.info(`[${opId}] tool ${tool.name} completed`);
       }
     },
   },
