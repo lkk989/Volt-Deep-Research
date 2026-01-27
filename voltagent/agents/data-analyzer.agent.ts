@@ -1,7 +1,5 @@
-import { google } from "@ai-sdk/google";
-import { Agent, AiSdkEmbeddingAdapter, createTool, Memory } from "@voltagent/core";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import z from "zod";
+import { Agent } from "@voltagent/core";
+
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";

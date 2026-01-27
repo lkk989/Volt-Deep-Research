@@ -27,6 +27,8 @@ export async function POST(req: Request) {
         const options = isRecord(body.options) ? body.options : undefined
         const conversationIdParam = getString(options, 'conversationId')
         const userIdParam = getString(options, 'userId')
+        const ctx = options?.context
+        const clientContext = isRecord(ctx) ? ctx : undefined
         const conversationId = conversationIdParam.trim()
         // Hoisted helpers (declare here so they are available for the calls above)
         function isRecord(value: unknown): value is Record<string, unknown> {
@@ -111,6 +113,25 @@ export async function POST(req: Request) {
             return jsonError(400, 'Message input is required')
         }
 
+        const providerFromClient =
+            clientContext && typeof clientContext.provider === 'string'
+                ? clientContext.provider
+                : undefined
+        const modelFromClient =
+            clientContext && typeof clientContext.model === 'string'
+                ? clientContext.model
+                : undefined
+        const modelIdFromClient =
+            clientContext && typeof clientContext.modelId === 'string'
+                ? clientContext.modelId
+                : undefined
+
+        const normalizedModelId =
+            modelIdFromClient ??
+            ((Boolean(providerFromClient)) && (Boolean(modelFromClient))
+                ? `${providerFromClient}/${modelFromClient}`
+                : undefined)
+
         // Enable non-blocking OTel export for Vercel/serverless
         // This ensures spans are flushed in the background without blocking the response
         setWaitUntil(after)
@@ -179,11 +200,26 @@ export async function POST(req: Request) {
         const result = await deepAgent.streamText(parsedInput, {
             userId,
             conversationId,
+            context: {
+                ...(clientContext ?? {}),
+            },
         })
 
         return result.toUIMessageStreamResponse({
             consumeSseStream: session.consumeSseStream,
             onFinish: session.onFinish,
+            sendSources: true,
+            messageMetadata: () => {
+                if (!normalizedModelId) {
+                    return undefined
+                }
+
+                return {
+                    model: {
+                        id: normalizedModelId,
+                    },
+                }
+            },
         })
     } catch (error) {
         // eslint-disable-next-line no-console

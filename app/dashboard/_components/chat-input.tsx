@@ -33,12 +33,6 @@ import {
     ModelSelectorLogo,
     ModelSelectorName,
 } from '@/components/ai-elements/model-selector'
-import {
-    MODELS,
-    getModelsGroupedByProvider,
-    PROVIDER_NAMES,
-    type ModelConfig,
-} from '../models'
 import { cn } from '@/lib/utils'
 import { ImageIcon, PaperclipIcon } from 'lucide-react'
 import { useState, useCallback, useRef } from 'react'
@@ -56,17 +50,17 @@ interface ChatInputProps {
     tokenUsage?: TokenUsage
     selectedModel?: string
     onModelChange?: (model: string) => void
+    modelOptions?: string[]
     showWebPreview?: boolean
     onWebPreviewToggle?: (show: boolean) => void
 }
 
-const MODEL_GROUPS = getModelsGroupedByProvider()
-
 export function ChatInput({
     onSubmit,
     tokenUsage,
-    selectedModel = 'google/gemini-3-flash',
+    selectedModel = '',
     onModelChange,
+    modelOptions = [],
     showWebPreview = false,
     onWebPreviewToggle,
 }: ChatInputProps) {
@@ -104,7 +98,7 @@ export function ChatInput({
         [onModelChange]
     )
 
-    const selectedModelConfig = getModelById(selectedModel)
+    const selectedProvider = getProviderFromModelId(selectedModel)
 
     return (
         <div className="border-t bg-background">
@@ -327,51 +321,43 @@ export function ChatInput({
                                             <ModelSelectorEmpty>
                                                 No models found
                                             </ModelSelectorEmpty>
-                                            {Object.entries(MODEL_GROUPS).map(
-                                                ([provider, models]) => (
-                                                    <ModelSelectorGroup
-                                                        key={provider}
-                                                        heading={
-                                                            PROVIDER_NAMES[
-                                                                provider
-                                                            ] || provider
-                                                        }
-                                                    >
-                                                        {models.map(
-                                                            (
-                                                                model: ModelConfig
-                                                            ) => (
-                                                                <ModelSelectorItem
-                                                                    key={
-                                                                        model.id
-                                                                    }
-                                                                    onClick={() =>
-                                                                        handleModelSelect(
-                                                                            model.id
-                                                                        )
-                                                                    }
-                                                                    className={cn(
-                                                                        selectedModel ===
-                                                                            model.id &&
-                                                                            'bg-accent'
-                                                                    )}
-                                                                >
-                                                                    <ModelSelectorLogo
-                                                                        provider={
-                                                                            provider
-                                                                        }
-                                                                    />
-                                                                    <ModelSelectorName>
-                                                                        {
-                                                                            model.name
-                                                                        }
-                                                                    </ModelSelectorName>
-                                                                </ModelSelectorItem>
-                                                            )
-                                                        )}
-                                                    </ModelSelectorGroup>
+                                            {Object.entries(
+                                                groupModelIdsByProvider(
+                                                    modelOptions
                                                 )
-                                            )}
+                                            ).map(([provider, models]) => (
+                                                <ModelSelectorGroup
+                                                    key={provider}
+                                                    heading={provider}
+                                                >
+                                                    {models.map((modelId) => (
+                                                        <ModelSelectorItem
+                                                            key={modelId}
+                                                            onClick={() =>
+                                                                handleModelSelect(
+                                                                    modelId
+                                                                )
+                                                            }
+                                                            className={cn(
+                                                                selectedModel ===
+                                                                    modelId &&
+                                                                    'bg-accent'
+                                                            )}
+                                                        >
+                                                            {provider && (
+                                                                <ModelSelectorLogo
+                                                                    provider={
+                                                                        provider
+                                                                    }
+                                                                />
+                                                            )}
+                                                            <ModelSelectorName>
+                                                                {modelId}
+                                                            </ModelSelectorName>
+                                                        </ModelSelectorItem>
+                                                    ))}
+                                                </ModelSelectorGroup>
+                                            ))}
                                         </ModelSelectorList>
                                     </ModelSelectorDialog>
                                 </ModelSelectorContent>
@@ -381,36 +367,37 @@ export function ChatInput({
                         {/* Right side: Submit + Model Badge */}
                         <div className="flex items-center gap-2">
                             {/* Current Model Badge */}
-                            {selectedModelConfig && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 gap-1 px-2 text-xs"
-                                                onClick={() =>
-                                                    setShowModelSelector(true)
-                                                }
-                                            >
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 gap-1 px-2 text-xs"
+                                            onClick={() =>
+                                                setShowModelSelector(true)
+                                            }
+                                        >
+                                            {selectedProvider && (
                                                 <ModelSelectorLogo
-                                                    provider={
-                                                        selectedModelConfig.provider
-                                                    }
+                                                    provider={selectedProvider}
                                                     className="size-3.5"
                                                 />
-                                                <span className="truncate max-w-30">
-                                                    {selectedModelConfig.name}
-                                                </span>
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Click to change model</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
+                                            )}
+                                            <span className="truncate max-w-40">
+                                                {selectedModel.trim().length >
+                                                0
+                                                    ? selectedModel
+                                                    : 'Model: (agent default)'}
+                                            </span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Click to change model</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
 
                             <PromptInputSubmit status={status} size="sm" />
                         </div>
@@ -421,9 +408,30 @@ export function ChatInput({
     )
 }
 
-// Helper function to get model by ID
-function getModelById(id: string): ModelConfig | undefined {
-    return MODELS[id]
+function getProviderFromModelId(modelId: string): string | undefined {
+    const trimmed = modelId.trim()
+    if (trimmed.length === 0) {
+        return undefined
+    }
+    const idx = trimmed.indexOf('/')
+    if (idx <= 0) {
+        return undefined
+    }
+    return trimmed.slice(0, idx)
+}
+
+function groupModelIdsByProvider(modelIds: string[]): Record<string, string[]> {
+    const result: Record<string, string[]> = {}
+    for (const id of modelIds) {
+        const trimmed = id.trim()
+        if (trimmed.length === 0) {
+            continue
+        }
+        const provider = getProviderFromModelId(trimmed) ?? 'unknown'
+        result[provider] ??= []
+        result[provider].push(trimmed)
+    }
+    return result
 }
 
 // Helper component for empty state

@@ -43,7 +43,7 @@ export const scrapperAgent = new Agent({
       const opId = context.context.get('opId') as string;
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
     },
-    onToolEnd: ({ tool, error, context }) => {
+    onToolEnd: async ({ tool, error, context }) => {
       const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] tool ${tool.name} failed`);

@@ -1,6 +1,6 @@
 import { google } from "@ai-sdk/google"
-import { Agent, AiSdkEmbeddingAdapter, createHooks, Memory } from "@voltagent/core"
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
+import { Agent, createHooks } from "@voltagent/core"
+
 import { voltlogger } from "../config/logger.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { searchDiscoveryToolkit } from "../tools/search-discovery-toolkit.js"
@@ -11,25 +11,28 @@ import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
 
 const researchCoordinatorHooks = createHooks({
-  onStart: ({ agent, context }) => {
+  onStart: async ({ agent, context }) => {
     const opId = crypto.randomUUID()
     context.context.set("operationId", opId)
     context.context.set("startTime", new Date().toISOString())
     voltlogger.info(`[${opId}] Research Coordinator starting`, { agent: agent.name })
+    return undefined
   },
-  onToolStart: ({ tool, context, args: toolArgs }) => {
+  onToolStart: async ({ tool, context, args: toolArgs }) => {
     const opId = context.context.get("operationId") as string
     voltlogger.info(`[${opId}] Tool starting: ${tool.name}`, { toolArgs: toolArgs as unknown })
+    return undefined
   },
-  onToolEnd: ({ tool, output, error, context }) => {
+  onToolEnd: async ({ tool, error, context }) => {
     const opId = context.context.get("operationId") as string
     if (error) {
       voltlogger.error(`[${opId}] Tool failed: ${tool.name}`, { error })
     } else {
       voltlogger.info(`[${opId}] Tool completed: ${tool.name}`)
     }
+    return undefined
   },
-  onEnd: ({ agent, output, error, context }) => {
+  onEnd: async ({ error, context }) => {
     const opId = context.context.get("operationId") as string
     const startTime = context.context.get("startTime") as string
     const duration = new Date().getTime() - new Date(startTime).getTime()
@@ -38,6 +41,7 @@ const researchCoordinatorHooks = createHooks({
     } else {
       voltlogger.info(`[${opId}] Research Coordinator completed in ${duration}ms`)
     }
+    return undefined
   },
 })
 

@@ -18,6 +18,7 @@ import {
 interface ChatHeaderProps {
     chatId: string
     userId: string
+    selectedModel?: string
     onNewChat?: () => void
     onDelete?: () => void
 }
@@ -25,6 +26,7 @@ interface ChatHeaderProps {
 export function ChatHeader({
     chatId,
     userId,
+    selectedModel,
     onNewChat,
     onDelete,
 }: ChatHeaderProps) {
@@ -129,7 +131,12 @@ export function ChatHeader({
                 )}
             </div>
 
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
+                {selectedModel && selectedModel.trim().length > 0 && (
+                    <span className="rounded-md border bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground">
+                        {selectedModel}
+                    </span>
+                )}
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
