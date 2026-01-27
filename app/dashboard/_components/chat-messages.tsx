@@ -166,8 +166,20 @@ import {
     FolderIcon,
 } from 'lucide-react'
 import { useState, useCallback, memo } from 'react'
-import type { UIMessage, ToolUIPart, TextUIPart, ReasoningUIPart } from 'ai'
-import { getToolName, isToolUIPart } from 'ai'
+import type {
+    DataUIPart,
+    FileUIPart,
+    ReasoningUIPart,
+    SourceDocumentUIPart,
+    SourceUrlUIPart,
+    StepStartUIPart,
+    TextUIPart,
+    ToolUIPart,
+    DynamicToolUIPart,
+    UIDataTypes,
+    UIMessage,
+} from 'ai'
+import { getToolName, isDataUIPart, isToolUIPart } from 'ai'
 import { messageHelpers } from '@voltagent/core'
 
 interface ChatMessagesProps {
@@ -220,25 +232,23 @@ export function ChatMessages({
     }, [])
 
     // Extract sources from message parts
-    const getSourcesFromParts = (
-        parts: Array<Record<string, unknown>>
-    ): SourceDocument[] => {
+    const getSourcesFromParts = (parts: UIMessage['parts']): SourceDocument[] => {
         const sources: SourceDocument[] = []
         for (const part of parts) {
-            if (part.type === 'source-document' && part.sourceDocument) {
-                try {
-                    const doc = JSON.parse(part.sourceDocument as string)
-                    sources.push({
-                        title: doc.title,
-                        url: doc.url,
-                        description: doc.description,
-                    })
-                } catch {
-                    sources.push({
-                        title: part.title as string | undefined,
-                        url: part.url as string | undefined,
-                    })
-                }
+            if (isSourceUrlPart(part)) {
+                sources.push({
+                    title: part.title,
+                    url: part.url,
+                    description: part.url,
+                })
+                continue
+            }
+
+            if (isSourceDocumentPart(part)) {
+                sources.push({
+                    title: part.title,
+                    description: part.filename ?? part.mediaType,
+                })
             }
         }
         return sources
@@ -281,11 +291,15 @@ export function ChatMessages({
                             const isUser = role === 'user'
                             const isAssistant = role === 'assistant'
                             const messageText = getMessageText(message)
+                            const modelLabel = getModelLabel(message.metadata)
 
                             // Get sources from parts
                             const messageParts = message.parts ?? []
+                            const subAgentName = getSubagentNameFromParts(
+                                messageParts
+                            )
                             const sources = getSourcesFromParts(
-                                messageParts as Array<Record<string, unknown>>
+                                messageParts
                             )
 
                             return (
@@ -306,14 +320,93 @@ export function ChatMessages({
                                                 className="size-8"
                                             />
                                             <span className="text-xs font-medium text-muted-foreground">
-                                                Assistant
+                                                {subAgentName ?? 'Assistant'}
                                             </span>
+                                            {modelLabel && (
+                                                <span className="text-[10px] text-muted-foreground/70">
+                                                    {modelLabel}
+                                                </span>
+                                            )}
                                         </div>
                                     )}
 
                                     <MessageContent>
                                         {/* Render message parts */}
                                         {messageParts.map((part, idx) => {
+                                            if (isSubagentResultPart(part)) {
+                                                return (
+                                                    <MessageResponse
+                                                        key={`subagent-result-${id}-${idx}`}
+                                                    >
+                                                        {`${part.data.subAgentName || 'SubAgent'}: ${part.data.text}`}
+                                                    </MessageResponse>
+                                                )
+                                            }
+
+                                            if (isSubagentStreamPart(part)) {
+                                                const textDelta =
+                                                    getSubagentStreamTextDelta(
+                                                        part.data
+                                                    )
+                                                if (!textDelta) {
+                                                    return null
+                                                }
+
+                                                return (
+                                                    <MessageResponse
+                                                        key={`subagent-stream-${id}-${idx}`}
+                                                    >
+                                                        {`${part.data.subAgentName || 'SubAgent'}: ${textDelta}`}
+                                                    </MessageResponse>
+                                                )
+                                            }
+
+                                            if (isStepStartPart(part)) {
+                                                return (
+                                                    <Checkpoint
+                                                        key={`step-start-${id}-${idx}`}
+                                                        className="py-1"
+                                                    >
+                                                        <CheckpointIcon />
+                                                        <span className="text-xs">
+                                                            Step started
+                                                        </span>
+                                                    </Checkpoint>
+                                                )
+                                            }
+
+                                            if (isFilePart(part)) {
+                                                if (
+                                                    part.mediaType.startsWith(
+                                                        'image/'
+                                                    )
+                                                ) {
+                                                    return (
+                                                        <div
+                                                            key={`file-${id}-${idx}`}
+                                                            className="overflow-hidden rounded-md border"
+                                                        >
+                                                            <img
+                                                                src={part.url}
+                                                                alt={
+                                                                    part.filename ??
+                                                                    'uploaded image'
+                                                                }
+                                                                className="max-h-96 w-full object-contain"
+                                                            />
+                                                        </div>
+                                                    )
+                                                }
+
+                                                return (
+                                                    <MessageResponse
+                                                        key={`file-${id}-${idx}`}
+                                                    >
+                                                        {`[${part.filename ?? part.url}](${part.url})`}
+                                                    </MessageResponse>
+                                                )
+                                            }
+
                                             // Render text parts with proper typing
                                             if (part.type === 'text') {
                                                 const textPart =
@@ -361,10 +454,13 @@ export function ChatMessages({
                                             if (
                                                 isToolUIPart(part as ToolUIPart)
                                             ) {
-                                                const toolPart =
-                                                    part as ToolUIPart
+                                                const toolPart = part as
+                                                    | ToolUIPart
+                                                    | DynamicToolUIPart
                                                 const toolName =
                                                     getToolName(toolPart)
+                                                const toolType =
+                                                    getToolType(toolPart)
                                                 const isLastTool =
                                                     idx ===
                                                     messageParts.length - 1
@@ -387,7 +483,7 @@ export function ChatMessages({
                                                         <ToolHeader
                                                             title={toolName}
                                                             type={
-                                                                toolPart.type as `tool-${string}`
+                                                                toolType
                                                             }
                                                             state={
                                                                 isStreaming
@@ -653,7 +749,10 @@ export function ChatMessages({
                                                                                                         .sandbox
                                                                                                         .files && (
                                                                                                         <SandboxTabsTrigger value="files">
-                                                                                                            Files
+                                                                                                            <span className="inline-flex items-center gap-1">
+                                                                                                                <FolderIcon className="size-3" />
+                                                                                                                Files
+                                                                                                            </span>
                                                                                                         </SandboxTabsTrigger>
                                                                                                     )}
                                                                                                     {toolPart
@@ -958,6 +1057,111 @@ function extractReasoningText(part: ReasoningUIPart): string {
     return part.text ?? ''
 }
 
+function isSourceUrlPart(part: UIMessage['parts'][number]): part is SourceUrlUIPart {
+    return part.type === 'source-url'
+}
+
+function isSourceDocumentPart(
+    part: UIMessage['parts'][number]
+): part is SourceDocumentUIPart {
+    return part.type === 'source-document'
+}
+
+function isFilePart(part: UIMessage['parts'][number]): part is FileUIPart {
+    return part.type === 'file'
+}
+
+function isStepStartPart(
+    part: UIMessage['parts'][number]
+): part is StepStartUIPart {
+    return part.type === 'step-start'
+}
+
+function getToolType(
+    part: ToolUIPart | DynamicToolUIPart
+): `tool-${string}` {
+    if (part.type === 'dynamic-tool') {
+        return `tool-${part.toolName}`
+    }
+
+    return part.type as `tool-${string}`
+}
+function getModelLabel(metadata: unknown): string | undefined {
+    if (!metadata || typeof metadata !== 'object') {
+        return undefined
+    }
+
+    const record = metadata as Record<string, unknown>
+    const { model } = record
+    if (!model || typeof model !== 'object') {
+        return undefined
+    }
+
+    const modelRecord = model as Record<string, unknown>
+    const { id } = modelRecord
+    return typeof id === 'string' && id.trim().length > 0 ? id : undefined
+}
+
+type SubagentResultPart = DataUIPart<{
+    'subagent-result': {
+        subAgentId?: string
+        subAgentName?: string
+        text: string
+    }
+}>
+
+type SubagentStreamPart = DataUIPart<{
+    'subagent-stream': {
+        subAgentId?: string
+        subAgentName?: string
+        originalType?: string
+        [key: string]: unknown
+    }
+}>
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null
+
+function isSubagentResultPart(part: UIMessage['parts'][number]): part is SubagentResultPart {
+    if (!isDataUIPart<UIDataTypes>(part) || part.type !== 'data-subagent-result') {
+        return false
+    }
+    return isRecord(part.data) && typeof part.data.text === 'string'
+}
+
+function isSubagentStreamPart(part: UIMessage['parts'][number]): part is SubagentStreamPart {
+    return isDataUIPart<UIDataTypes>(part) && part.type === 'data-subagent-stream'
+}
+
+function getSubagentNameFromParts(parts: UIMessage['parts']): string | undefined {
+    for (const part of parts) {
+        if (isSubagentResultPart(part) && part.data.subAgentName) {
+            return part.data.subAgentName
+        }
+        if (isSubagentStreamPart(part)) {
+            const name = part.data.subAgentName
+            if (typeof name === 'string' && name.trim().length > 0) {
+                return name
+            }
+        }
+    }
+    return undefined
+}
+
+function getSubagentStreamTextDelta(data: Record<string, unknown>): string {
+    const { delta, textDelta, inputTextDelta } = data
+    if (typeof delta === 'string') {
+        return delta
+    }
+    if (typeof textDelta === 'string') {
+        return textDelta
+    }
+    if (typeof inputTextDelta === 'string') {
+        return inputTextDelta
+    }
+    return ''
+}
+
 // Type guards for detecting content types from tool outputs
 function isTerminalOutput(
     output: unknown
@@ -1112,6 +1316,9 @@ function renderTestResults(suites: TestSuiteData[]): React.ReactNode {
     const totalFailed = suites.reduce((sum, s) => sum + (s.failed ?? 0), 0)
     const totalSkipped = suites.reduce((sum, s) => sum + (s.skipped ?? 0), 0)
     const totalTests = suites.reduce((sum, s) => sum + s.tests.length, 0)
+    const duration = suites
+        .flatMap((s) => s.tests)
+        .reduce((sum, t) => sum + (t.duration ?? 0), 0)
 
     return (
         <TestResults
@@ -1120,8 +1327,16 @@ function renderTestResults(suites: TestSuiteData[]): React.ReactNode {
                 failed: totalFailed,
                 skipped: totalSkipped,
                 total: totalTests,
+                duration,
             }}
         >
+            <TestResultsHeader>
+                <TestResultsSummary />
+                <TestResultsDuration />
+            </TestResultsHeader>
+            <div className="px-4 pb-2">
+                <TestResultsProgress />
+            </div>
             <TestResultsContent>
                 {suites.map((suite, idx) => (
                     <TestSuite

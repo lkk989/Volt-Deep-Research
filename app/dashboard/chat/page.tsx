@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react'
 
 export default function ChatPage() {
     const [chatId, setChatId] = useState(() => nanoid())
+    const [selectedModel, setSelectedModel] = useState('')
     const userId = 'user-1' // Replace with actual user ID from auth
 
     const handleNewChat = useCallback(() => {
@@ -22,10 +23,16 @@ export default function ChatPage() {
             <ChatHeader
                 chatId={chatId}
                 userId={userId}
+                selectedModel={selectedModel}
                 onNewChat={handleNewChat}
                 onDelete={handleDeleteChat}
             />
-            <ChatPanel chatId={chatId} userId={userId} />
+            <ChatPanel
+                chatId={chatId}
+                userId={userId}
+                selectedModel={selectedModel}
+                onSelectedModelChange={setSelectedModel}
+            />
         </div>
     )
 }

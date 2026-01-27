@@ -1,7 +1,7 @@
-import { google } from "@ai-sdk/google";
-import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import z from "zod";
+
+import { Agent } from "@voltagent/core";
+//import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
+//import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
@@ -137,10 +137,14 @@ export const writerAgent = new Agent({
       const opId = context.context.get('opId') as string;
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
     },
-    onToolEnd: ({ tool, error, context }) => {
+    onToolEnd: async ({ tool, error, context }) => {
       const opId = context.context.get('opId') as string;
       if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+        voltlogger.error(
+          `[${opId}] tool ${tool.name} failed: ${error?.message}${error?.stack ? `\n${error.stack}` : ""}`
+        );
+      } else {
+        voltlogger.info(`[${opId}] tool ${tool.name} completed`);
       }
     },
     onEnd: ({ output, error, context }) => {

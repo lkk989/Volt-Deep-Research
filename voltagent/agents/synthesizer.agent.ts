@@ -1,12 +1,12 @@
 import { google } from "@ai-sdk/google";
-import { Agent, AiSdkEmbeddingAdapter, createTool, Memory } from "@voltagent/core";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
+import { Agent, createTool } from "@voltagent/core";
+
 import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
-import { voltObservability } from "../config/observability.js"
-import { defaultAgentHooks } from "./agentHooks.js";
+import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import { defaultAgentHooks } from "./agentHooks.js";
 import { synthesizerPrompt } from "./prompts.js";
 
 // Synthesis tools
@@ -304,29 +304,58 @@ export const synthesizerAgent = new Agent({
   maxHistoryEntries: 100,
   hooks: {
     onStart: ({ context }) => {
-      const opId = crypto.randomUUID();
-      context.context.set('opId', opId);
-      voltlogger.info(`[${opId}] Synthesizer starting`);
+      const opId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `op-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      try {
+        context.context.set("opId", opId);
+        voltlogger.info(`[${opId}] Synthesizer starting`);
+      } catch (err) {
+        voltlogger.error(
+          `[${opId}] Failed to initialize Synthesizer opId in context: ${(err as Error)?.message ?? String(err)}`
+        );
+      }
+
+      return undefined;
     },
     onToolStart: ({ tool, context }) => {
-      const opId = context.context.get('opId') as string;
-      voltlogger.info(`[${opId}] tool: ${tool.name}`);
+      const opId = (context.context.get("opId") as string) ?? "unknown-op";
+      voltlogger.info(`[${opId}] tool start: ${tool.name}`);
+      return undefined;
     },
-    onToolEnd: ({ tool, error, context }) => {
-      const opId = context.context.get('opId') as string;
+    onToolEnd: async ({ tool, error, context }) => {
+      const opId = (context.context.get("opId") as string) ?? "unknown-op";
       if (error) {
-        voltlogger.error(`[${opId}] tool ${tool.name} failed`);
+        voltlogger.error(
+          `[${opId}] tool ${tool.name} failed: ${error?.message ?? String(error)}`
+        );
+        if ((error as any)?.stack) {
+          voltlogger.debug(`[${opId}] tool ${tool.name} stack: ${(error as any).stack}`);
+        }
+      } else {
+        voltlogger.info(`[${opId}] tool ${tool.name} completed`);
       }
+
+      // Return undefined explicitly to satisfy hook return type requirements
+      return undefined;
     },
     onEnd: ({ output, error, context }) => {
-      const opId = context.context.get('opId') as string;
+      const opId = (context.context.get("opId") as string) ?? "unknown-op";
       if (error) {
-        voltlogger.error(`[${opId}] Synthesizer error: ${error.message}`);
+        voltlogger.error(`[${opId}] Synthesizer error: ${error.message}`, {
+          stack: error.stack,
+        });
       } else if (output) {
         voltlogger.info(`[${opId}] Synthesizer completed`);
+      } else {
+        voltlogger.info(`[${opId}] Synthesizer finished with no output`);
       }
+      return undefined;
     },
     onPrepareMessages: ({ messages }) => {
+      // Pass through messages by default; can augment for diagnostics if needed
       return { messages };
     },
   },

@@ -1,28 +1,62 @@
+import type { AnthropicProviderOptions } from '@ai-sdk/anthropic'
+import type { GoogleGenerativeAIProviderOptions } from '@ai-sdk/google'
+import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai'
 import {
     createHooks,
     messageHelpers,
-    type AgentTool,
-
-    type OnStartHookArgs,
+    //  type AgentTool,
     type OnEndHookArgs,
+    type OnHandoffCompleteHookArgs,
+    type OnHandoffHookArgs,
     type OnPrepareMessagesHookArgs,
     type OnPrepareModelMessagesHookArgs,
-    type OnToolStartHookArgs,
+    type OnStartHookArgs,
     type OnToolEndHookArgs,
-    type OnHandoffHookArgs,
+    type OnToolStartHookArgs,
 } from '@voltagent/core'
-import safestringify from "@voltagent/core"
+import { generateId } from 'ai'
+import type { UIMessage } from 'ai'
+import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
-import { GoogleGenerativeAIProviderOptions } from '@ai-sdk/google'
-import { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
-import { AnthropicProviderOptions } from '@ai-sdk/anthropic';
+
+const stringifyForLog = (value: unknown): string => {
+    if (typeof value === 'string') {
+        return value
+    }
+    if (value === null) {
+        return 'null'
+    }
+    if (
+        typeof value === 'number' ||
+        typeof value === 'boolean' ||
+        typeof value === 'bigint'
+    ) {
+        return String(value)
+    }
+    if (typeof value === 'symbol') {
+        return value.toString()
+    }
+    if (typeof value === 'function') {
+        return `[Function${value.name ? ': ' + value.name : ''}]`
+    }
+    try {
+        const json = JSON.stringify(value)
+        if (json !== undefined) {
+            return json
+        }
+    } catch {
+        // ignore
+    }
+    return `[Unserializable: ${typeof value}]`
+}
 
 // Comprehensive agent hooks following official VoltAgent patterns
 const defaultAgentHooks = createHooks({
     /**
      * Called before the agent starts processing a request.
      */
-    onStart: (args: OnStartHookArgs) => {
+    onStart: async (args: OnStartHookArgs) => {
+        await Promise.resolve()
         const { agent, context } = args
         voltlogger.info(
             `[Hook] Agent ${agent.name} starting interaction at ${new Date().toISOString()}`
@@ -34,16 +68,17 @@ const defaultAgentHooks = createHooks({
      * Called after VoltAgent sanitizes UI messages but before the LLM receives them.
      * `rawMessages` contains the unsanitized list for inspection or metadata recovery.
      */
-    onPrepareMessages: (args: OnPrepareMessagesHookArgs) => {
+    onPrepareMessages: async (args: OnPrepareMessagesHookArgs) => {
+        await Promise.resolve()
         const { messages, rawMessages, context } = args
-        if (!messages || messages.length === 0) {
+        if (messages.length === 0) {
             throw new Error('No messages to prepare for LLM')
         }
         voltlogger.info(
             `Preparing ${messages.length} sanitized messages for LLM`
         )
         // Log context safely
-        voltlogger.info(`[Hook] Context: ${new safestringify(context)}`)
+        voltlogger.info('[Hook] Context:', context)
         // Add timestamp to each message
         const timestamp = new Date().toLocaleTimeString()
         const enhanced = messages.map((msg) =>
@@ -61,11 +96,10 @@ const defaultAgentHooks = createHooks({
     /**
      * Called after UI messages are converted into provider-specific ModelMessage objects.
      */
-    onPrepareModelMessages: (args: OnPrepareModelMessagesHookArgs) => {
+    onPrepareModelMessages: async (args: OnPrepareModelMessagesHookArgs) => {
+        await Promise.resolve()
         const { modelMessages, uiMessages } = args
-        voltlogger.info(
-            `Model payload contains ${uiMessages.length} messages`
-        )
+        voltlogger.info(`Model payload contains ${uiMessages.length} messages`)
 
         // Inject a system message if none exists
         if (!uiMessages.some((msg) => msg.role === 'system')) {
@@ -74,15 +108,17 @@ const defaultAgentHooks = createHooks({
                 modelMessages: [
                     {
                         role: 'system',
-                        content: 'You are a highly intelligent AI assistant. Provide detailed and thoughtful responses.',
+                        content:
+                            'You are a highly intelligent AI assistant. Provide detailed and thoughtful responses.',
                         providerOptions: {
                             google: {
                                 thinkingConfig: {
                                     thinkingBudget: -1,
                                     includeThoughts: true,
-                                    thinkingLevel: 'medium'
+                                    thinkingLevel: 'medium',
                                 },
-                                cachedContent: "Insights, analysis, and recommendations should be provided within the allocated budget.",
+                                cachedContent:
+                                    'Insights, analysis, and recommendations should be provided within the allocated budget.',
                                 responseModalities: ['TEXT', 'IMAGE'],
                             } satisfies GoogleGenerativeAIProviderOptions,
 
@@ -92,19 +128,19 @@ const defaultAgentHooks = createHooks({
                                 reasoningEffort: 'medium',
                                 promptCacheRetention: 'in_memory',
                                 textVerbosity: 'medium',
-                            }  satisfies OpenAIResponsesProviderOptions,
+                            } satisfies OpenAIResponsesProviderOptions,
 
                             anthropic: {
                                 sendReasoning: true,
                                 effort: 'low',
                                 toolStreaming: true,
                                 thinking: {
-                                    type: "enabled",
-                                    budgetTokens: 4096
+                                    type: 'enabled',
+                                    budgetTokens: 4096,
                                 },
                                 cacheControl: {
-                                    type: "ephemeral",
-                                    ttl: "1h"
+                                    type: 'ephemeral',
+                                    ttl: '1h',
                                 },
                             } satisfies AnthropicProviderOptions,
                         },
@@ -120,9 +156,10 @@ const defaultAgentHooks = createHooks({
     /**
      * Called after the agent completes a request (success or failure).
      */
-    onEnd: (args: OnEndHookArgs) => {
+    onEnd: async (args: OnEndHookArgs) => {
+        await Promise.resolve()
         const { agent, output, error, context } = args
-        voltlogger.info(`[Hook] Context: ${new safestringify(context)}`)
+        voltlogger.info('[Hook] Context:', context)
         if (error) {
             voltlogger.error(
                 `[Hook] Agent ${agent.name} finished with error:`,
@@ -131,21 +168,33 @@ const defaultAgentHooks = createHooks({
             voltlogger.error(`[Hook] Error Details:`, error)
         } else if (output) {
             voltlogger.info(`[Hook] Agent ${agent.name} finished successfully.`)
-            // Log usage or inspect output type
-            if ('usage' in output && output.usage) {
-                voltlogger.info(
-                    `[Hook] Token Usage: ${output.usage.totalTokens}`
-                )
-            }
-            if ('text' in output && output.text) {
-                voltlogger.info(
-                    `[Hook] Final text length: ${output.text.length}`
-                )
-            }
-            if ('object' in output && output.object) {
-                voltlogger.info(
-                    `[Hook] Final object keys: ${Object.keys(output.object).join(', ')}`
-                )
+            if (typeof output === 'object' && output !== null) {
+                const outputRecord = output as unknown as Record<string, unknown>
+                const usage = outputRecord['usage']
+                const text = outputRecord['text']
+                const object = outputRecord['object']
+
+                if (typeof usage === 'object' && usage !== null) {
+                    const usageRecord = usage as Record<string, unknown>
+                    const totalTokens = usageRecord['totalTokens']
+                    if (typeof totalTokens === 'number') {
+                        voltlogger.info(
+                            `[Hook] Token Usage: ${totalTokens}`
+                        )
+                    }
+                }
+
+                if (typeof text === 'string') {
+                    voltlogger.info(
+                        `[Hook] Final text length: ${text.length}`
+                    )
+                }
+
+                if (typeof object === 'object' && object !== null) {
+                    voltlogger.info(
+                        `[Hook] Final object keys: ${Object.keys(object).join(', ')}`
+                    )
+                }
             }
         }
     },
@@ -153,14 +202,12 @@ const defaultAgentHooks = createHooks({
     /**
      * Called before a tool executes.
      */
-    onToolStart: (args: OnToolStartHookArgs) => {
-        const {
-            agent,
-            tool,
-            context,
-            options: toolExecuteOptions,
-            args: toolArgs,
-        } = args
+    onToolStart: async (args: OnToolStartHookArgs) => {
+        await Promise.resolve()
+        const { agent, tool, context } = args
+
+        const toolArgs: unknown = args.args
+        const toolExecuteOptions: unknown = args.options
         voltlogger.info(
             `[Hook] Agent ${agent.name} starting tool: ${tool.name}`
         )
@@ -181,16 +228,16 @@ const defaultAgentHooks = createHooks({
             toolArgs === undefined
                 ? undefined
                 : typeof toolArgs === 'object' && toolArgs !== null
-                  ? (toolArgs as object)
-                  : { value: String(toolArgs) }
+                  ? toolArgs
+                  : { value: stringifyForLog(toolArgs) }
 
         const safeToolOptions: object | undefined =
             toolExecuteOptions === undefined
                 ? undefined
                 : typeof toolExecuteOptions === 'object' &&
                     toolExecuteOptions !== null
-                  ? (toolExecuteOptions as object)
-                  : { value: String(toolExecuteOptions) }
+                  ? toolExecuteOptions
+                  : { value: stringifyForLog(toolExecuteOptions) }
 
         voltlogger.info(`[Hook] Tool arguments:`, safeToolArgs)
         voltlogger.info(`[Hook] Tool options:`, safeToolOptions)
@@ -199,14 +246,20 @@ const defaultAgentHooks = createHooks({
     /**
      * Called after a tool completes or throws an error.
      */
-    onToolEnd: (args: OnToolEndHookArgs) => {
+    onToolEnd: async (args: OnToolEndHookArgs) => {
+        await Promise.resolve()
         const { agent, tool, output, error, context } = args
         if (error) {
-            voltlogger.error(`[Hook] Agent ${agent.name} tool ${tool.name} failed:`, {
-                message: error.message,
-            })
-            voltlogger.error(`[Hook] Tool Error Details: ${JSON.stringify(error)}`)
-            voltlogger.error(`[Hook] Context: ${new safestringify(context)}`)
+            voltlogger.error(
+                `[Hook] Agent ${agent.name} tool ${tool.name} failed:`,
+                {
+                    message: error.message,
+                }
+            )
+            voltlogger.error(
+                `[Hook] Tool Error Details: ${JSON.stringify(error)}`
+            )
+            voltlogger.error('[Hook] Context:', context)
         } else {
             // Ensure output is an object or undefined for the logger
             let logOutput: object | undefined
@@ -254,14 +307,16 @@ const defaultAgentHooks = createHooks({
                 `[Hook] Agent ${agent.name} tool ${tool.name} completed with result:`,
                 logOutput
             )
-            voltlogger.info(`[Hook] Context: ${new safestringify(context)}`)
+            voltlogger.info('[Hook] Context:', context)
         }
+        return undefined
     },
 
     /**
      * Called when a task is handed off from a source agent to this agent.
      */
-    onHandoff: (args: OnHandoffHookArgs) => {
+    onHandoff: async (args: OnHandoffHookArgs) => {
+        await Promise.resolve()
         const { agent, sourceAgent } = args
         voltlogger.info(
             `[Hook] Task handed off from ${sourceAgent.name} to ${agent.name}`
@@ -272,13 +327,56 @@ const defaultAgentHooks = createHooks({
      * Called when a handoff operation completes.
      * Useful for tracking sub-agent results and performance metrics.
      */
-    onHandoffComplete: (args) => {
-        const { agent, sourceAgent, result } = args
+    onHandoffComplete: async (args: OnHandoffCompleteHookArgs) => {
+        await Promise.resolve()
+        const { agent, sourceAgent, result, context } = args
         voltlogger.info(
             `[Hook] Handoff from ${sourceAgent.name} to ${agent.name} completed`
         )
         if (result) {
             voltlogger.debug(`[Hook] Handoff result:`, { result })
+        }
+
+        const { userId, conversationId } = context
+        if (
+            typeof userId !== 'string' ||
+            userId.trim().length === 0 ||
+            typeof conversationId !== 'string' ||
+            conversationId.trim().length === 0
+        ) {
+            return
+        }
+
+        const subagentMessage: UIMessage = {
+            id: generateId(),
+            role: 'assistant',
+            parts: [
+                {
+                    type: 'data-subagent-result',
+                    data: {
+                        subAgentId: agent.id,
+                        subAgentName: agent.name,
+                        text: result,
+                    },
+                },
+            ],
+            metadata: {
+                kind: 'subagent-result',
+                sourceAgentId: sourceAgent.id,
+                sourceAgentName: sourceAgent.name,
+            },
+        }
+
+        try {
+            await sharedMemory.addMessage(
+                subagentMessage,
+                userId.trim(),
+                conversationId.trim()
+            )
+        } catch (error) {
+            voltlogger.warn('[Hook] Failed to persist subagent message', {
+                error,
+            })
         }
     },
 })
