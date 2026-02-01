@@ -54,8 +54,6 @@
     "hooks/*.{ts,tsx}",
     "hooks/**/*.{ts,tsx}",
     "next-env.d.ts",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "next.config.ts",
     "globalSetup.ts",
     "testSetup.ts"
@@ -63,6 +61,7 @@
   "exclude": [
     "node_modules",
     "dist",
+    ".next",
     "**/*.test.ts",
     "**/*.spec.ts",
     "tests",
