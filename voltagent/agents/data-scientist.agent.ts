@@ -82,6 +82,16 @@ Statistical Methodology:
   },
   tools: [],
   toolkits: [thinkOnlyToolkit, dataProcessingToolkit],
+  toolRouting: {
+    embedding: {
+      model: "google/text-embedding-004",
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(", ") ?? "";
+        return [tool.name, tool.description, tags].filter(Boolean).join("\n");
+      },
+    },
+  },
   memory: sharedMemory,
   maxHistoryEntries: 100,
   temperature: 0.2,

@@ -128,14 +128,16 @@ export const writerAgent = new Agent({
     return `${provider}/${model}`;
   },
   hooks: {
-    onStart: ({ context }) => {
+    onStart: async ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Writer starting`);
+      await Promise.resolve();
     },
-    onToolStart: ({ tool, context }) => {
+    onToolStart: async ({ tool, context }) => {
       const opId = context.context.get('opId') as string;
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
+      await Promise.resolve();
     },
     onToolEnd: async ({ tool, error, context }) => {
       const opId = context.context.get('opId') as string;
@@ -146,16 +148,25 @@ export const writerAgent = new Agent({
       } else {
         voltlogger.info(`[${opId}] tool ${tool.name} completed`);
       }
+      await Promise.resolve();
     },
-    onEnd: ({ output, error, context }) => {
+    onEnd: async ({ output, error, context }) => {
       const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] Writer error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Writer completed`);
       }
+      await Promise.resolve();
     },
-    onPrepareMessages: ({ messages }) => {
+    onPrepareMessages: async ({ messages, context }) => {
+      const opId = context?.context.get('opId');
+      const opIdValue =
+        typeof opId === 'string' && opId.length > 0 ? opId : 'unknown-op';
+      voltlogger.debug(`[${opIdValue}] preparing messages`, {
+        count: messages.length,
+      });
+      await Promise.resolve();
       return { messages };
     },
   },

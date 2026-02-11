@@ -1,4 +1,3 @@
-import { google } from "@ai-sdk/google";
 import { Agent } from "@voltagent/core";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
@@ -27,21 +26,33 @@ export const factCheckerAgent = new Agent({
   }),
   tools: [verifyClaimTool, crossReferenceSourcesTool, detectBiasTool],
   toolkits: [thinkOnlyToolkit],
+  toolRouting: {
+    embedding: {
+      model: "google/text-embedding-004",
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(", ") ?? "";
+        return [tool.name, tool.description, tags].filter(Boolean).join("\n");
+      },
+    },
+  },
   memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: ({ context }) => {
+    onStart: async ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] FactChecker starting`);
+      await Promise.resolve();
     },
 
-    onToolStart: ({ tool, context }) => {
+    onToolStart: async ({ tool, context }) => {
       const opId = context.context.get('opId') as string;
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
+      await Promise.resolve();
     },
 
     onToolEnd: async ({ tool, error, context }) => {
@@ -64,7 +75,7 @@ export const factCheckerAgent = new Agent({
       await Promise.resolve();
     },
 
-    onEnd: ({ output, error, context }) => {
+    onEnd: async ({ output, error, context }) => {
       const opId = context.context.get('opId') as string;
       if (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -72,8 +83,16 @@ export const factCheckerAgent = new Agent({
       } else if (output) {
         voltlogger.info(`[${opId}] FactChecker completed`);
       }
+      await Promise.resolve();
     },
-    onPrepareMessages: ({ messages }) => {
+    onPrepareMessages: async ({ messages, context }) => {
+      const opId = context?.context.get('opId');
+      const opIdValue =
+        typeof opId === 'string' && opId.length > 0 ? opId : 'unknown-op';
+      voltlogger.debug(`[${opIdValue}] preparing messages`, {
+        count: messages.length,
+      });
+      await Promise.resolve();
       return { messages };
     },
   },

@@ -1,7 +1,4 @@
-
 import { Agent } from '@voltagent/core'
-
-
 import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
@@ -38,6 +35,16 @@ export const directorAgent = new Agent({
   }),
   tools: [],
   toolkits: [thinkOnlyToolkit],
+  toolRouting: {
+    embedding: {
+      model: 'google/text-embedding-004',
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(', ') ?? '';
+        return [tool.name, tool.description, tags].filter(Boolean).join('\n');
+      },
+    },
+  },
   memory: sharedMemory,
   retriever: undefined,
   // No local sub-agents configured; delegate planning and execution to the PlanAgent (deep-work-agent / deep-research-agent).

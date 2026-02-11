@@ -32,14 +32,25 @@ export const codingAgent = new Agent({
   }),
   tools: [],
   toolkits: [codeAnalysisToolkit, filesystemToolkit, gitToolkit, testToolkit, thinkOnlyToolkit],
+  toolRouting: {
+    embedding: {
+      model: "google/text-embedding-004",
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(", ") ?? "";
+        return [tool.name, tool.description, tags].filter(Boolean).join("\n");
+      },
+    },
+  },
   memory: sharedMemory,
   hooks: {
-    onStart: ({ context }) => {
+    onStart: async ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Coding Agent starting`);
+      await Promise.resolve();
     },
-    onEnd: ({ output, error, context }) => {
+    onEnd: async ({ output, error, context }) => {
       const opId = String(context.context.get('opId'));
       if (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -47,10 +58,12 @@ export const codingAgent = new Agent({
       } else if (output) {
         voltlogger.info(`[${opId}] Coding Agent completed`);
       }
+      await Promise.resolve();
     },
-    onToolStart: ({ tool, context }) => {
+    onToolStart: async ({ tool, context }) => {
       const opId = String(context.context.get('opId'));
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
+      await Promise.resolve();
     },
     onToolEnd: async ({ tool, error, context }) => {
       const opId = String(context.context.get('opId'));
@@ -60,6 +73,7 @@ export const codingAgent = new Agent({
       } else {
         voltlogger.info(`[${opId}] tool ${tool.name} completed`);
       }
+      await Promise.resolve();
     },
   },
   temperature: 0.2, // Lower temperature for coding precision

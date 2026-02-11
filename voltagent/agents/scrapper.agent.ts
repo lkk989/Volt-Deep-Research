@@ -1,7 +1,4 @@
-import { google } from "@ai-sdk/google";
-import { Agent, AiSdkEmbeddingAdapter, Memory } from "@voltagent/core";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import z from "zod";
+import { Agent } from "@voltagent/core";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
@@ -28,36 +25,55 @@ export const scrapperAgent = new Agent({
   }),
   tools: [],
   toolkits: [webScraperToolkit],
+  toolRouting: {
+    embedding: {
+      model: "google/text-embedding-004",
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(", ") ?? "";
+        return [tool.name, tool.description, tags].filter(Boolean).join("\n");
+      },
+    },
+  },
   memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: ({ context }) => {
+    onStart: async ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Scrapper starting`);
+      await Promise.resolve();
     },
-    onToolStart: ({ tool, context }) => {
+    onToolStart: async ({ tool, context }) => {
       const opId = context.context.get('opId') as string;
       voltlogger.info(`[${opId}] tool: ${tool.name}`);
+      await Promise.resolve();
     },
     onToolEnd: async ({ tool, error, context }) => {
       const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] tool ${tool.name} failed`);
       }
+      await Promise.resolve();
     },
-    onEnd: ({ output, error, context }) => {
+    onEnd: async ({ output, error, context }) => {
       const opId = context.context.get('opId') as string;
       if (error) {
         voltlogger.error(`[${opId}] Scrapper error: ${error.message}`);
       } else if (output) {
         voltlogger.info(`[${opId}] Scrapper completed`);
       }
+      await Promise.resolve();
     },
-    onPrepareMessages: ({ messages }) => {
+    onPrepareMessages: async ({ messages, context }) => {
+      const opId = context?.context.get('opId') as string | undefined;
+      voltlogger.debug(`[${opId ?? 'unknown-op'}] preparing messages`, {
+        count: messages.length,
+      });
+      await Promise.resolve();
       return { messages };
     },
   },
