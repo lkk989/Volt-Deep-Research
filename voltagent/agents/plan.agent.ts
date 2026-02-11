@@ -59,6 +59,16 @@ export const deepAgent = new PlanAgent({
   },
   tools: [],
   toolkits: [thinkOnlyToolkit],
+  toolRouting: {
+    embedding: {
+      model: 'google/text-embedding-004',
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(', ') ?? '';
+        return [tool.name, tool.description, tags].filter(Boolean).join('\n');
+      },
+    },
+  },
   memory: sharedMemory,
   maxSteps: 100,
   logger: voltlogger,

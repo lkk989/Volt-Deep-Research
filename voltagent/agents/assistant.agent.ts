@@ -1,14 +1,12 @@
-import { google } from "@ai-sdk/google";
-import { Agent, AiSdkEmbeddingAdapter, Memory, createTool } from "@voltagent/core";
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
-import z from "zod";
+import { Agent } from "@voltagent/core";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { getForecastOpenMeteo, getWeatherTool } from "../tools/weather-toolkit.js";
-import { defaultAgentHooks } from "./agentHooks.js";
+//import { defaultAgentHooks } from "./agentHooks.js";
 import { assistantPrompt } from "./prompts.js";
+
 export const assistantAgent = new Agent({
   id: "assistant",
   name: "Assistant",
@@ -27,37 +25,57 @@ export const assistantAgent = new Agent({
   }),
   tools: [getWeatherTool, getForecastOpenMeteo],
   toolkits: [thinkOnlyToolkit],
+  toolRouting: {
+    embedding: {
+      model: "google/text-embedding-004",
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(", ") ?? "";
+        return [tool.name, tool.description, tags].filter(Boolean).join("\n");
+      },
+    },
+  },
   memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: ({ context }) => {
+    onStart: async ({ context }) => {
       const opId = crypto.randomUUID();
       context.context.set('opId', opId);
       voltlogger.info(`[${opId}] Assistant starting`);
+      await Promise.resolve();
       return undefined;
     },
-    onToolStart: ({ tool, context }) => {
+    onToolStart: async ({ tool, context }) => {
       const opId = String(context.context.get('opId'));
       voltlogger.info(`[${opId}] tool: ${String(tool.name)} starting`);
+      await Promise.resolve();
       return undefined;
     },
     onToolEnd: async ({ tool, error, context }) => {
       const opId = String(context.context.get('opId'));
       if (error) {
-        const errMsg = error instanceof Error ? (error.stack || error.message) : String(error);
+        const errMsg = error instanceof Error ? (error.stack ?? error.message) : String(error);
         voltlogger.error(`[${opId}] tool ${String(tool.name)} failed: ${errMsg}`);
       } else {
         voltlogger.info(`[${opId}] tool ${String(tool.name)} completed`);
       }
+      await Promise.resolve();
       return undefined;
     },
-    onPrepareMessages: ({ messages }) => {
+    onPrepareMessages: async ({ messages, context }) => {
+      const opId = context?.context.get('opId');
+      const opIdValue =
+        typeof opId === 'string' && opId.length > 0 ? opId : 'unknown-op';
+      voltlogger.debug(`[${opIdValue}] preparing messages`, {
+        count: messages.length,
+      });
+      await Promise.resolve();
       return { messages };
     },
-    onEnd: ({ output, error, context }) => {
+    onEnd: async ({ output, error, context }) => {
       const opId = String(context.context.get('opId'));
       if (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -67,6 +85,7 @@ export const assistantAgent = new Agent({
       } else {
         voltlogger.info(`[${opId}] Assistant ended without output`);
       }
+      await Promise.resolve();
       return undefined;
     },
   },

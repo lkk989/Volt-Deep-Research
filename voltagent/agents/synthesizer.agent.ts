@@ -1,6 +1,4 @@
-import { google } from "@ai-sdk/google";
 import { Agent, createTool } from "@voltagent/core";
-
 import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
@@ -297,13 +295,23 @@ export const synthesizerAgent = new Agent({
   }),
   tools: [synthesizeInformationTool, resolveContradictionsTool, createUnifiedNarrativeTool],
   toolkits: [thinkOnlyToolkit],
+  toolRouting: {
+    embedding: {
+      model: "google/text-embedding-004",
+      topK: 3,
+      toolText: (tool) => {
+        const tags = tool.tags?.join(", ") ?? "";
+        return [tool.name, tool.description, tags].filter(Boolean).join("\n");
+      },
+    },
+  },
   memory: sharedMemory,
   retriever: undefined,
   subAgents: [],
   supervisorConfig: undefined,
   maxHistoryEntries: 100,
   hooks: {
-    onStart: ({ context }) => {
+    onStart: async ({ context }) => {
       const opId =
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
@@ -318,11 +326,13 @@ export const synthesizerAgent = new Agent({
         );
       }
 
+      await Promise.resolve();
       return undefined;
     },
-    onToolStart: ({ tool, context }) => {
+    onToolStart: async ({ tool, context }) => {
       const opId = (context.context.get("opId") as string) ?? "unknown-op";
       voltlogger.info(`[${opId}] tool start: ${tool.name}`);
+      await Promise.resolve();
       return undefined;
     },
     onToolEnd: async ({ tool, error, context }) => {
@@ -331,17 +341,23 @@ export const synthesizerAgent = new Agent({
         voltlogger.error(
           `[${opId}] tool ${tool.name} failed: ${error?.message ?? String(error)}`
         );
-        if ((error as any)?.stack) {
-          voltlogger.debug(`[${opId}] tool ${tool.name} stack: ${(error as any).stack}`);
+        if (error instanceof Error) {
+          const { stack } = error;
+          if (typeof stack === "string" && stack.length > 0) {
+            voltlogger.debug(
+              `[${opId}] tool ${tool.name} stack: ${stack}`
+            );
+          }
         }
       } else {
         voltlogger.info(`[${opId}] tool ${tool.name} completed`);
       }
 
       // Return undefined explicitly to satisfy hook return type requirements
+      await Promise.resolve();
       return undefined;
     },
-    onEnd: ({ output, error, context }) => {
+    onEnd: async ({ output, error, context }) => {
       const opId = (context.context.get("opId") as string) ?? "unknown-op";
       if (error) {
         voltlogger.error(`[${opId}] Synthesizer error: ${error.message}`, {
@@ -352,10 +368,17 @@ export const synthesizerAgent = new Agent({
       } else {
         voltlogger.info(`[${opId}] Synthesizer finished with no output`);
       }
+      await Promise.resolve();
       return undefined;
     },
-    onPrepareMessages: ({ messages }) => {
-      // Pass through messages by default; can augment for diagnostics if needed
+    onPrepareMessages: async ({ messages, context }) => {
+      const opId = context?.context.get("opId");
+      const opIdValue =
+        typeof opId === "string" && opId.length > 0 ? opId : "unknown-op";
+      voltlogger.debug(`[${opIdValue}] preparing messages`, {
+        count: messages.length,
+      });
+      await Promise.resolve();
       return { messages };
     },
   },
