@@ -5,6 +5,7 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import { ChatInput } from './chat-input'
 import { ChatMessages } from './chat-messages'
+import { Spinner } from '@/components/ui/spinner'
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input'
 
 interface ChatPanelProps {
@@ -149,8 +150,9 @@ export function ChatPanel({
     return (
         <div className="flex h-screen flex-col">
             {isLoading && (
-                <div className="border-b bg-muted/20 px-6 py-2 text-xs text-muted-foreground">
-                    Loading conversation…
+                <div className="flex items-center gap-2 border-b bg-muted/20 px-6 py-2 text-xs text-muted-foreground">
+                    <Spinner className="size-3" />
+                    <span>Loading conversation…</span>
                 </div>
             )}
             <ChatMessages

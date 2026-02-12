@@ -7,17 +7,22 @@ import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { codeAnalysisToolkit } from "../tools/code-analysis-toolkit.js";
-import { filesystemToolkit } from "../tools/filesystem-toolkit.js";
+import { debugTool } from "../tools/debug-tool.js";
 import { gitToolkit } from "../tools/git-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { testToolkit } from "../tools/test-toolkit.js";
-import { defaultAgentHooks } from "./agentHooks.js";
+import {
+  sharedWorkspaceFilesystemToolkit,
+  sharedWorkspaceSandboxToolkit,
+  sharedWorkspaceSearchToolkit,
+  sharedWorkspaceSkillsToolkit,
+} from "../workspaces/index.js";
 import { codingAgentPrompt } from "./prompts.js";
 
 export const codingAgent = new Agent({
   id: "coding-agent",
   name: "Coding Agent",
-  purpose: "Implement code features, fix bugs, and refactor code",
+  purpose: "Implement and refactor code with production-grade correctness, maintainability, and alignment to repository architecture.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
@@ -27,14 +32,24 @@ export const codingAgent = new Agent({
     language: "TypeScript",
     framework: "VoltAgent",
     taskType: "implementation",
-    constraints: "Follow project patterns",
-    task: "Implement the requested feature",
+    tools: "code-analysis, git, test toolkit, workspace filesystem/search/sandbox/skills, debug",
+    constraints: "Follow project patterns, preserve existing behavior unless explicitly changing, and keep changes minimal but complete",
+    task: "Implement requested feature/fix with clear reasoning, safe edits, and maintainable structure.",
   }),
-  tools: [],
-  toolkits: [codeAnalysisToolkit, filesystemToolkit, gitToolkit, testToolkit, thinkOnlyToolkit],
+  tools: [debugTool],
+  toolkits: [
+    codeAnalysisToolkit,
+    sharedWorkspaceFilesystemToolkit,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSandboxToolkit,
+    sharedWorkspaceSkillsToolkit,
+    gitToolkit,
+    testToolkit,
+    thinkOnlyToolkit,
+  ],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: "google/gemini-embedding-001",
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";

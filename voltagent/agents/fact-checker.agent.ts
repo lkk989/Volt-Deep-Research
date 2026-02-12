@@ -4,13 +4,14 @@ import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { crossReferenceSourcesTool, detectBiasTool, verifyClaimTool } from "../tools/analyze-data-tool.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { defaultAgentHooks } from "./agentHooks.js";
 import { factCheckerPrompt } from "./prompts.js";
 
 export const factCheckerAgent = new Agent({
   id: "fact-checker",
   name: "Fact Checker",
-  purpose: "Verify information accuracy, detect bias, and ensure research integrity",
+  purpose: "Verify claims against credible evidence, detect bias/manipulation risk, and assign confidence for safe downstream synthesis.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
@@ -18,17 +19,18 @@ export const factCheckerAgent = new Agent({
   },
   instructions: factCheckerPrompt({
     standard: "multiple credible sources",
-    sourceRequirements: "authoritative, recent, unbiased",
+    sourceRequirements: "authoritative, recent, independent, and conflict-of-interest aware",
     confidenceLevels: "High (95%+), Medium (70-94%), Low (<70%)",
     biasIndicators: "sensationalism, one-sided arguments, lack of evidence",
-    standards: "Maintain objectivity, cite all sources, acknowledge uncertainties",
-    task: "Verify the accuracy of the provided information"
+    tools: "verify-claim, cross-reference, bias-detection, workspace search/skills",
+    standards: "Maintain objectivity, cite all sources, acknowledge uncertainty, and separate facts from interpretation",
+    task: "Verify claims and provide confidence-scored recommendations for acceptance, revision, or rejection."
   }),
   tools: [verifyClaimTool, crossReferenceSourcesTool, detectBiasTool],
-  toolkits: [thinkOnlyToolkit],
+  toolkits: [thinkOnlyToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: 'google/gemini-embedding-001',
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";

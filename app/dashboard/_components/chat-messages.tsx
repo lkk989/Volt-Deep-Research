@@ -6,7 +6,7 @@ import {
     ConversationEmptyState,
     ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
-import { Loader } from '@/components/ai-elements/loader'
+import { Spinner } from '@/components/ui/spinner'
 import {
     Message,
     MessageContent,
@@ -22,6 +22,11 @@ import {
     ToolInput,
     ToolOutput,
 } from '@/components/ai-elements/tool'
+import {
+    JSXPreview,
+    JSXPreviewContent,
+    JSXPreviewError,
+} from '@/components/ai-elements/jsx-preview'
 import {
     Reasoning,
     ReasoningContent,
@@ -165,21 +170,28 @@ import {
     FileIcon,
     FolderIcon,
 } from 'lucide-react'
-import { useState, useCallback, memo } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import type {
     DataUIPart,
-    FileUIPart,
     ReasoningUIPart,
     SourceDocumentUIPart,
     SourceUrlUIPart,
     StepStartUIPart,
     TextUIPart,
+    Tool as AITool,
     ToolUIPart,
     DynamicToolUIPart,
     UIDataTypes,
     UIMessage,
 } from 'ai'
-import { getToolName, isDataUIPart, isToolUIPart } from 'ai'
+import {
+    getToolName,
+    isDataUIPart,
+    isFileUIPart,
+    isReasoningUIPart,
+    isTextUIPart,
+    isToolUIPart,
+} from 'ai'
 import { messageHelpers } from '@voltagent/core'
 
 interface ChatMessagesProps {
@@ -225,11 +237,6 @@ export function ChatMessages({
         },
         [onCopyMessage]
     )
-
-    // Get text content from message parts using message helpers
-    const getMessageText = useCallback((message: UIMessage): string => {
-        return messageHelpers.extractText(message)
-    }, [])
 
     // Extract sources from message parts
     const getSourcesFromParts = (parts: UIMessage['parts']): SourceDocument[] => {
@@ -290,7 +297,9 @@ export function ChatMessages({
                             const { role, id } = message
                             const isUser = role === 'user'
                             const isAssistant = role === 'assistant'
-                            const messageText = getMessageText(message)
+                            const messageText = messageHelpers.hasContent(message)
+                                ? messageHelpers.extractText(message)
+                                : ''
                             const modelLabel = getModelLabel(message.metadata)
 
                             // Get sources from parts
@@ -375,7 +384,7 @@ export function ChatMessages({
                                                 )
                                             }
 
-                                            if (isFilePart(part)) {
+                                            if (isFileUIPart(part)) {
                                                 if (
                                                     part.mediaType.startsWith(
                                                         'image/'
@@ -408,9 +417,8 @@ export function ChatMessages({
                                             }
 
                                             // Render text parts with proper typing
-                                            if (part.type === 'text') {
-                                                const textPart =
-                                                    part as TextUIPart
+                                            if (isTextUIPart(part)) {
+                                                const textPart = part as TextUIPart
                                                 return (
                                                     <MessageResponse
                                                         key={`text-${id}-${idx}`}
@@ -421,13 +429,9 @@ export function ChatMessages({
                                             }
 
                                             // Render reasoning parts with proper typing
-                                            if (part.type === 'reasoning') {
-                                                const reasoningPart =
-                                                    part as ReasoningUIPart
-                                                const reasoningText =
-                                                    extractReasoningText(
-                                                        reasoningPart
-                                                    )
+                                            if (isReasoningUIPart(part)) {
+                                                const reasoningPart = part as ReasoningUIPart
+                                                const reasoningText = reasoningPart.text ?? ''
                                                 if (!reasoningText) return null
 
                                                 return (
@@ -451,9 +455,7 @@ export function ChatMessages({
                                             }
 
                                             // Render tool invocation parts
-                                            if (
-                                                isToolUIPart(part as ToolUIPart)
-                                            ) {
+                                            if (isToolUIPart(part)) {
                                                 const toolPart = part as
                                                     | ToolUIPart
                                                     | DynamicToolUIPart
@@ -682,9 +684,7 @@ export function ChatMessages({
                                                                                                                 key={
                                                                                                                     tIdx
                                                                                                                 }
-                                                                                                                tool={
-                                                                                                                    tool as unknown as import('ai').Tool
-                                                                                                                }
+                                                                                                                tool={tool}
                                                                                                                 value={`tool-${tIdx}`}
                                                                                                             />
                                                                                                         )
@@ -868,6 +868,9 @@ export function ChatMessages({
                                                                             ) ||
                                                                             isConfirmationOutput(
                                                                                 toolPart.output
+                                                                            ) ||
+                                                                            isJsxPreviewOutput(
+                                                                                toolPart.output
                                                                             )
                                                                         ) && (
                                                                             <ToolOutput
@@ -931,11 +934,60 @@ export function ChatMessages({
                                                                                 )}
                                                                             </div>
                                                                         )}
+
+                                                                        {isJsxPreviewOutput(
+                                                                            toolPart.output
+                                                                        ) && (
+                                                                            <div className="mt-2 space-y-2">
+                                                                                <JSXPreview
+                                                                                    jsx={getJsxPreviewContent(
+                                                                                        toolPart.output
+                                                                                    )}
+                                                                                    isStreaming={
+                                                                                        toolPart
+                                                                                            .output
+                                                                                            .isStreaming ??
+                                                                                        false
+                                                                                    }
+                                                                                    className="rounded-md border bg-background p-3"
+                                                                                >
+                                                                                    <JSXPreviewContent />
+                                                                                </JSXPreview>
+                                                                                <JSXPreviewError />
+                                                                            </div>
+                                                                        )}
                                                                     </>
+                                                                )}
+
+                                                                {/* Tool error fallback when no structured output is provided */}
+                                                                {toolPart.state ===
+                                                                    'output-error' &&
+                                                                    !toolPart.output && (
+                                                                    <ToolOutput
+                                                                        output={{
+                                                                            error:
+                                                                                toolPart.errorText ||
+                                                                                'Tool execution failed',
+                                                                        }}
+                                                                        errorText={
+                                                                            toolPart.errorText ||
+                                                                            'Tool execution failed'
+                                                                        }
+                                                                    />
                                                                 )}
                                                             </>
                                                         </ToolContent>
                                                     </Tool>
+                                                )
+                                            }
+
+                                            if (isDataUIPart<UIDataTypes>(part)) {
+                                                return (
+                                                    <DataPartArtifact
+                                                        key={`data-${id}-${idx}`}
+                                                        partType={part.type}
+                                                        data={part.data}
+                                                    />
                                                 )
                                             }
 
@@ -1026,7 +1078,7 @@ export function ChatMessages({
                                 </div>
                                 <MessageContent>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Loader />
+                                        <Spinner className="h-4 w-4" />
                                         <span>Thinking...</span>
                                     </div>
                                 </MessageContent>
@@ -1052,11 +1104,6 @@ export function ChatMessages({
     )
 }
 
-// Helper function to extract reasoning text from ReasoningUIPart
-function extractReasoningText(part: ReasoningUIPart): string {
-    return part.text ?? ''
-}
-
 function isSourceUrlPart(part: UIMessage['parts'][number]): part is SourceUrlUIPart {
     return part.type === 'source-url'
 }
@@ -1065,10 +1112,6 @@ function isSourceDocumentPart(
     part: UIMessage['parts'][number]
 ): part is SourceDocumentUIPart {
     return part.type === 'source-document'
-}
-
-function isFilePart(part: UIMessage['parts'][number]): part is FileUIPart {
-    return part.type === 'file'
 }
 
 function isStepStartPart(
@@ -1164,8 +1207,8 @@ function getSubagentStreamTextDelta(data: Record<string, unknown>): string {
 
 // Type guards for detecting content types from tool outputs
 function isTerminalOutput(
-    output: unknown
-): output is { type: 'terminal'; content: string } {
+    output: ToolOutputValue
+): output is TerminalOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'terminal' && typeof obj.content === 'string'
@@ -1174,8 +1217,8 @@ function isTerminalOutput(
 }
 
 function isStackTrace(
-    output: unknown
-): output is { type: 'stack-trace'; trace: string } {
+    output: ToolOutputValue
+): output is StackTraceOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'stack-trace' && typeof obj.trace === 'string'
@@ -1184,8 +1227,8 @@ function isStackTrace(
 }
 
 function isCodeOutput(
-    output: unknown
-): output is { type: 'code'; code: string; language: string } {
+    output: ToolOutputValue
+): output is CodeOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1205,8 +1248,8 @@ interface FileNode {
 }
 
 function isFileTree(
-    output: unknown
-): output is { type: 'file-tree'; files: FileNode[] } {
+    output: ToolOutputValue
+): output is FileTreeOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'file-tree' && Array.isArray(obj.files)
@@ -1231,9 +1274,89 @@ interface TestSuiteData {
     tests: TestResult[]
 }
 
+type JsonPrimitive = string | number | boolean | null
+type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
+
+type TerminalOutput = { type: 'terminal'; content: string }
+type StackTraceOutput = { type: 'stack-trace'; trace: string }
+type CodeOutput = { type: 'code'; code: string; language: string }
+type FileTreeOutput = { type: 'file-tree'; files: FileNode[] }
+type TestResultsOutput = { type: 'test-results'; suites: TestSuiteData[] }
+
+type SchemaOutput = {
+    type: 'schema'
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+    path: string
+    description?: string
+    parameters?: Array<{
+        name: string
+        type: string
+        required?: boolean
+        description?: string
+        location?: 'path' | 'query' | 'header'
+    }>
+    requestBody?: Array<{
+        name: string
+        type: string
+        required?: boolean
+        description?: string
+        properties?: Array<{
+            name: string
+            type: string
+            required?: boolean
+            description?: string
+        }>
+    }>
+    responseBody?: Array<{
+        name: string
+        type: string
+        required?: boolean
+        description?: string
+    }>
+}
+
+type SnippetOutput = { type: 'snippet'; code: string; label?: string }
+type PackageInfoOutput = { type: 'package-info'; package: PackageData }
+type CheckpointOutput = {
+    type: 'checkpoint'
+    label: string
+    status: 'completed' | 'pending' | 'in-progress' | 'error'
+    timestamp?: string
+    tooltip?: string
+}
+type ConfirmationOutput = {
+    type: 'confirmation'
+    id: string
+    message: string
+    approved?: boolean
+    reason?: string
+}
+type JsxPreviewOutput = {
+    type?: 'jsx-preview'
+    jsx?: string
+    content?: string
+    isStreaming?: boolean
+}
+
+type ToolOutputValue =
+    | ToolUIPart['output']
+    | DynamicToolUIPart['output']
+    | JsonValue
+    | TerminalOutput
+    | StackTraceOutput
+    | CodeOutput
+    | FileTreeOutput
+    | TestResultsOutput
+    | SchemaOutput
+    | SnippetOutput
+    | PackageInfoOutput
+    | CheckpointOutput
+    | ConfirmationOutput
+    | JsxPreviewOutput
+
 function isTestResults(
-    output: unknown
-): output is { type: 'test-results'; suites: TestSuiteData[] } {
+    output: ToolOutputValue
+): output is TestResultsOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'test-results' && Array.isArray(obj.suites)
@@ -1245,16 +1368,12 @@ interface AgentData {
     name: string
     model?: string
     instructions?: string
-    tools?: Array<{
-        name: string
-        description?: string
-        inputSchema?: Record<string, unknown>
-    }>
+    tools?: AITool[]
     outputSchema?: string
 }
 
 function isAgentOutput(
-    output: unknown
+    output: ToolOutputValue
 ): output is { type: 'agent'; agent: AgentData } {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
@@ -1275,7 +1394,7 @@ interface SandboxData {
 }
 
 function isSandboxOutput(
-    output: unknown
+    output: ToolOutputValue
 ): output is { type: 'sandbox'; sandbox: SandboxData } {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
@@ -1386,37 +1505,7 @@ function renderTestResults(suites: TestSuiteData[]): React.ReactNode {
 }
 
 // Type guards for additional output types
-function isSchemaOutput(output: unknown): output is {
-    type: 'schema'
-    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-    path: string
-    description?: string
-    parameters?: Array<{
-        name: string
-        type: string
-        required?: boolean
-        description?: string
-        location?: 'path' | 'query' | 'header'
-    }>
-    requestBody?: Array<{
-        name: string
-        type: string
-        required?: boolean
-        description?: string
-        properties?: Array<{
-            name: string
-            type: string
-            required?: boolean
-            description?: string
-        }>
-    }>
-    responseBody?: Array<{
-        name: string
-        type: string
-        required?: boolean
-        description?: string
-    }>
-} {
+function isSchemaOutput(output: ToolOutputValue): output is SchemaOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1429,8 +1518,8 @@ function isSchemaOutput(output: unknown): output is {
 }
 
 function isSnippetOutput(
-    output: unknown
-): output is { type: 'snippet'; code: string; label?: string } {
+    output: ToolOutputValue
+): output is SnippetOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'snippet' && typeof obj.code === 'string'
@@ -1448,8 +1537,8 @@ interface PackageData {
 }
 
 function isPackageInfoOutput(
-    output: unknown
-): output is { type: 'package-info'; package: PackageData } {
+    output: ToolOutputValue
+): output is PackageInfoOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1462,13 +1551,7 @@ function isPackageInfoOutput(
     return false
 }
 
-function isCheckpointOutput(output: unknown): output is {
-    type: 'checkpoint'
-    label: string
-    status: 'completed' | 'pending' | 'in-progress' | 'error'
-    timestamp?: string
-    tooltip?: string
-} {
+function isCheckpointOutput(output: ToolOutputValue): output is CheckpointOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1480,13 +1563,7 @@ function isCheckpointOutput(output: unknown): output is {
     return false
 }
 
-function isConfirmationOutput(output: unknown): output is {
-    type: 'confirmation'
-    id: string
-    message: string
-    approved?: boolean
-    reason?: string
-} {
+function isConfirmationOutput(output: ToolOutputValue): output is ConfirmationOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1498,8 +1575,64 @@ function isConfirmationOutput(output: unknown): output is {
     return false
 }
 
+function isJsxPreviewOutput(output: ToolOutputValue): output is JsxPreviewOutput {
+    if (output && typeof output === 'object') {
+        const obj = output as Record<string, unknown>
+        return (
+            typeof obj.jsx === 'string' ||
+            (obj.type === 'jsx-preview' && typeof obj.content === 'string')
+        )
+    }
+    return false
+}
+
+function getJsxPreviewContent(output: {
+    jsx?: string
+    content?: string
+}): string {
+    return output.jsx ?? output.content ?? ''
+}
+
+interface DataPartArtifactProps {
+    partType: string
+    data: unknown
+}
+
+const DataPartArtifact = memo(function DataPartArtifact({
+    partType,
+    data,
+}: DataPartArtifactProps) {
+    const serializedData = useMemo(() => safeJsonStringify(data), [data])
+
+    return (
+        <Artifact>
+            <ArtifactHeader>
+                <div className="flex items-center gap-2">
+                    <FileJsonIcon className="size-4 text-muted-foreground" />
+                    <ArtifactTitle className="text-sm">{partType}</ArtifactTitle>
+                </div>
+            </ArtifactHeader>
+            <ArtifactContent className="p-0">
+                <CodeBlock
+                    code={serializedData}
+                    language="json"
+                    showLineNumbers
+                />
+            </ArtifactContent>
+        </Artifact>
+    )
+})
+
+function safeJsonStringify(value: unknown): string {
+    try {
+        return JSON.stringify(value, null, 2)
+    } catch {
+        return String(value)
+    }
+}
+
 // Render schema display
-function renderSchema(output: unknown): React.ReactNode {
+function renderSchema(output: ToolOutputValue): React.ReactNode {
     if (!isSchemaOutput(output)) return null
 
     // Use the SchemaDisplay subcomponents explicitly so imports are exercised
@@ -1532,7 +1665,7 @@ function renderSchema(output: unknown): React.ReactNode {
             <SchemaDisplayContent>
                 {output.parameters && output.parameters.length > 0 && (
                     <SchemaDisplayParameters>
-                        {output.parameters.map((p: any) => (
+                        {output.parameters.map((p) => (
                             <SchemaDisplayParameter key={p.name} {...p} />
                         ))}
                     </SchemaDisplayParameters>
@@ -1541,7 +1674,7 @@ function renderSchema(output: unknown): React.ReactNode {
                 {output.requestBody && output.requestBody.length > 0 && (
                     <SchemaDisplayRequest>
                         <SchemaDisplayBody>
-                            {output.requestBody.map((prop: any) => (
+                            {output.requestBody.map((prop) => (
                                 <SchemaDisplayProperty key={prop.name} {...prop} />
                             ))}
                         </SchemaDisplayBody>
@@ -1551,7 +1684,7 @@ function renderSchema(output: unknown): React.ReactNode {
                 {output.responseBody && output.responseBody.length > 0 && (
                     <SchemaDisplayResponse>
                         <SchemaDisplayBody>
-                            {output.responseBody.map((prop: any) => (
+                            {output.responseBody.map((prop) => (
                                 <SchemaDisplayProperty key={prop.name} {...prop} />
                             ))}
                         </SchemaDisplayBody>
@@ -1601,7 +1734,7 @@ function renderSchema(output: unknown): React.ReactNode {
 }
 
 // Render snippet
-function renderSnippet(output: unknown): React.ReactNode {
+function renderSnippet(output: ToolOutputValue): React.ReactNode {
     if (!isSnippetOutput(output)) return null
     return (
         <Snippet code={output.code}>
@@ -1613,7 +1746,7 @@ function renderSnippet(output: unknown): React.ReactNode {
 }
 
 // Render package info
-function renderPackageInfo(output: unknown): React.ReactNode {
+function renderPackageInfo(output: ToolOutputValue): React.ReactNode {
     if (!isPackageInfoOutput(output)) return null
     const pkg = output.package
     return (
@@ -1652,7 +1785,7 @@ function renderPackageInfo(output: unknown): React.ReactNode {
 }
 
 // Render checkpoint
-function renderCheckpoint(output: unknown): React.ReactNode {
+function renderCheckpoint(output: ToolOutputValue): React.ReactNode {
     if (!isCheckpointOutput(output)) return null
 
     const statusIcons: Record<string, React.ReactNode> = {
@@ -1689,7 +1822,7 @@ function renderCheckpoint(output: unknown): React.ReactNode {
 
 // Render confirmation
 function renderConfirmation(
-    output: unknown,
+    output: ToolOutputValue,
     toolState: ToolUIPart['state']
 ): React.ReactNode {
     if (!isConfirmationOutput(output)) return null

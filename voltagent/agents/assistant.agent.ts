@@ -2,32 +2,41 @@ import { Agent } from "@voltagent/core";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { arxivToolkit } from "../tools/arxiv-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { getForecastOpenMeteo, getWeatherTool } from "../tools/weather-toolkit.js";
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 //import { defaultAgentHooks } from "./agentHooks.js";
 import { assistantPrompt } from "./prompts.js";
 
 export const assistantAgent = new Agent({
   id: "assistant",
   name: "Assistant",
-  purpose: "Generate effective search queries and coordinate research tasks",
+  purpose: "Generate high-signal, source-targeted research queries and concise investigation plans for downstream specialist agents.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
     return `${provider}/${model}`;
   },
   instructions: assistantPrompt({
-    topic: "general research",
-    strategy: "comprehensive",
-    sources: "web, academic, news",
-    expertise: "intermediate",
-    task: "Generate search queries for the research topic",
+    topic: "complex multi-source research",
+    strategy: "coverage-first then precision refinement",
+    sources: "web, academic, standards docs, regulatory, technical blogs",
+    tools: "reasoning, arXiv search/extract, workspace search, workspace skills",
+    expertise: "advanced",
+    task: "Generate prioritized query sets and angles to maximize evidence coverage with minimal redundancy.",
+    queryFormat: "one-per-line with optional tags [intent|source-type|time-range]",
   }),
   tools: [getWeatherTool, getForecastOpenMeteo],
-  toolkits: [thinkOnlyToolkit],
+  toolkits: [
+    thinkOnlyToolkit,
+    arxivToolkit,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSkillsToolkit,
+  ],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: "google/gemini-embedding-001",
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";

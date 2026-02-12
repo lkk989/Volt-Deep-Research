@@ -13,10 +13,18 @@ import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
 import { chromaRetriever } from '../retriever/chroma.js'
 import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
+import { sharedWorkspaceRuntime, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from '../workspaces/index.js'
 import { defaultAgentHooks } from './agentHooks.js'
 import { assistantAgent } from './assistant.agent.js'
+import { codeReviewerAgent } from './code-reviewer.agent.js'
+import { codingAgent } from './coding.agent.js'
+import { contentCuratorAgent } from './content-curator.agent.js'
 import { dataAnalyzerAgent } from './data-analyzer.agent.js'
+import { dataScientistAgent } from './data-scientist.agent.js'
+import { directorAgent } from './director.agent.js'
 import { factCheckerAgent } from './fact-checker.agent.js'
+import { judgeAgent, supportAgent } from './judge.agent.js'
+import { researchCoordinatorAgent } from './research-coordinator.agent.js'
 import { scrapperAgent } from './scrapper.agent.js'
 import { synthesizerAgent } from './synthesizer.agent.js'
 import { writerAgent } from './writer.agent.js'
@@ -31,12 +39,20 @@ const generalInstructions = [
   '- **Synthesis**: Combine results from sub-agents into a coherent final output.',
   '',
   '## Sub-Agents',
-  '- **Assistant**: General help, query generation, quick answers.',
-  '- **Writer**: Drafting reports, articles, and content.',
-  '- **Data Analyzer**: Analyzing datasets, patterns, and code.',
-  '- **Fact Checker**: Verifying claims and checking for bias.',
-  '- **Synthesizer**: Merging conflicting information and summarizing.',
-  '- **Scrapper**: Extracting data from websites.',
+  '- **Assistant**: Generate high-signal query plans and investigation angles.',
+  '- **Writer**: Convert findings into citation-backed, decision-ready reports.',
+  '- **Data Analyzer**: Extract quantified patterns, confidence, and limitations.',
+  '- **Fact Checker**: Verify claims with evidence and confidence labels.',
+  '- **Synthesizer**: Resolve contradictions and produce coherent integrated narratives.',
+  '- **Scrapper**: Extract structured source data with provenance metadata.',
+  '- **Coding Agent**: Implement tools/workflows/fixes aligned to project architecture.',
+  '- **Code Reviewer**: Audit code changes for correctness, security, and maintainability.',
+  '- **Content Curator**: Rank and bundle high-value evidence for downstream synthesis.',
+  '- **Data Scientist**: Run rigorous statistical analysis and uncertainty quantification.',
+  '- **Research Coordinator**: Build dependency-aware plans and milestone tracking.',
+  '- **Director**: Enforce orchestration quality gates and escalation decisions.',
+  '- **Support Agent**: Handle user support and quick issue resolution.',
+  '- **Satisfaction Judge**: Score output quality and user satisfaction signals.',
   '',
   '## Workflow',
   "1. **Understand**: Read the user's request and context carefully.",
@@ -49,7 +65,7 @@ const generalInstructions = [
 export const deepAgent = new PlanAgent({
   name: 'deep-work-agent',
   purpose:
-    'Orchestrate complex workflows, research, and problem-solving tasks using specialized sub-agents.',
+    'Orchestrate complex research by delegating to specialists, enforcing quality gates, and synthesizing verified outcomes into final answers.',
   systemPrompt: generalInstructions,
 
   model: ({ context }) => {
@@ -58,10 +74,12 @@ export const deepAgent = new PlanAgent({
     return `${provider}/${model}`
   },
   tools: [],
-  toolkits: [thinkOnlyToolkit],
+  toolkits: [thinkOnlyToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
   toolRouting: {
     embedding: {
-      model: 'google/text-embedding-004',
+      model: 'google/gemini-embedding-001',
+      normalize: true,
+      maxBatchSize: 200,
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(', ') ?? '';
@@ -78,6 +96,14 @@ export const deepAgent = new PlanAgent({
   retriever: chromaRetriever,
   subagents: [
     assistantAgent,
+    codingAgent,
+    codeReviewerAgent,
+    contentCuratorAgent,
+    dataScientistAgent,
+    researchCoordinatorAgent,
+    directorAgent,
+    supportAgent,
+    judgeAgent,
     writerAgent,
     dataAnalyzerAgent,
     factCheckerAgent,
@@ -133,7 +159,7 @@ export const deepAgent = new PlanAgent({
   },
   filesystem: {
     backend: new NodeFilesystemBackend({
-      rootDir: process.cwd(),
+      rootDir: sharedWorkspaceRuntime.filesystemRootDir,
       virtualMode: true,
       maxFileSizeMb: 25,
     }),

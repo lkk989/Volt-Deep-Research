@@ -1,12 +1,15 @@
 
 import { Agent, createHooks } from "@voltagent/core"
 import { voltlogger } from "../config/logger.js"
+import { knowledgeGraphToolkit } from "../tools/knowledge-graph-toolkit.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
 //import { sentimentBiasToolkit } from "../tools/sentiment-bias-toolkit.js"
 
 import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
+import { contentCuratorPrompt } from "./prompts.js"
 
 const contentCuratorHooks = createHooks({
   onStart: ({ agent, context }) => {
@@ -69,51 +72,30 @@ const contentCuratorHooks = createHooks({
 export const contentCuratorAgent = new Agent({
   id: "content-curator",
   name: "Content Curator",
-  purpose: "Evaluate, organize, and recommend content based on quality, relevance, and user preferences",
+  purpose: "Score, de-duplicate, and prioritize content into high-value evidence bundles aligned with user goals.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
     return `${provider}/${model}`;
   },
   instructions: ({ context }) => {
-    const userPrefs = context?.get("userPreferences") as Record<string, unknown> | undefined
-    const contentType = context?.get("contentType") ?? "general"
+    const userPrefs = (context?.get("userPreferences") as Record<string, unknown> | undefined) ?? {}
+    const topics = Array.isArray(userPrefs.topics) ? (userPrefs.topics as string[]) : []
+    const threshold = typeof userPrefs.qualityThreshold === "number" ? userPrefs.qualityThreshold : 7
+    const contentType = String(context?.get("contentType") ?? "general")
 
-    let baseInstructions = `You are a Content Curator agent specialized in evaluating and organizing information.
-
-Your responsibilities:
-1. Evaluate content quality, relevance, and credibility
-2. Organize content by topic, source, and quality tier
-3. Detect and flag duplicates or low-quality items
-4. Provide personalized recommendations based on user preferences
-5. Maintain metadata and audit trails for all curation decisions
-6. Adapt curation criteria based on context and feedback
-
-Curation Methodology:
-- Assess source credibility and authority
-- Check for factual accuracy and bias
-- Evaluate relevance to user interests
-- Consider recency and timeliness
-- Track curation decisions for transparency`
-
-    if (userPrefs) {
-      const topics = userPrefs.topics as string[] | undefined
-      if (topics && topics.length > 0) {
-        baseInstructions += `\n\nUser's preferred topics: ${topics.join(", ")}`
-      }
-      const threshold = userPrefs.qualityThreshold as number | undefined
-      if (threshold) {
-        baseInstructions += `\n\nMinimum quality threshold: ${threshold}/10`
-      }
-    }
-
-    if (contentType === "academic") {
-      baseInstructions += "\n\nFocus on peer-reviewed sources and academic rigor."
-    } else if (contentType === "news") {
-      baseInstructions += "\n\nPrioritize recency and source diversity."
-    }
-
-    return baseInstructions
+    return contentCuratorPrompt({
+      contentType,
+      userTopics: topics.length > 0 ? topics.join(", ") : "general",
+      qualityThreshold: `${threshold}/10`,
+      tools: "knowledge graph toolkit, workspace search/skills, reasoning toolkit",
+      standards: contentType === "academic"
+        ? "Prioritize peer-reviewed evidence, methodological rigor, and citation quality."
+        : contentType === "news"
+          ? "Prioritize recency, source diversity, and corroboration across outlets."
+          : "Prioritize credibility, relevance, and explainable ranking decisions.",
+      task: "Curate, de-duplicate, score, and return ranked content bundles with rationale and next-read recommendations.",
+    })
   },
   tools: ({ context }) => {
     const role = context?.get("role") ?? "user"
@@ -125,10 +107,15 @@ Curation Methodology:
     }
     return baseTools
   },
-  toolkits: [thinkOnlyToolkit],
+  toolkits: [
+    thinkOnlyToolkit,
+    knowledgeGraphToolkit,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSkillsToolkit,
+  ],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: "google/gemini-embedding-001",
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";

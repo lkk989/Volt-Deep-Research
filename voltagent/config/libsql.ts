@@ -4,6 +4,19 @@ import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql";
 import z from "zod";
 import { voltlogger } from "./logger.js";
 
+export const sharedVectorAdapter = new LibSQLVectorAdapter({
+  url: process.env.TURSO_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN!,
+  logger: voltlogger,
+  tablePrefix: "voltagent_vector",
+  debug: true,
+  maxRetries: 3,
+  retryDelayMs: 100,
+  maxVectorDimensions: 3072,
+  cacheSize: 200,
+  batchSize: 100,
+});
+
 export const sharedMemory = new Memory({
   // @ts-ignore TS2739 This is working as intended despite the error. Tested 1/22/2026
   storage: new LibSQLMemoryAdapter({
@@ -38,18 +51,7 @@ export const sharedMemory = new Memory({
     }),
   },
   embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
-  vector: new LibSQLVectorAdapter({
-    url: process.env.TURSO_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN!,
-    logger: voltlogger,
-    tablePrefix: "voltagent_vector",
-    debug: true,
-    maxRetries: 3,
-    retryDelayMs: 100,
-    maxVectorDimensions: 3072,
-    cacheSize: 200,
-    batchSize: 100,
-  }),
+  vector: sharedVectorAdapter,
   enableCache: true, // optional embedding cache
   cacheSize: 1000, // optional cache size
   cacheTTL: 3600000, // optional cache time-to-live in seconds

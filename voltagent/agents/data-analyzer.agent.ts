@@ -8,14 +8,42 @@ import {
     extractInsightsTool,
 } from '../tools/analyze-data-tool.js'
 import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
+import { alphaVantageToolkit } from '../tools/alpha-vantage-toolkit.js'
+import {
+    binanceAggTradesTool,
+    binanceAveragePriceTool,
+    binanceBookTickerTool,
+    binanceExchangeInfoTool,
+    binanceOrderBookTool,
+    binanceRecentTradesTool,
+    binanceTicker24hrTool,
+    cryptoDexBoostsTool,
+    cryptoDexPairTool,
+    cryptoDexSearchTool,
+    cryptoDexTokenPairsTool,
+    cryptoDexTokenProfilesTool,
+    cryptoMultiSourcePriceTool,
+    cryptoOhlcvTool,
+    cryptoSpotPriceTool,
+} from '../tools/crypto-market-toolkit'
+import {
+    stockBatchQuoteTool,
+    stockMultiSourcePriceTool,
+    stockOhlcvTool,
+    stockSpotPriceTool,
+    stockStooqDailyTool,
+    stockSymbolSearchTool,
+} from '../tools/stock-market-toolkit.js'
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from '../workspaces/index.js'
 import { dataAnalyzerPrompt } from './prompts.js'
 import { financialAnalysisToolkit } from '../tools/financial-analysis-toolkit.js'
+import { visualizationToolkit } from '../tools/visualization-toolkit.js'
 
 export const dataAnalyzerAgent = new Agent({
     id: 'data-analyzer',
     name: 'Data Analyzer',
     purpose:
-        'Analyze research data, extract patterns and insights, and provide data-driven conclusions',
+        'Extract robust patterns, quantify evidence strength, and produce decision-relevant analytical findings for synthesis.',
     model: ({ context }) => {
         const provider = (context.get('provider') as string) || 'google'
         const model =
@@ -28,15 +56,47 @@ export const dataAnalyzerAgent = new Agent({
         focus: 'patterns and insights',
         confidence: 'high',
         format: 'structured markdown',
+        tools: 'analyze/extract tools, stock market tools, crypto market tools, alpha-vantage, financial analysis, visualization, workspace retrieval',
         standards:
-            'Use evidence-based conclusions, quantify findings where possible',
-        task: 'Analyze the provided data and extract key insights',
+            'Use evidence-based conclusions, quantify findings, report uncertainty, and distinguish signal from noise.',
+        task: 'Analyze provided data, rank findings by impact/confidence, and surface limitations.',
     }),
-    tools: [analyzeDataTool, extractInsightsTool],
-    toolkits: [thinkOnlyToolkit, financialAnalysisToolkit],
+    tools: [
+        analyzeDataTool,
+        extractInsightsTool,
+        cryptoSpotPriceTool,
+        cryptoMultiSourcePriceTool,
+        cryptoOhlcvTool,
+        binanceExchangeInfoTool,
+        binanceTicker24hrTool,
+        binanceBookTickerTool,
+        binanceAveragePriceTool,
+        binanceOrderBookTool,
+        binanceRecentTradesTool,
+        binanceAggTradesTool,
+        cryptoDexSearchTool,
+        cryptoDexPairTool,
+        cryptoDexTokenPairsTool,
+        cryptoDexTokenProfilesTool,
+        cryptoDexBoostsTool,
+        stockSpotPriceTool,
+        stockBatchQuoteTool,
+        stockOhlcvTool,
+        stockStooqDailyTool,
+        stockMultiSourcePriceTool,
+        stockSymbolSearchTool,
+    ],
+    toolkits: [
+        thinkOnlyToolkit,
+        alphaVantageToolkit,
+        financialAnalysisToolkit,
+        visualizationToolkit,
+        sharedWorkspaceSearchToolkit,
+        sharedWorkspaceSkillsToolkit,
+    ],
     toolRouting: {
         embedding: {
-            model: 'google/text-embedding-004',
+            model: 'google/gemini-embedding-001',
             topK: 3,
             toolText: (tool) => {
                 const tags = tool.tags?.join(', ') ?? ''

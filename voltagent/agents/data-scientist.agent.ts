@@ -4,8 +4,37 @@ import { Agent, createHooks } from "@voltagent/core"
 import { sharedMemory } from "../config/libsql.js"
 import { voltlogger } from "../config/logger.js"
 import { voltObservability } from "../config/observability.js"
+import { dataConversionToolkit } from "../tools/data-conversion-toolkit.js"
+import {
+  binanceAggTradesTool,
+  binanceAveragePriceTool,
+  binanceBookTickerTool,
+  binanceExchangeInfoTool,
+  binanceOrderBookTool,
+  binanceRecentTradesTool,
+  binanceTicker24hrTool,
+  cryptoDexBoostsTool,
+  cryptoDexPairTool,
+  cryptoDexSearchTool,
+  cryptoDexTokenPairsTool,
+  cryptoDexTokenProfilesTool,
+  cryptoMultiSourcePriceTool,
+  cryptoOhlcvTool,
+  cryptoSpotPriceTool,
+} from "../tools/crypto-market-toolkit"
+import {
+  stockBatchQuoteTool,
+  stockMultiSourcePriceTool,
+  stockOhlcvTool,
+  stockSpotPriceTool,
+  stockStooqDailyTool,
+  stockSymbolSearchTool,
+} from "../tools/stock-market-toolkit.js"
 import { dataProcessingToolkit } from "../tools/data-processing-toolkit.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
+import { visualizationToolkit } from "../tools/visualization-toolkit.js"
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
+import { dataScientistPrompt } from "./prompts.js"
 
 const dataScientistHooks = createHooks({
   onStart: ({ agent, context }) => {
@@ -46,45 +75,57 @@ const dataScientistHooks = createHooks({
 export const dataScientistAgent = new Agent({
   id: "data-scientist",
   name: "Data Scientist",
-  purpose: "Perform statistical analysis, extract insights from datasets, and generate data-driven hypotheses",
+  purpose: "Run statistically rigorous analysis, quantify uncertainty, and deliver hypothesis-driven recommendations with explicit assumptions.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
     return `${provider}/${model}`;
   },
   instructions: ({ context }) => {
-    const analysisType = context?.get("analysisType") ?? "exploratory"
-
-    let baseInstructions = `You are a Data Scientist agent specialized in statistical analysis and data-driven insights.
-
-Your responsibilities:
-1. Perform exploratory data analysis (EDA) on datasets
-2. Compute descriptive statistics and perform hypothesis testing
-3. Identify patterns, correlations, and anomalies
-4. Generate data-driven hypotheses and recommendations
-5. Provide confidence intervals and statistical significance measures
-6. Create clear visualizations and explanations
-
-Statistical Methodology:
-- Always start with data quality assessment
-- Use appropriate statistical tests based on data characteristics
-- Report effect sizes alongside p-values
-- Consider multiple hypothesis correction when needed
-- Clearly communicate uncertainty and limitations`
-
-    if (analysisType === "predictive") {
-      baseInstructions += "\n\nFocus on predictive modeling and forecasting techniques."
-    } else if (analysisType === "causal") {
-      baseInstructions += "\n\nFocus on causal inference and experimental design."
-    }
-
-    return baseInstructions
+    const analysisType = String(context?.get("analysisType") ?? "exploratory")
+    return dataScientistPrompt({
+      analysisType,
+      datasetContext: "research datasets and extracted evidence artifacts",
+      goal: analysisType === "predictive" ? "deliver robust forecasts" : analysisType === "causal" ? "estimate causal effects" : "extract reliable insights",
+      tools: "data processing, data conversion, stock market data, crypto market data, visualization, workspace search/skills, reasoning",
+      standards: "State assumptions, quantify uncertainty, report effect sizes, and avoid causal overreach unless supported.",
+      task: "Perform statistically sound analysis and return prioritized findings with confidence and limitations.",
+    })
   },
-  tools: [],
-  toolkits: [thinkOnlyToolkit, dataProcessingToolkit],
+  tools: [
+    cryptoSpotPriceTool,
+    cryptoMultiSourcePriceTool,
+    cryptoOhlcvTool,
+    binanceExchangeInfoTool,
+    binanceTicker24hrTool,
+    binanceBookTickerTool,
+    binanceAveragePriceTool,
+    binanceOrderBookTool,
+    binanceRecentTradesTool,
+    binanceAggTradesTool,
+    cryptoDexSearchTool,
+    cryptoDexPairTool,
+    cryptoDexTokenPairsTool,
+    cryptoDexTokenProfilesTool,
+    cryptoDexBoostsTool,
+    stockSpotPriceTool,
+    stockBatchQuoteTool,
+    stockOhlcvTool,
+    stockStooqDailyTool,
+    stockMultiSourcePriceTool,
+    stockSymbolSearchTool,
+  ],
+  toolkits: [
+    thinkOnlyToolkit,
+    dataConversionToolkit,
+    dataProcessingToolkit,
+    visualizationToolkit,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSkillsToolkit,
+  ],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: 'google/gemini-embedding-001',
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";

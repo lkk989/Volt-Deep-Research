@@ -1,4 +1,8 @@
-import { VoltAgent, VoltOpsClient, createTriggers } from "@voltagent/core";
+import {
+  VoltAgent,
+  VoltOpsClient,
+  createTriggers,
+} from "@voltagent/core";
 
 import {
   createResumableStreamAdapter,
@@ -17,7 +21,7 @@ import { honoServer } from "@voltagent/server-hono";
 import { mcpServer } from "./config/mcpserver.js";
 import { scrapperAgent } from "./agents/scrapper.agent.js";
 import { codingAgent } from "./agents/coding.agent.js";
-import { codeReviewerAgent } from "./agents/code-reviewer.agent.js";
+import { codeReviewerAgent } from "./agents/code-reviewer.agent";
 import { a2aServer } from "./a2a/server.js";
 import { voltObservability } from "./config/observability.js";
 import { comprehensiveResearchWorkflow } from "./workflows/comprehensive-research.workflow.js";
@@ -30,9 +34,12 @@ import { dataScientistAgent } from "./agents/data-scientist.agent.js";
 import { researchCoordinatorAgent } from "./agents/research-coordinator.agent.js";
 import { deepAgent } from "./agents/plan.agent.js";
 import { sharedMemory } from "./config/libsql.js";
+import { sharedWorkspaceRuntime } from "./workspaces/index.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
+
+await sharedWorkspaceRuntime.init();
 
 
 const streamStore = await createResumableStreamVoltOpsStore();

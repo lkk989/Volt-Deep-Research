@@ -2,6 +2,9 @@ import { google } from "@ai-sdk/google"
 import { Agent, createHooks } from "@voltagent/core"
 
 import { voltlogger } from "../config/logger.js"
+import { debugTool } from "../tools/debug-tool.js"
+import { apiIntegrationToolkit } from "../tools/api-integration-toolkit.js"
+import { ragToolkit } from "../tools/rag-toolkit.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { searchDiscoveryToolkit } from "../tools/search-discovery-toolkit.js"
 //import { contentAnalysisToolkit } from "../tools/content-analysis-toolkit.js"
@@ -9,6 +12,8 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 import z from "zod"
 import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
+import { researchCoordinatorPrompt } from "./prompts.js"
 
 const researchCoordinatorHooks = createHooks({
   onStart: async ({ agent, context }) => {
@@ -48,47 +53,38 @@ const researchCoordinatorHooks = createHooks({
 export const researchCoordinatorAgent = new Agent({
   id: "research-coordinator",
   name: "Research Coordinator",
-  purpose: "Orchestrate complex multi-step research projects by decomposing tasks, coordinating execution, and synthesizing results",
+  purpose: "Translate ambiguous goals into dependency-aware execution plans, coordinate specialists, and return auditable milestone outcomes.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
     return `${provider}/${model}`;
   },
   instructions: ({ context }) => {
-    const role = context?.get("role") ?? "researcher"
-    const tier = context?.get("tier") ?? "standard"
-
-    let baseInstructions = `You are a Research Coordinator agent specialized in managing complex research projects.
-
-Your responsibilities:
-1. Decompose research topics into manageable subtasks
-2. Coordinate research execution across multiple sources
-3. Monitor progress and handle failures gracefully
-4. Synthesize results into comprehensive reports
-5. Resolve conflicts in data with evidence-based reasoning
-6. Provide detailed progress updates and resource usage metrics
-
-Research Methodology:
-- Start by understanding the research scope and objectives
-- Break down complex topics into specific, answerable questions
-- Prioritize subtasks based on dependencies and importance
-- Track progress and adapt strategy as needed
-- Synthesize findings with proper citations and evidence`
-
-    if (role === "admin") {
-      baseInstructions += "\n\nAs an admin, you have access to advanced research tools and can override default limits."
-    }
-    if (tier === "premium") {
-      baseInstructions += "\n\nPremium tier: You can conduct deeper research with more sources and longer reports."
-    }
-
-    return baseInstructions
+    const role = String(context?.get("role") ?? "researcher")
+    const tier = String(context?.get("tier") ?? "standard")
+    return researchCoordinatorPrompt({
+      userRole: role,
+      tier,
+      scope: tier === "premium" ? "deep, cross-domain multi-source orchestration" : "standard multi-source orchestration",
+      timeConstraint: "adaptive",
+      tools: "reasoning, API integration, RAG, workspace search/skills, debug diagnostics",
+      qualityBar: "Clear delegation contracts, verifiable outputs, explicit status tracking, and acceptance criteria per milestone.",
+      riskControls: "No uncited claims, no skipped verification, no unresolved blockers without mitigation plan, no silent task drops.",
+      task: "Coordinate end-to-end research execution with milestone reporting and conflict-resolution decisions.",
+    })
   },
-  tools: [],
-  toolkits: [thinkOnlyToolkit],
+  tools: [debugTool],
+  toolkits: [
+    thinkOnlyToolkit,
+    apiIntegrationToolkit,
+    ragToolkit,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSkillsToolkit,
+  ],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: 'google/gemini-embedding-001',
+      normalize: true,
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";

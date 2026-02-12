@@ -54,3 +54,4 @@ node_modules
 .ralph-tui/ralph.lock
 .ralph-tui/session-meta.json
 nul
+docs/exr-data.xml

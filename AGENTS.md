@@ -21,39 +21,86 @@ AI agents working on this project should use this file as the authoritative sour
 ## Project Structure
 
 ```bash
-src/
-├── index.ts                 # Main entry point: VoltAgent initialization, workflow setup
-├── agents/                  # Multi-agent orchestration system
-│   ├── assistant.agent.ts   # Query generation & search coordination
+voltagent/                  # Core multi-agent backend (VoltAgent-based)
+├── index.ts                # Main entry point: VoltAgent initialization, workflow setup
+├── agents/                 # Multi-agent orchestration (14+ specialized agents)
+│   ├── plan.agent.ts       # Deep Research orchestrator (primary)
+│   ├── assistant.agent.ts  # Query generation & search coordination
 │   ├── writer.agent.ts      # Report synthesis & composition
 │   ├── director.agent.ts    # Supervisor agent managing sub-agents
-│   └── prompts.ts           # Shared prompt templates
-├── config/                  # Configuration modules
-│   ├── logger.ts            # Pino-based logging setup
-│   ├── mcp.ts               # MCP client configuration
-│   ├── mcpserver.ts         # MCP server configuration
-│   ├── retriever.ts         # Data retrieval configuration
-│   ├── scorers.ts           # Evaluation & scoring setup
-│   └── supabase.ts          # Supabase client initialization
-├── tools/                   # Custom tools and toolkits
-│   ├── reasoning-tool.ts    # Reasoning toolkits (think, analyze)
-│   ├── debug-tool.ts        # Debugging & context inspection
-│   └── ...                  # Additional toolkits
-└── a2a/                     # Agent-to-Agent communication
-    ├── server.ts            # A2A server implementation
-    └── store.ts             # Shared state management
+│   ├── data-analyzer.agent.ts   # Pattern detection & analysis
+│   ├── fact-checker.agent.ts    # Verification & bias detection
+│   ├── synthesizer.agent.ts     # Multi-source integration
+│   ├── scrapper.agent.ts        # Web scraping & extraction
+│   ├── coding.agent.ts          # Code implementation
+│   └── prompts.ts         # Shared prompt templates
+├── config/                 # Configuration modules
+│   ├── logger.ts           # Pino-based logging setup
+│   ├── mcp.ts              # MCP client configuration
+│   ├── mcpserver.ts        # MCP server configuration
+│   ├── retriever.ts        # Data retrieval configuration
+│   ├── scorers.ts          # Evaluation & scoring setup
+│   └── supabase.ts         # Supabase client initialization
+├── tools/                  # Custom tools and toolkits (20+ tools)
+│   ├── reasoning-tool.ts   # Reasoning toolkits (think, analyze)
+│   ├── debug-tool.ts       # Debugging & context inspection
+│   ├── web-scraper-toolkit.ts   # Web scraping toolkit
+│   ├── filesystem-toolkit.ts     # File operations
+│   ├── data-processing-toolkit.ts    # Data manipulation
+│   └── ...                 # Additional toolkits (knowledge-graph, rag, etc.)
+├── a2a/                    # Agent-to-Agent communication
+│   ├── server.ts           # A2A server implementation
+│   └── store.ts            # Shared state management
+├── workflows/              # Workflow chain definitions
+├── experiments/             # Eval/experiment configs
+├── retriever/              # Vector DB retriever integrations
+├── types/                  # TypeScript type definitions
+└── workspaces/             # Local Workspace implementation (filesystem, sandbox, skills)
 
-app/                         # Next.js application
-└── chat/                    # UI routes/components
+app/                        # Next.js 16 App Router (Frontend)
+├── api/                    # API Routes (Chat, Health, Messages)
+├── dashboard/              # User dashboard (protected routes)
+│   ├── chat/               # Chat interface
+│   └── _components/        # Dashboard UI components
+├── documentation/          # Project documentation pages
+├── _components/            # Shared UI components
+│   ├── ai-elements/        # AI interaction components (Chat, Artifacts, Reasoning)
+│   ├── landing/            # Landing page components
+│   └── ui/                 # Shadcn UI design system
+├── global.css              # Global styles (Tailwind + CSS variables)
+├── layout.tsx              # Root layout (Providers)
+└── page.tsx               # Landing page
 
-src/retriever/               # Vector DB retriever integrations
-src/workflows/               # Workflow chain definitions
-src/experiments/             # Eval/experiment configs
+components/                 # Reusable React components
+├── ai-elements/            # Specialized AI UI (ChainOfThought, Artifact, Message)
+├── ui/                     # Shadcn components (Button, Dialog, Card, etc.)
+└── theme-provider.tsx     # Next-themes wrapper
+
+lib/                        # Shared utilities
+├── resumable-stream.ts     # Stream adapters
+└── utils.ts               # Common helpers
+
+docs/                       # Project documentation
+├── agents/                 # Agent-specific documentation
+└── ...
+
+memory-bank/               # Project memory & context (for AI agents)
+├── activeContext.md        # Current work focus
+├── productContext.md       # Product goals & vision
+├── progress.md             # Build status & known issues
+├── projectbrief.md         # Core requirements & scope
+├── systemPatterns.md       # Architecture & patterns
+├── techContext.md          # Tech stack & constraints
+└── copilot-rules.md       # Project rules & guidance
 
 .voltagent/                 # Runtime directory (auto-created)
-├── {agent-id}-memory.db     # Per-agent LibSQL memory database
-├── memory.db                # Shared vector store
-└── observability.db         # OpenTelemetry traces
+├── {agent-id}-memory.db    # Per-agent LibSQL memory database
+├── memory.db               # Shared vector store
+└── observability.db        # OpenTelemetry traces
+
+.github/
+├── copilot-instructions.md    # GitHub Copilot instructions
+└── instructions/              # Additional agent instructions
 ```
 
 ## Setup Commands
@@ -170,7 +217,7 @@ npx vitest run --coverage
 - Provider: v8
 - Reports in `tests/test-results/coverage/`
 - Coverage for: `src/**/*.{ts,tsx}`
-- Excluded: node_modules, dist, tests, *.d.ts files
+- Excluded: node_modules, dist, tests, \*.d.ts files
 
 ### Focus on Specific Tests
 
@@ -295,49 +342,53 @@ The application automatically forwards metrics and traces to VoltOps when config
 Follow the pattern in `src/agents/assistant.agent.ts`:
 
 ```typescript
-import { Agent, Memory, AiSdkEmbeddingAdapter } from "@voltagent/core"
-import { google } from "@ai-sdk/google"
-import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from "@voltagent/libsql"
-import { voltlogger } from "../config/logger.js"
-import z from "zod"
+import { Agent, Memory, AiSdkEmbeddingAdapter } from '@voltagent/core'
+import { google } from '@ai-sdk/google'
+import { LibSQLMemoryAdapter, LibSQLVectorAdapter } from '@voltagent/libsql'
+import { voltlogger } from '../config/logger.js'
+import z from 'zod'
 
 const agentMemory = new Memory({
-  storage: new LibSQLMemoryAdapter({
-    url: "file:./.voltagent/{agent-id}-memory.db",
-  }),
-  workingMemory: {
-    enabled: true,
-    scope: "user",
-    schema: z.object({
-      profile: z.object({
-        name: z.string().optional(),
-        role: z.string().optional(),
-        timezone: z.string().optional(),
-      }).optional(),
-      preferences: z.array(z.string()).optional(),
-      goals: z.array(z.string()).optional(),
+    storage: new LibSQLMemoryAdapter({
+        url: 'file:./.voltagent/{agent-id}-memory.db',
     }),
-  },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
-  vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
-  enableCache: true,
+    workingMemory: {
+        enabled: true,
+        scope: 'user',
+        schema: z.object({
+            profile: z
+                .object({
+                    name: z.string().optional(),
+                    role: z.string().optional(),
+                    timezone: z.string().optional(),
+                })
+                .optional(),
+            preferences: z.array(z.string()).optional(),
+            goals: z.array(z.string()).optional(),
+        }),
+    },
+    embedding: new AiSdkEmbeddingAdapter(
+        google.textEmbedding('gemini-embedding-001')
+    ),
+    vector: new LibSQLVectorAdapter({ url: 'file:./.voltagent/memory.db' }),
+    enableCache: true,
 })
 
 export const newAgent = new Agent({
-  id: "agent-id",
-  name: "Agent Name",
-  purpose: "Clear description of agent's role and responsibilities",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
-  instructions: `Detailed system prompt...`,
-  tools: [],
-  toolkits: [],
-  memory: agentMemory,
-  maxHistoryEntries: 100,
-  temperature: 0.7,
-  maxOutputTokens: 64000,
-  maxSteps: 25,
-  markdown: false,
-  logger: voltlogger,
+    id: 'agent-id',
+    name: 'Agent Name',
+    purpose: "Clear description of agent's role and responsibilities",
+    model: google('gemini-2.5-flash-lite-preview-09-2025'),
+    instructions: `Detailed system prompt...`,
+    tools: [],
+    toolkits: [],
+    memory: agentMemory,
+    maxHistoryEntries: 100,
+    temperature: 0.7,
+    maxOutputTokens: 64000,
+    maxSteps: 25,
+    markdown: false,
+    logger: voltlogger,
 })
 ```
 
@@ -346,24 +397,24 @@ export const newAgent = new Agent({
 Use `createTool()` with Zod schema validation:
 
 ```typescript
-import { createTool } from "@voltagent/core"
-import z from "zod"
-import { voltlogger } from "../config/logger.js"
+import { createTool } from '@voltagent/core'
+import z from 'zod'
+import { voltlogger } from '../config/logger.js'
 
 export const myTool = createTool({
-  name: "tool_name",
-  description: "What this tool does",
-  parameters: z.object({
-    param: z.string().describe("Parameter description"),
-  }),
-  execute: async (args, context) => {
-    if (!context?.isActive) {
-      throw new Error("Operation was cancelled")
-    }
-    
-    voltlogger.info(`Tool executed with param: ${args.param}`)
-    return `Result: ...`
-  },
+    name: 'tool_name',
+    description: 'What this tool does',
+    parameters: z.object({
+        param: z.string().describe('Parameter description'),
+    }),
+    execute: async (args, context) => {
+        if (!context?.isActive) {
+            throw new Error('Operation was cancelled')
+        }
+
+        voltlogger.info(`Tool executed with param: ${args.param}`)
+        return `Result: ...`
+    },
 })
 ```
 
@@ -372,30 +423,30 @@ export const myTool = createTool({
 Use `createWorkflowChain()` with Zod schemas:
 
 ```typescript
-import { createWorkflowChain } from "@voltagent/core"
-import z from "zod"
+import { createWorkflowChain } from '@voltagent/core'
+import z from 'zod'
 
 const workflow = createWorkflowChain({
-  id: "workflow-id",
-  name: "Workflow Name",
-  purpose: "Detailed description",
-  input: z.object({ topic: z.string() }),
-  result: z.object({ text: z.string() }),
+    id: 'workflow-id',
+    name: 'Workflow Name',
+    purpose: 'Detailed description',
+    input: z.object({ topic: z.string() }),
+    result: z.object({ text: z.string() }),
 })
-  .andThen({
-    id: "step-one",
-    execute: async ({ data }) => {
-      const { topic } = data
-      return { result: "..." }
-    },
-  })
-  .andThen({
-    id: "step-two",
-    execute: async ({ data, getStepData }) => {
-      const prevData = getStepData("step-one")
-      return { final: "..." }
-    },
-  })
+    .andThen({
+        id: 'step-one',
+        execute: async ({ data }) => {
+            const { topic } = data
+            return { result: '...' }
+        },
+    })
+    .andThen({
+        id: 'step-two',
+        execute: async ({ data, getStepData }) => {
+            const prevData = getStepData('step-one')
+            return { final: '...' }
+        },
+    })
 ```
 
 ## Logging
@@ -403,13 +454,13 @@ const workflow = createWorkflowChain({
 Use `voltlogger` from `./config/logger.ts` throughout the application:
 
 ```typescript
-import { voltlogger } from "./config/logger.js"
+import { voltlogger } from './config/logger.js'
 
-voltlogger.info("Information message")
-voltlogger.error("Error message", { errorData })
-voltlogger.trace("Detailed trace information")
-voltlogger.warn("Warning message")
-voltlogger.debug("Debug information")
+voltlogger.info('Information message')
+voltlogger.error('Error message', { errorData })
+voltlogger.trace('Detailed trace information')
+voltlogger.warn('Warning message')
+voltlogger.debug('Debug information')
 ```
 
 The logger is configured with:
@@ -440,21 +491,21 @@ The project integrates with VoltOps for monitoring and observability:
 ### Enable Observability
 
 ```typescript
-import { VoltAgentObservability } from "@voltagent/core"
-import { LibSQLObservabilityAdapter } from "@voltagent/libsql"
+import { VoltAgentObservability } from '@voltagent/core'
+import { LibSQLObservabilityAdapter } from '@voltagent/libsql'
 
 const observability = new VoltAgentObservability({
-  serviceName: "Mastervolt",
-  storage: new LibSQLObservabilityAdapter({
-    url: "file:./.voltagent/observability.db",
-  }),
-  logger: voltlogger,
-  voltOpsSync: {
-    sampling: { strategy: "ratio", ratio: 0.5 },
-    maxQueueSize: 4096,
-    maxExportBatchSize: 512,
-    scheduledDelayMillis: 4000,
-  },
+    serviceName: 'Mastervolt',
+    storage: new LibSQLObservabilityAdapter({
+        url: 'file:./.voltagent/observability.db',
+    }),
+    logger: voltlogger,
+    voltOpsSync: {
+        sampling: { strategy: 'ratio', ratio: 0.5 },
+        maxQueueSize: 4096,
+        maxExportBatchSize: 512,
+        scheduledDelayMillis: 4000,
+    },
 })
 ```
 
@@ -471,13 +522,13 @@ Defined in `src/config/mcp.ts` (client) and `src/config/mcpserver.ts` (server):
 
 ```typescript
 const mcpConfig = new MCPConfiguration({
-  servers: {
-    filesystem: {
-      type: "stdio",
-      command: "npx",
-      args: ["-y", "@modelcontextprotocol/server-filesystem", "<path>"]
+    servers: {
+        filesystem: {
+            type: 'stdio',
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem', '<path>'],
+        },
     },
-  },
 })
 
 // Get all available tools from MCP servers
@@ -485,8 +536,8 @@ const tools = await mcpConfig.getTools()
 
 // Use in agent
 const agent = new Agent({
-  tools: tools,
-  // ... rest of config
+    tools: tools,
+    // ... rest of config
 })
 ```
 
@@ -515,19 +566,19 @@ const agent = new Agent({
 The logger is configured with `level: "trace"` to show all details:
 
 ```typescript
-voltlogger.trace("Detailed diagnostic information")
+voltlogger.trace('Detailed diagnostic information')
 ```
 
 ### Inspect Context in Tools
 
 ```typescript
 export const debugTool = createTool({
-  execute: async (args, context) => {
-    voltlogger.info(`Operation ID: ${context?.operationId}`)
-    voltlogger.info(`User ID: ${context?.userId}`)
-    voltlogger.info(`Conversation ID: ${context?.conversationId}`)
-    voltlogger.info(`Original input: ${context?.input}`)
-  }
+    execute: async (args, context) => {
+        voltlogger.info(`Operation ID: ${context?.operationId}`)
+        voltlogger.info(`User ID: ${context?.userId}`)
+        voltlogger.info(`Conversation ID: ${context?.conversationId}`)
+        voltlogger.info(`Original input: ${context?.input}`)
+    },
 })
 ```
 
@@ -615,17 +666,17 @@ npm run volt                # Run VoltAgent CLI
 
 ## Version Information
 
-| Component | Version | Purpose |
-| --- | --- | --- |
-| TypeScript | 5.9.3 | Language and compilation |
-| Node.js | 18+ | Runtime environment |
-| VoltAgent | 2.1.3 | Multi-agent orchestration |
-| Vitest | 4.0.17 | Testing framework |
-| Google AI SDK | 3.0.10 | Gemini model integration |
-| OpenAI SDK | 3.0.12 | OpenAI model integration |
-| Zod | 4.1.13 | Schema validation |
-| Prettier | 3.8.0 | Code formatting |
-| ESLint | 9.39.2 | Code linting |
+| Component     | Version | Purpose                   |
+| ------------- | ------- | ------------------------- |
+| TypeScript    | 5.9.3   | Language and compilation  |
+| Node.js       | 18+     | Runtime environment       |
+| VoltAgent     | 2.1.3   | Multi-agent orchestration |
+| Vitest        | 4.0.17  | Testing framework         |
+| Google AI SDK | 3.0.10  | Gemini model integration  |
+| OpenAI SDK    | 3.0.12  | OpenAI model integration  |
+| Zod           | 4.1.13  | Schema validation         |
+| Prettier      | 3.8.0   | Code formatting           |
+| ESLint        | 9.39.2  | Code linting              |
 
 ## Additional Resources
 

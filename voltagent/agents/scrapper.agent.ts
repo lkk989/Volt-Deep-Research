@@ -2,13 +2,16 @@ import { Agent } from "@voltagent/core";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { apiIntegrationToolkit } from "../tools/api-integration-toolkit.js";
+import { dataConversionToolkit } from "../tools/data-conversion-toolkit.js";
 import { webScraperToolkit } from "../tools/web-scraper-toolkit.js";
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { scrapperPrompt } from "./prompts.js";
 
 export const scrapperAgent = new Agent({
   id: "scrapper",
   name: "Scrapper",
-  purpose: "Extract and collect data from web sources for research and analysis",
+  purpose: "Collect high-quality, structured evidence from web/API sources with provenance metadata and extraction reliability signals.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
@@ -19,15 +22,22 @@ export const scrapperAgent = new Agent({
     format: "markdown, structured data, clean text",
     ethics: "respect robots.txt, rate limiting, terms of service",
     errorHandling: "graceful failures, retry logic, timeout handling",
-    tools: "web scraper toolkit with multiple extraction methods",
-    standards: "Data quality over quantity, ethical practices, structured output",
-    task: "Extract and collect data from web sources",
+    tools: "web-scraper toolkit, API integration toolkit, data conversion toolkit, workspace retrieval",
+    standards: "Data quality over quantity, ethical practices, reproducible extraction, and provenance-first output",
+    task: "Extract and normalize web evidence with source metadata and concise excerpts.",
   }),
   tools: [],
-  toolkits: [webScraperToolkit],
+  toolkits: [
+    webScraperToolkit,
+    apiIntegrationToolkit,
+    dataConversionToolkit,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSkillsToolkit,
+  ],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: 'google/gemini-embedding-001',
+      normalize: true,
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";
