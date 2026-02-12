@@ -276,6 +276,7 @@ Tips:
             name: 'extract_code_blocks',
             description:
                 'Extracts all code blocks from a webpage along with their context (surrounding text, language, file references). Perfect for finding code examples and documentation.',
+            tags: ['web', 'scraping', 'code'],
             parameters: z.object({
                 url: z
                     .url()
@@ -346,7 +347,7 @@ Tips:
                 },
             },
             execute: async (args, context?: ToolExecuteOptions) => {
-                if (!(context?.isActive ?? false)) {
+                if (context?.isActive === false) {
                     throw new Error('Operation has been cancelled')
                 }
 
@@ -522,6 +523,7 @@ Tips:
             name: 'extract_structured_data',
             description:
                 'Extracts structured data from a webpage including headings, links, tables, lists, and metadata. Useful for understanding page structure and extracting specific information.',
+            tags: ['web', 'scraping', 'structured-data'],
             parameters: z.object({
                 url: z.url().describe('The URL of the webpage to analyze'),
                 includeMetadata: z
@@ -824,7 +826,7 @@ Tips:
                                     headers:
                                         headers.length > 0
                                             ? headers
-                                            : rows[0] ?? [],
+                                            : (rows[0] ?? []),
                                     rows:
                                         headers.length > 0
                                             ? rows
@@ -943,6 +945,7 @@ Tips:
             name: 'extract_text_content',
             description:
                 'Extracts clean, readable text content from a webpage. Removes HTML, scripts, styles, and navigation elements. Great for getting the main article or document text.',
+            tags: ['web', 'scraping', 'text'],
             parameters: z.object({
                 url: z
                     .url()
@@ -1087,6 +1090,7 @@ Tips:
             name: 'batch_scrape_pages',
             description:
                 'Performs batch scraping of multiple webpages with configurable depth. Can follow links recursively while respecting rate limits and depth constraints. Always extracts content as Markdown with embedded code blocks.',
+            tags: ['web', 'scraping', 'batch'],
             parameters: z.object({
                 urls: z
                     .array(z.url())
@@ -1573,5 +1577,5 @@ Tips:
                 }
             },
         }),
-    ] as unknown as Tool[],
+    ] as Tool<any, any>[],
 })

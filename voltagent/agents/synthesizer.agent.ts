@@ -3,7 +3,10 @@ import z from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { knowledgeGraphToolkit } from "../tools/knowledge-graph-toolkit.js";
+import { ragToolkit } from "../tools/rag-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { defaultAgentHooks } from "./agentHooks.js";
 import { synthesizerPrompt } from "./prompts.js";
 
@@ -279,7 +282,7 @@ const createUnifiedNarrativeTool = createTool({
 export const synthesizerAgent = new Agent({
   id: "synthesizer",
   name: "Synthesizer",
-  purpose: "Combine multiple research streams, resolve contradictions, and create unified narratives",
+  purpose: "Fuse multi-source outputs into a coherent, contradiction-resolved narrative with explicit confidence and open gaps.",
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "google";
     const model = (context.get("model") as string) || "gemini-2.5-flash-lite-preview-09-2025";
@@ -290,14 +293,21 @@ export const synthesizerAgent = new Agent({
     resolution: "evidence-based reconciliation",
     focus: "comprehensive understanding",
     structure: "thematic chapters with conclusions",
-    standards: "Maintain intellectual honesty, acknowledge source limitations",
-    task: "Synthesize the provided information into a unified analysis"
+    tools: "synthesis/contradiction/narrative tools, knowledge graph toolkit, RAG toolkit, workspace retrieval",
+    standards: "Maintain intellectual honesty, preserve attribution, and explicitly report unresolved conflicts",
+    task: "Synthesize inputs into a decision-ready analysis with conflicts, confidence, and next-step gaps."
   }),
   tools: [synthesizeInformationTool, resolveContradictionsTool, createUnifiedNarrativeTool],
-  toolkits: [thinkOnlyToolkit],
+  toolkits: [
+    thinkOnlyToolkit,
+    knowledgeGraphToolkit,
+    ragToolkit,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSkillsToolkit,
+  ],
   toolRouting: {
     embedding: {
-      model: "google/text-embedding-004",
+      model: 'google/gemini-embedding-001',
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(", ") ?? "";

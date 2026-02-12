@@ -1,52 +1,165 @@
-# AGENTS.md - voltagent/agents
+# AGENTS.md
 
-This file documents all agents defined in `voltagent/agents` and their roles.
+Reference for `voltagent/agents/**`.
 
-## Overview
+## Source of truth
 
-The `agents` directory contains specialized VoltAgent agents.
+If this file conflicts with implementation, code wins. Validate against:
 
-## Agents
+1. `voltagent/index.ts` (top-level runtime `agents` registry)
+2. `voltagent/agents/plan.agent.ts` (`deepAgent` subagents)
+3. each `*.agent.ts` file (`id`, `purpose`, `tools`, `toolkits`)
 
-### Main Orchestrator (PlanAgent)
+## Runtime registration
 
-- **plan.agent.ts** (export: `deepAgent`, registry id: `deep-research-agent`)
-  - Role: Primary orchestrator for complex, multi-step research workflows. Responsible for planning (write_todos), delegation (task tool), filesystem management, summarization, and eviction of large tool outputs.
-  - Key in-repo settings to be aware of: `maxSteps: 100`, `summarization.enabled: true`, `toolResultEviction.enabled: true`, `filesystem.virtualMode: true` (NodeFilesystemBackend).
-  - Implementation note: Treat this agent as the authoritative conductor — tests and CI should validate its registration, plan parsing/fallback, and summarization/eviction behavior.
+### Top-level agents in `voltagent/index.ts`
 
-### Subagents (Specialized helpers)
+- assistant
+- support-agent
+- satisfaction-judge
+- research-coordinator
+- writer
+- director
+- data-analyzer
+- data-scientist
+- fact-checker
+- synthesizer
+- scrapper
+- coding-agent
+- code-reviewer
+- deep-research-agent
 
-These are intended to be called or delegated to by the PlanAgent for focused tasks.
+### Delegated by PlanAgent (`deepAgent`)
 
-- **assistant.agent.ts** (id: `assistant`): Query generation, quick research, and coordination of small tasks.
-- **scrapper.agent.ts** (id: `scrapper`): Web scraping and content extraction (uses web-scraper-toolkit).
-- **data-analyzer.agent.ts** (id: `data-analyzer`): Pattern detection, metrics, and structured analysis.
-- **fact-checker.agent.ts** (id: `fact-checker`): Claim verification, cross-referencing, and bias detection.
-- **synthesizer.agent.ts** (id: `synthesizer`): Combining streams into unified narratives and resolving contradictions.
-- **writer.agent.ts** (id: `writer`): Long-form report composition and formatting (markdown-enabled).
+- assistant
+- coding
+- code-reviewer
+- content-curator
+- data-scientist
+- research-coordinator
+- director
+- support
+- judge
+- writer
+- data-analyzer
+- fact-checker
+- synthesizer
+- scrapper
 
-Additional supportive agents (use when appropriate):
+> `contentCuratorAgent` is delegatable but not currently top-level registered in `index.ts`.
 
-- **coding.agent.ts** (id: `coding-agent`): Implementation and code assistance tasks.
-- **code-reviewer.agent.ts** (id: `code-reviewer`): Automated code review and quality checks.
-- **data-scientist.agent.ts** (id: `data-scientist`): Advanced statistical modeling and EDA.
-- **content-curator.agent.ts** (id: `content-curator`): Curates and ranks source content.
-- **judge.agent.ts** (id: `satisfaction-judge`) and **support-agent** (id: `support-agent`): Evaluation and lightweight support flows.
+## Agent catalog
 
+### `deepAgent` (`plan.agent.ts`)
 
+- **Type**: `PlanAgent`
+- **Role**: primary orchestrator for complex tasks
+- **Responsibilities**:
+  - decompose work into todos
+  - delegate to specialist subagents
+  - review and iterate subagent outputs
+  - synthesize final answer
+  - manage long sessions (summarization + tool-result eviction)
 
-### Utilities & Integrations
+### `assistantAgent` (`assistant.agent.ts`, id `assistant`)
 
-- **copilot.ts**: Integration with Copilot features and helper utilities.
-- **agentHooks.ts**: Shared lifecycle hooks applied to agents (observability, security, audit, etc.).
-- **prompts.ts**: Centralized shared prompt templates and guardrails.
+- **Role**: query strategy and rapid discovery
+- **Does**: produces high-signal research queries and investigation angles
+- **Typical capabilities**: reasoning, arXiv, weather, workspace search/skills
 
-## Usage Notes
+### `researchCoordinatorAgent` (`research-coordinator.agent.ts`, id `research-coordinator`)
 
-- New agents must follow the patterns from `assistant.agent.ts` and register with the VoltAgent registry in `voltagent/index.ts`.
-- Each agent should define a `id`, `name`, `purpose`, `model`, and `instructions` and configure memory (LibSQL) where appropriate.
-- Use LibSQL memory files in `.voltagent/` (e.g., `.voltagent/assistant-memory.db`).
-- Ensure agent hooks (security, audit) and `context?.isActive` checks are present as required by project rules.
+- **Role**: execution planner
+- **Does**: builds dependency-aware plans and milestone tracking
+- **Typical capabilities**: reasoning, API integration, RAG, debug, workspace search/skills
 
----
+### `directorAgent` (`director.agent.ts`, id `director`)
+
+- **Role**: quality governor
+- **Does**: enforces orchestration quality gates and escalation logic
+- **Typical capabilities**: reasoning + workspace search/skills
+
+### `scrapperAgent` (`scrapper.agent.ts`, id `scrapper`)
+
+- **Role**: source ingestion
+- **Does**: extracts and normalizes web/API content with provenance metadata
+- **Typical capabilities**: scraper, API integration, conversion, workspace search/skills
+
+### `contentCuratorAgent` (`content-curator.agent.ts`, id `content-curator`)
+
+- **Role**: evidence curation
+- **Does**: scores, de-duplicates, and ranks source content for synthesis
+- **Typical capabilities**: reasoning, knowledge graph, workspace search/skills
+
+### `dataAnalyzerAgent` (`data-analyzer.agent.ts`, id `data-analyzer`)
+
+- **Role**: analytical interpretation
+- **Does**: extracts quantified patterns and decision-oriented findings
+- **Typical capabilities**:
+  - direct crypto + stock market tools
+  - analysis/extraction helpers
+  - financial + visualization + workspace retrieval
+
+### `dataScientistAgent` (`data-scientist.agent.ts`, id `data-scientist`)
+
+- **Role**: quantitative/statistical analysis
+- **Does**: statistical workflows with explicit assumptions and uncertainty
+- **Typical capabilities**:
+  - direct crypto + stock market tools
+  - data conversion/processing + visualization
+  - reasoning + workspace retrieval
+
+### `factCheckerAgent` (`fact-checker.agent.ts`, id `fact-checker`)
+
+- **Role**: verification
+- **Does**: verifies claims, detects bias, assigns confidence
+- **Typical capabilities**: verify/cross-reference/bias tools + reasoning + workspace retrieval
+
+### `synthesizerAgent` (`synthesizer.agent.ts`, id `synthesizer`)
+
+- **Role**: integration
+- **Does**: resolves contradictions and combines streams into coherent outputs
+- **Typical capabilities**: synthesis + reasoning + knowledge graph + RAG + workspace retrieval
+
+### `writerAgent` (`writer.agent.ts`, id `writer`)
+
+- **Role**: report generation
+- **Does**: produces citation-backed, decision-ready outputs
+- **Typical capabilities**: workspace search/skills
+
+### `codingAgent` (`coding.agent.ts`, id `coding-agent`)
+
+- **Role**: implementation
+- **Does**: implements/refactors code with architecture alignment
+- **Typical capabilities**: debug, code analysis, filesystem, git, tests, workspace FS/search/sandbox/skills
+
+### `codeReviewerAgent` (`code-reviewer.agent.ts`, id `code-reviewer`)
+
+- **Role**: code audit
+- **Does**: reviews correctness, security, performance, maintainability
+- **Typical capabilities**: debug, code analysis, filesystem, git, tests, workspace FS/search/sandbox/skills
+
+### `judgeAgent` (`judge.agent.ts`, id `satisfaction-judge`)
+
+- **Role**: quality scoring
+- **Does**: scores response quality and satisfaction signals
+- **Typical capabilities**: workspace search/skills
+
+### `supportAgent` (`judge.agent.ts`, id `support-agent`)
+
+- **Role**: issue resolution
+- **Does**: provides concise next-step support guidance
+- **Typical capabilities**: workspace search/skills
+
+## Prompt policy
+
+- Use `prompts.ts` prompt builders rather than large inline instruction strings.
+- Keep prompt tool descriptions aligned with actual agent imports.
+
+## Change checklist
+
+- [ ] Agent id/registration key is still valid in `index.ts`
+- [ ] PlanAgent subagent graph updated when delegation changes
+- [ ] `purpose` reflects current implemented behavior
+- [ ] tool/toolkit assignments are role-appropriate
+- [ ] prompt variables remain accurate

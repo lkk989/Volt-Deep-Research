@@ -1,3 +1,5 @@
+import type { ComponentProps, ReactNode } from "react";
+
 import {
   Command,
   CommandDialog,
@@ -16,7 +18,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type { ComponentProps, ReactNode } from "react";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;
 
@@ -41,6 +42,7 @@ export const ModelSelectorContent = ({
   ...props
 }: ModelSelectorContentProps) => (
   <DialogContent
+    aria-describedby={undefined}
     className={cn(
       "outline! border-none! p-0 outline-border! outline-solid!",
       className
@@ -168,6 +170,7 @@ export type ModelSelectorLogoProps = Omit<
     | "scaleway"
     | "amazon-bedrock"
     | "cerebras"
+    // oxlint-disable-next-line typescript-eslint(ban-types) -- intentional pattern for autocomplete-friendly string union
     | (string & {});
 };
 
@@ -194,7 +197,7 @@ export const ModelSelectorLogoGroup = ({
 }: ModelSelectorLogoGroupProps) => (
   <div
     className={cn(
-      "-space-x-1 flex shrink-0 items-center [&>img]:rounded-full [&>img]:bg-background [&>img]:p-px [&>img]:ring-1 dark:[&>img]:bg-foreground",
+      "flex shrink-0 items-center -space-x-1 [&>img]:rounded-full [&>img]:bg-background [&>img]:p-px [&>img]:ring-1 dark:[&>img]:bg-foreground",
       className
     )}
     {...props}

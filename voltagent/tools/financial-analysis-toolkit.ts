@@ -34,7 +34,7 @@ import {
 import { voltlogger } from '../config/logger.js'
 
 const numberSeriesSchema = z
-    .array(z.number().finite())
+    .array(z.number())
     .min(3)
     .describe('Numeric series (length >= 3)')
 

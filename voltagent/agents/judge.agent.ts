@@ -3,18 +3,23 @@ import { z } from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
+import { judgePrompt, supportPrompt } from "./prompts.js";
 
 export const judgeAgent = new Agent({
   id: "satisfaction-judge",
   name: "satisfaction-judge",
-  purpose: "Judge user satisfaction based on input and output.",
-  instructions: "Return JSON with score (0-1), label, and optional reason.",
+  purpose: "Score response quality and user satisfaction signals to support feedback-driven orchestration improvement.",
+  instructions: judgePrompt({
+    task: "Return strict JSON score/label/reason for satisfaction judgment.",
+  }),
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "github-copilot";
     const model = (context.get("model") as string) || "grok-code-fast-1";
     return `${provider}/${model}`;
   },
   tools: [],
+  toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
   maxOutputTokens: 64000,
   temperature: 0.3,
   logger: voltlogger,
@@ -49,15 +54,20 @@ Assistant: ${String(payload.output)}`;
 export const supportAgent = new Agent({
   id: "support-agent",
   name: "support-agent",
-  purpose: "Support Agent to assist users with their inquiries and issues.",
-  instructions: "You are a support agent.",
+  purpose: "Resolve user issues quickly with accurate, actionable guidance and escalation when confidence is low.",
+  instructions: supportPrompt({
+    tone: "helpful, concise, action-oriented",
+    policy: "Never invent facts; ask minimal clarifying questions only when required.",
+    tools: "workspace search and workspace skills",
+    task: "Help users resolve issues quickly with concrete next steps.",
+  }),
   model: ({ context }) => {
     const provider = (context.get("provider") as string) || "github-copilot";
     const model = (context.get("model") as string) || "grok-code-fast-1";
     return `${provider}/${model}`;
   },
   tools: [],
-  toolkits: [],
+  toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
   maxOutputTokens: 64000,
   memory: sharedMemory,
   temperature: 0.3,

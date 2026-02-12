@@ -3,6 +3,7 @@ import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
 import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
+import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from '../workspaces/index.js'
 import { defaultAgentHooks } from './agentHooks.js'
 import { agentPrompt } from './prompts.js'; // kept single import
 
@@ -10,7 +11,7 @@ export const directorAgent = new Agent({
   id: 'director',
   name: 'Director',
   purpose:
-    'Orchestrate comprehensive research projects using specialized agents for optimal results',
+    'Act as orchestration governor: enforce task decomposition quality, evidence thresholds, and cross-agent output consistency.',
   model: ({ context }) => {
     const provider = (context.get('provider') as string) || 'google'
     const model =
@@ -21,23 +22,23 @@ export const directorAgent = new Agent({
   // Use a string representation of the PromptCreator to satisfy the expected instructions type
   instructions: agentPrompt({
     agentName: 'Director',
-    role: 'research orchestration specialist',
+    role: 'research orchestration governor',
     researchPhase: 'planning',
-    qualityLevel: 'high',
-    capabilities: 'multi-agent coordination, workflow management',
+    qualityLevel: 'high with explicit verification gates',
+    capabilities: 'multi-agent coordination, workflow risk control, output contract enforcement',
     topic: 'research projects',
     depth: 'comprehensive',
     expertise: 'expert',
     tools: 'agent delegation, reasoning',
-    responsibilities: 'Coordinate specialized agents for research tasks',
-    standards: 'Ensure quality, accuracy, and efficiency',
-    task: 'Orchestrate research workflows',
+    responsibilities: 'Route tasks, enforce acceptance criteria, and block low-confidence outputs from promotion',
+    standards: 'Ensure quality, source traceability, and measurable progress at each stage',
+    task: 'Orchestrate research workflows with strict quality gates and escalation when blockers appear',
   }),
   tools: [],
-  toolkits: [thinkOnlyToolkit],
+  toolkits: [thinkOnlyToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
   toolRouting: {
     embedding: {
-      model: 'google/text-embedding-004',
+      model: 'google/gemini-embedding-001',
       topK: 3,
       toolText: (tool) => {
         const tags = tool.tags?.join(', ') ?? '';

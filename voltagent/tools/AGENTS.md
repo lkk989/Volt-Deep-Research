@@ -1,59 +1,119 @@
-# AGENTS.md - voltagent/tools
+# AGENTS.md
 
-Documentation for the tools folder in the VoltAgent project.
+Reference for `voltagent/tools/**`.
 
-## Tool Categories
+## Source of truth
 
-### Core Toolkits
+If this file conflicts with implementation, code wins. Validate against:
 
-- **debug-tool.ts**: Context inspection and debug helpers (`log_debug_info`).
-- **reasoning-tool.ts**: Cognitive reasoning (`think`, `analyze`).
-- **web-scraper-toolkit.ts**: Web scraping (`scrape_webpage_markdown`, `extract_text_content`, `extract_structured_data`).
+1. tool exports in `voltagent/tools/*.ts`
+2. consuming imports in `voltagent/agents/*.agent.ts`
 
-### Data & Analysis
+## Tool architecture
 
-- **data-processing-toolkit.ts**: Data manipulation and normalization.
-- **data-conversion-toolkit.ts**: Format conversion utilities (CSV, JSON, XML).
-- **visualization-toolkit.ts**: Data visualization helpers and converters.
-- **knowledge-graph-toolkit.ts**: Graph creation and relationship mapping.
-- **semantic-utils.ts**: Semantic analysis helpers, Python bridge, and utilities.
+This folder contains both patterns:
 
-### Integration & External APIs
+- **Toolkit pattern**: grouped `createToolkit(...)` exports
+- **Single-tool pattern**: many direct `createTool(...)` exports
 
-- **api-integration-toolkit.ts**: Generic API helpers and HTTP utilities.
-- **alpha-vantage-toolkit.ts**: Financial market data helpers (Alpha Vantage).
-- **arxiv-toolkit.ts**: Academic paper search and PDF extraction.
-- **weather-toolkit.ts**: Weather data helpers and adapters.
+## Tool families and purpose
 
-### Development & Ops
+### Market data
 
-- **filesystem-toolkit.ts**: File access and batch operations.
-- **git-toolkit.ts**: Git operations (status, diff, log, commit).
-- **test-toolkit.ts**: Testing helpers and test-run integration.
-- **code-analysis-toolkit.ts**: TypeScript and codebase analysis (ts-morph based tooling).
-- **rag-toolkit.ts**: RAG support and retrieval utilities.
+#### `crypto-market-toolkit.ts` (single-tool exports)
 
-### Other Tools
+Purpose: no-key crypto market data for analyzer/scientist workflows.
 
-- **data-conversion-toolkit.ts**: CSV/JSON/XML format conversion helpers.
-- **alpha-vantage-toolkit.ts**: (listed above) time-series utilities.
-- **semantic-utils.ts**: Includes child_process usage for Python bridge — validate inputs.
+Includes tools for:
 
-## Development Notes
+- spot price with provider fallback
+- multi-source price consensus
+- OHLCV candles
+- Binance public market endpoints (exchange info, 24h ticker, book ticker, avg price, order book, recent trades, aggregate trades)
+- DexScreener endpoints (search, pair, token pairs, token profiles, boosts)
 
-- All tools use `createTool` or `createToolkit` and Zod parameter schemas where applicable.
-- Keep long-running external calls cancellable with `context?.isActive` checks.
+Implementation notes:
 
-## Development Workflow
+- axios + axios-retry
+- configurable request options (`timeoutMs`, `retries`, `retryDelayMs`)
+- provider-aware errors and logging
+- Kraken alias/candidate pair resolution for symbol compatibility
 
-### Creating a New Tool
+#### `stock-market-toolkit.ts` (single-tool exports)
 
-Use `createTool` with Zod schema validation.
+Purpose: no-key stock market data using Yahoo + Stooq.
 
-### Creating a New Toolkit
+Includes tools for:
 
-Use `createToolkit` to group related tools.
+- spot price (Yahoo primary, Stooq fallback)
+- batch quotes
+- OHLCV chart bars
+- Stooq daily history
+- multi-source consensus price
+- symbol search
 
-### Testing
+Implementation notes:
 
-Colocate tests with source files (e.g., `my-tool.test.ts`).
+- axios + axios-retry
+- request options schema
+- cancellation checks and structured outputs
+
+#### `alpha-vantage-toolkit.ts` (toolkit)
+
+Purpose: keyed market data series (intraday/daily/weekly/monthly).
+
+- Requires `ALPHA_VANTAGE_API_KEY`
+
+#### `financial-analysis-toolkit.ts`
+
+Purpose: financial metrics and analysis helpers.
+
+### Data and analytics
+
+- `analyze-data-tool.ts`: direct analysis primitives
+- `data-processing-toolkit.ts`: transforms and processing
+- `data-conversion-toolkit.ts`: format conversion/parsing
+- `visualization-toolkit.ts`: chart/visual helpers
+
+### Retrieval, extraction, and knowledge
+
+- `web-scraper-toolkit.ts`: web extraction
+- `arxiv-toolkit.ts`: arXiv retrieval
+- `api-integration-toolkit.ts`: generic API orchestration
+- `rag-toolkit.ts`: retrieval-augmented utilities
+- `knowledge-graph-toolkit.ts`: graph/entity utilities
+
+### Engineering and diagnostics
+
+- `code-analysis-toolkit.ts`: code quality checks
+- `test-toolkit.ts`: test execution/inspection
+- `git-toolkit.ts`: SCM operations
+- `filesystem-toolkit.ts`: filesystem operations
+- `debug-tool.ts`: diagnostics and context inspection
+- `reasoning-tool.ts`: structured reasoning helpers
+
+### Utility modules
+
+- `semantic-utils.ts`: shared semantic helper utilities
+- `weather-toolkit.ts`: weather-oriented tools used by assistant workflows
+
+## Agent wiring guidance
+
+- Data agents (`data-analyzer`, `data-scientist`): market + analysis + visualization + retrieval tools
+- Coding/reviewer agents: code-analysis + tests + git + filesystem + debug
+- Fact/synthesis agents: verification + graph + RAG + retrieval
+- Coordinator/assistant agents: discovery + API + reasoning tools
+
+## Quality rules when editing tools
+
+- Validate all input via Zod
+- Keep output schema explicit and stable
+- Respect cancellation (`context?.isActive`)
+- Use structured tool hooks (`onStart`, `onEnd`) with useful provider context
+- For network tools: include timeout/retry options and actionable provider errors
+
+## Change checklist
+
+- [ ] export names match consuming agent imports
+- [ ] no stale toolkit references remain after style changes
+- [ ] docs updated when export pattern changes (toolkit ↔ single tools)
