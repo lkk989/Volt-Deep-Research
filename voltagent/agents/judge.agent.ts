@@ -3,7 +3,7 @@ import { z } from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
-import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { judgePrompt, supportPrompt } from "./prompts.js";
 
 export const judgeAgent = new Agent({
@@ -20,6 +20,8 @@ export const judgeAgent = new Agent({
   },
   tools: [],
   toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
   maxOutputTokens: 64000,
   temperature: 0.3,
   logger: voltlogger,
@@ -68,6 +70,9 @@ export const supportAgent = new Agent({
   },
   tools: [],
   toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   maxOutputTokens: 64000,
   memory: sharedMemory,
   temperature: 0.3,

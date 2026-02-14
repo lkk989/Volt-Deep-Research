@@ -5,7 +5,7 @@ import { voltObservability } from "../config/observability.js";
 import { arxivToolkit } from "../tools/arxiv-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
 import { getForecastOpenMeteo, getWeatherTool } from "../tools/weather-toolkit.js";
-import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 //import { defaultAgentHooks } from "./agentHooks.js";
 import { assistantPrompt } from "./prompts.js";
 
@@ -34,6 +34,9 @@ export const assistantAgent = new Agent({
     sharedWorkspaceSearchToolkit,
     sharedWorkspaceSkillsToolkit,
   ],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
       model: "google/gemini-embedding-001",

@@ -6,7 +6,7 @@ import { voltObservability } from "../config/observability.js";
 import { knowledgeGraphToolkit } from "../tools/knowledge-graph-toolkit.js";
 import { ragToolkit } from "../tools/rag-toolkit.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { defaultAgentHooks } from "./agentHooks.js";
 import { synthesizerPrompt } from "./prompts.js";
 
@@ -305,6 +305,9 @@ export const synthesizerAgent = new Agent({
     sharedWorkspaceSearchToolkit,
     sharedWorkspaceSkillsToolkit,
   ],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
       model: 'google/gemini-embedding-001',

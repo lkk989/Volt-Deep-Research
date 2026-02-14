@@ -3,7 +3,7 @@ import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
 import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
-import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from '../workspaces/index.js'
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from '../workspaces/index.js'
 import { defaultAgentHooks } from './agentHooks.js'
 import { agentPrompt } from './prompts.js'; // kept single import
 
@@ -36,6 +36,9 @@ export const directorAgent = new Agent({
   }),
   tools: [],
   toolkits: [thinkOnlyToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
       model: 'google/gemini-embedding-001',

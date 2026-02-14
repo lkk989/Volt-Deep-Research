@@ -4,7 +4,7 @@ import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { crossReferenceSourcesTool, detectBiasTool, verifyClaimTool } from "../tools/analyze-data-tool.js";
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js";
-import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { defaultAgentHooks } from "./agentHooks.js";
 import { factCheckerPrompt } from "./prompts.js";
 
@@ -28,6 +28,9 @@ export const factCheckerAgent = new Agent({
   }),
   tools: [verifyClaimTool, crossReferenceSourcesTool, detectBiasTool],
   toolkits: [thinkOnlyToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
       model: 'google/gemini-embedding-001',
@@ -63,7 +66,7 @@ export const factCheckerAgent = new Agent({
         const errorMessage = error instanceof Error ? error.message : String(error);
         voltlogger.error(`[${opId}] tool ${tool.name} failed: ${errorMessage}`);
         if (error instanceof Error) {
-          const {stack} = error;
+          const { stack } = error;
           if (typeof stack === 'string' && stack.length > 0) {
             voltlogger.debug(`[${opId}] tool ${tool.name} stack: ${stack}`);
           } else {

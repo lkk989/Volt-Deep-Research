@@ -8,7 +8,7 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 
 import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
-import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
 import { contentCuratorPrompt } from "./prompts.js"
 
 const contentCuratorHooks = createHooks({
@@ -113,6 +113,9 @@ export const contentCuratorAgent = new Agent({
     sharedWorkspaceSearchToolkit,
     sharedWorkspaceSkillsToolkit,
   ],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
       model: "google/gemini-embedding-001",

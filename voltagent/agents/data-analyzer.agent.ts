@@ -55,8 +55,9 @@ import {
 } from '../tools/stock-market-toolkit.js'
 import { visualizationToolkit } from '../tools/visualization-toolkit.js'
 import {
+  sharedWorkspaceFilesystemToolkit,
   sharedWorkspaceSearchToolkit,
-  sharedWorkspaceSkillsToolkit,
+  sharedWorkspaceSkillsToolkit
 } from '../workspaces/index.js'
 import { dataAnalyzerPrompt } from './prompts.js'
 
@@ -129,6 +130,9 @@ export const dataAnalyzerAgent = new Agent({
     sharedWorkspaceSearchToolkit,
     sharedWorkspaceSkillsToolkit,
   ],
+  workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
       model: 'google/gemini-embedding-001',

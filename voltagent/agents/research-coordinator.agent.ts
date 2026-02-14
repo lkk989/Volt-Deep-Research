@@ -82,6 +82,8 @@ export const researchCoordinatorAgent = new Agent({
     sharedWorkspaceSkillsToolkit,
   ],
   workspace: sharedWorkspaceFilesystemToolkit,
+  workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
       model: 'google/gemini-embedding-001',
