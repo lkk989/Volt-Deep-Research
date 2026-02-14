@@ -68,6 +68,48 @@ Purpose: keyed market data series (intraday/daily/weekly/monthly).
 
 Purpose: financial metrics and analysis helpers.
 
+#### `forex-market-toolkit.ts` (single-tool exports)
+
+Purpose: no-key forex/currency exchange rate data.
+
+Includes tools for:
+
+- spot exchange rate with provider fallback (ExchangeRate-API, Frankfurter, RatesAPI)
+- multi-source rate consensus with spread metrics
+- currency conversion calculations
+- historical rates (Frankfurter ECB data)
+- time series for date ranges
+- available currencies list
+- latest rates for base currency
+
+Implementation notes:
+
+- axios + axios-retry
+- configurable request options (`timeoutMs`, `retries`, `retryDelayMs`)
+- currency code normalization (ISO 4217)
+- provider-aware errors and logging
+
+#### `economic-data-toolkit.ts` (single-tool exports)
+
+Purpose: macroeconomic indicators from FRED and World Bank.
+
+Includes tools for:
+
+- FRED economic indicators (GDP, CPI, unemployment, interest rates, etc.)
+- FRED indicator search
+- World Bank indicators by country (GDP, inflation, unemployment)
+- World Bank countries and regions list
+- World Bank indicator codes search
+- FRED data releases calendar
+- FRED category series
+
+Implementation notes:
+
+- FRED requires `FRED_API_KEY` environment variable
+- World Bank API is no-key
+- axios + axios-retry
+- configurable request options
+
 ### Data and analytics
 
 - `analyze-data-tool.ts`: direct analysis primitives

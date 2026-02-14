@@ -1,24 +1,18 @@
 import { google } from '@ai-sdk/google'
-import {
-    NodeFilesystemBackend,
-    PlanAgent,
-    PlanAgentState,
-    PlanAgentSubagentDefinition,
-    PlanAgentTodoItem,
-    PlanAgentTodoStatus,
-} from '@voltagent/core'
+import { NodeFilesystemBackend, PlanAgent } from '@voltagent/core'
 
 import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
 import { chromaRetriever } from '../retriever/chroma.js'
+import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
 import {
     countTokensTool,
     estimateCostTool,
     truncateTextTool,
 } from '../tools/token-analysis-toolkit.js'
-import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
 import {
+    sharedWorkspaceFilesystemToolkit,
     sharedWorkspaceRuntime,
     sharedWorkspaceSearchToolkit,
     sharedWorkspaceSkillsToolkit,
@@ -33,7 +27,9 @@ import { dataScientistAgent } from './data-scientist.agent.js'
 import { directorAgent } from './director.agent.js'
 import { factCheckerAgent } from './fact-checker.agent.js'
 import { judgeAgent, supportAgent } from './judge.agent.js'
+import { newsPlanAgent } from './news-plan.agent.js'
 import { researchCoordinatorAgent } from './research-coordinator.agent.js'
+import { researchPlanAgent } from './research-plan.agent.js'
 import { scrapperAgent } from './scrapper.agent.js'
 import { synthesizerAgent } from './synthesizer.agent.js'
 import { writerAgent } from './writer.agent.js'
@@ -43,11 +39,15 @@ const generalInstructions = [
     '',
     '## Capabilities',
     "- **Planning**: Analyze the user's request and create a step-by-step plan.",
-    '- **Delegation**: Assign tasks to sub-agents (Assistant, Writer, Data Analyzer, etc.) based on their expertise.',
+    '- **Delegation**: Assign tasks to sub-agents (Assistant, Writer, Data Analyzer, etc.) or sub-orchestrators based on their expertise.',
     '- **Execution**: Use your tools (filesystem, internet search) to gather information or manage state.',
     '- **Synthesis**: Combine results from sub-agents into a coherent final output.',
     '',
-    '## Sub-Agents',
+    '## Sub-Orchestrators (PlanAgents)',
+    '- **Research Orchestrator**: For complex, multi-step research requiring verification and synthesis. Coordinates Assistant → Scrapper → Data Analyzer → Fact Checker → Synthesizer → Writer workflow.',
+    '- **News Orchestrator**: For news aggregation, trend monitoring, and sentiment analysis. Uses HackerNews, Reddit, Dev.to, GitHub APIs with sentiment tools.',
+    '',
+    '## Individual Sub-Agents',
     '- **Assistant**: Generate high-signal query plans and investigation angles.',
     '- **Writer**: Convert findings into citation-backed, decision-ready reports.',
     '- **Data Analyzer**: Extract quantified patterns, confidence, and limitations.',
@@ -65,10 +65,11 @@ const generalInstructions = [
     '',
     '## Workflow',
     "1. **Understand**: Read the user's request and context carefully.",
-    '2. **Plan**: Create a high-level plan using `write_todos`.',
-    '3. **Delegate**: Use `task` tool to assign work to sub-agents.',
-    '4. **Review**: Check sub-agent outputs. If unsatisfactory, refine instructions and retry.',
-    '5. **Finalize**: Compile the final response.',
+    '2. **Choose Strategy**: For complex research with verification needs, delegate to Research Orchestrator. For news/sentiment tasks, use News Orchestrator. For focused tasks, use individual agents.',
+    '3. **Plan**: Create a high-level plan using `write_todos`.',
+    '4. **Delegate**: Use `task` tool to assign work to sub-agents or sub-orchestrators.',
+    '5. **Review**: Check sub-agent outputs. If unsatisfactory, refine instructions and retry.',
+    '6. **Finalize**: Compile the final response.',
 ].join('\n')
 
 export const deepAgent = new PlanAgent({
@@ -77,16 +78,24 @@ export const deepAgent = new PlanAgent({
         'Orchestrate complex research by delegating to specialists, enforcing quality gates, and synthesizing verified outcomes into final answers.',
     systemPrompt: generalInstructions,
 
-    model: ({ context }) => {
-        const provider = (context.get('provider') as string) || 'github-copilot'
-        const model = (context.get('model') as string) || 'gpt-5-mini'
-        return `${provider}/${model}`
-    },
+    model: [
+        {
+            id: 'primary',
+            model: google('gemini-2.5-flash-lite-preview-09-2025'),
+            maxRetries: 3,
+        },
+        {
+            id: 'secondary',
+            model: "google/gemini-3-flash-preview",
+            maxRetries: 2,
+        },
+    ],
     tools: [countTokensTool, estimateCostTool, truncateTextTool],
     toolkits: [
         thinkOnlyToolkit,
         sharedWorkspaceSearchToolkit,
         sharedWorkspaceSkillsToolkit,
+        sharedWorkspaceFilesystemToolkit,
     ],
     toolRouting: {
         embedding: {
@@ -102,12 +111,32 @@ export const deepAgent = new PlanAgent({
             },
         },
     },
+    toolResultEviction: {
+        enabled: true,
+        tokenLimit: 20000
+    },
     memory: sharedMemory,
     maxSteps: 100,
     logger: voltlogger,
     maxOutputTokens: 64000,
     observability: voltObservability,
-    hooks: defaultAgentHooks,
+    hooks: {
+        ...defaultAgentHooks,
+        onRetry: async (args) => {
+            if (args.source === 'llm') {
+                voltlogger.warn(
+                    `[Deep PlanAgent] LLM retry ${args.nextAttempt}/${args.maxRetries + 1}`,
+                    { model: args.modelName }
+                )
+            }
+        },
+        onFallback: async ({ stage, fromModel, nextModel, operation }) => {
+            voltlogger.warn(
+                `[Deep PlanAgent] Fallback (${stage}) from ${fromModel} to ${nextModel ?? 'next'}`,
+                { operation }
+            )
+        },
+    },
     retriever: chromaRetriever,
     subagents: [
         assistantAgent,
@@ -124,6 +153,8 @@ export const deepAgent = new PlanAgent({
         factCheckerAgent,
         synthesizerAgent,
         scrapperAgent,
+        researchPlanAgent,
+        newsPlanAgent,
     ],
     generalPurposeAgent: true,
     task: {
@@ -193,9 +224,5 @@ export const deepAgent = new PlanAgent({
                 'Use this to search for files matching a specific pattern. This is useful for finding related research documents.',
         },
         toolTokenLimitBeforeEvict: 12000,
-    },
-    toolResultEviction: {
-        enabled: true,
-        tokenLimit: 12000,
-    },
+    }
 })

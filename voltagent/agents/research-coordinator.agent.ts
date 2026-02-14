@@ -2,8 +2,8 @@ import { google } from "@ai-sdk/google"
 import { Agent, createHooks } from "@voltagent/core"
 
 import { voltlogger } from "../config/logger.js"
-import { debugTool } from "../tools/debug-tool.js"
 import { apiIntegrationToolkit } from "../tools/api-integration-toolkit.js"
+import { debugTool } from "../tools/debug-tool.js"
 import { ragToolkit } from "../tools/rag-toolkit.js"
 import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 //import { searchDiscoveryToolkit } from "../tools/search-discovery-toolkit.js"
@@ -12,7 +12,7 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 import z from "zod"
 import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
-import { sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
 import { researchCoordinatorPrompt } from "./prompts.js"
 
 const researchCoordinatorHooks = createHooks({
@@ -81,6 +81,7 @@ export const researchCoordinatorAgent = new Agent({
     sharedWorkspaceSearchToolkit,
     sharedWorkspaceSkillsToolkit,
   ],
+  workspace: sharedWorkspaceFilesystemToolkit,
   toolRouting: {
     embedding: {
       model: 'google/gemini-embedding-001',
