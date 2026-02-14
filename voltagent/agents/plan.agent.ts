@@ -1,19 +1,28 @@
 import { google } from '@ai-sdk/google'
 import {
-  NodeFilesystemBackend,
-  PlanAgent,
-  PlanAgentState,
-  PlanAgentSubagentDefinition,
-  PlanAgentTodoItem,
-  PlanAgentTodoStatus
+    NodeFilesystemBackend,
+    PlanAgent,
+    PlanAgentState,
+    PlanAgentSubagentDefinition,
+    PlanAgentTodoItem,
+    PlanAgentTodoStatus,
 } from '@voltagent/core'
 
 import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
 import { chromaRetriever } from '../retriever/chroma.js'
+import {
+    countTokensTool,
+    estimateCostTool,
+    truncateTextTool,
+} from '../tools/token-analysis-toolkit.js'
 import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
-import { sharedWorkspaceRuntime, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from '../workspaces/index.js'
+import {
+    sharedWorkspaceRuntime,
+    sharedWorkspaceSearchToolkit,
+    sharedWorkspaceSkillsToolkit,
+} from '../workspaces/index.js'
 import { defaultAgentHooks } from './agentHooks.js'
 import { assistantAgent } from './assistant.agent.js'
 import { codeReviewerAgent } from './code-reviewer.agent.js'
@@ -30,157 +39,163 @@ import { synthesizerAgent } from './synthesizer.agent.js'
 import { writerAgent } from './writer.agent.js'
 
 const generalInstructions = [
-  'You are a Master Planner and Orchestrator. Your goal is to solve complex problems by breaking them down into manageable subtasks and delegating them to the most appropriate specialized agents.',
-  '',
-  '## Capabilities',
-  "- **Planning**: Analyze the user's request and create a step-by-step plan.",
-  '- **Delegation**: Assign tasks to sub-agents (Assistant, Writer, Data Analyzer, etc.) based on their expertise.',
-  '- **Execution**: Use your tools (filesystem, internet search) to gather information or manage state.',
-  '- **Synthesis**: Combine results from sub-agents into a coherent final output.',
-  '',
-  '## Sub-Agents',
-  '- **Assistant**: Generate high-signal query plans and investigation angles.',
-  '- **Writer**: Convert findings into citation-backed, decision-ready reports.',
-  '- **Data Analyzer**: Extract quantified patterns, confidence, and limitations.',
-  '- **Fact Checker**: Verify claims with evidence and confidence labels.',
-  '- **Synthesizer**: Resolve contradictions and produce coherent integrated narratives.',
-  '- **Scrapper**: Extract structured source data with provenance metadata.',
-  '- **Coding Agent**: Implement tools/workflows/fixes aligned to project architecture.',
-  '- **Code Reviewer**: Audit code changes for correctness, security, and maintainability.',
-  '- **Content Curator**: Rank and bundle high-value evidence for downstream synthesis.',
-  '- **Data Scientist**: Run rigorous statistical analysis and uncertainty quantification.',
-  '- **Research Coordinator**: Build dependency-aware plans and milestone tracking.',
-  '- **Director**: Enforce orchestration quality gates and escalation decisions.',
-  '- **Support Agent**: Handle user support and quick issue resolution.',
-  '- **Satisfaction Judge**: Score output quality and user satisfaction signals.',
-  '',
-  '## Workflow',
-  "1. **Understand**: Read the user's request and context carefully.",
-  '2. **Plan**: Create a high-level plan using `write_todos`.',
-  '3. **Delegate**: Use `task` tool to assign work to sub-agents.',
-  '4. **Review**: Check sub-agent outputs. If unsatisfactory, refine instructions and retry.',
-  '5. **Finalize**: Compile the final response.',
+    'You are a Master Planner and Orchestrator. Your goal is to solve complex problems by breaking them down into manageable subtasks and delegating them to the most appropriate specialized agents.',
+    '',
+    '## Capabilities',
+    "- **Planning**: Analyze the user's request and create a step-by-step plan.",
+    '- **Delegation**: Assign tasks to sub-agents (Assistant, Writer, Data Analyzer, etc.) based on their expertise.',
+    '- **Execution**: Use your tools (filesystem, internet search) to gather information or manage state.',
+    '- **Synthesis**: Combine results from sub-agents into a coherent final output.',
+    '',
+    '## Sub-Agents',
+    '- **Assistant**: Generate high-signal query plans and investigation angles.',
+    '- **Writer**: Convert findings into citation-backed, decision-ready reports.',
+    '- **Data Analyzer**: Extract quantified patterns, confidence, and limitations.',
+    '- **Fact Checker**: Verify claims with evidence and confidence labels.',
+    '- **Synthesizer**: Resolve contradictions and produce coherent integrated narratives.',
+    '- **Scrapper**: Extract structured source data with provenance metadata.',
+    '- **Coding Agent**: Implement tools/workflows/fixes aligned to project architecture.',
+    '- **Code Reviewer**: Audit code changes for correctness, security, and maintainability.',
+    '- **Content Curator**: Rank and bundle high-value evidence for downstream synthesis.',
+    '- **Data Scientist**: Run rigorous statistical analysis and uncertainty quantification.',
+    '- **Research Coordinator**: Build dependency-aware plans and milestone tracking.',
+    '- **Director**: Enforce orchestration quality gates and escalation decisions.',
+    '- **Support Agent**: Handle user support and quick issue resolution.',
+    '- **Satisfaction Judge**: Score output quality and user satisfaction signals.',
+    '',
+    '## Workflow',
+    "1. **Understand**: Read the user's request and context carefully.",
+    '2. **Plan**: Create a high-level plan using `write_todos`.',
+    '3. **Delegate**: Use `task` tool to assign work to sub-agents.',
+    '4. **Review**: Check sub-agent outputs. If unsatisfactory, refine instructions and retry.',
+    '5. **Finalize**: Compile the final response.',
 ].join('\n')
 
 export const deepAgent = new PlanAgent({
-  name: 'deep-work-agent',
-  purpose:
-    'Orchestrate complex research by delegating to specialists, enforcing quality gates, and synthesizing verified outcomes into final answers.',
-  systemPrompt: generalInstructions,
+    name: 'deep-work-agent',
+    purpose:
+        'Orchestrate complex research by delegating to specialists, enforcing quality gates, and synthesizing verified outcomes into final answers.',
+    systemPrompt: generalInstructions,
 
-  model: ({ context }) => {
-    const provider = (context.get('provider') as string) || 'github-copilot'
-    const model = (context.get('model') as string) || 'gpt-5-mini'
-    return `${provider}/${model}`
-  },
-  tools: [],
-  toolkits: [thinkOnlyToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
-  toolRouting: {
-    embedding: {
-      model: 'google/gemini-embedding-001',
-      normalize: true,
-      maxBatchSize: 200,
-      topK: 3,
-      toolText: (tool) => {
-        const tags = tool.tags?.join(', ') ?? '';
-        return [tool.name, tool.description, tags].filter(Boolean).join('\n');
-      },
+    model: ({ context }) => {
+        const provider = (context.get('provider') as string) || 'github-copilot'
+        const model = (context.get('model') as string) || 'gpt-5-mini'
+        return `${provider}/${model}`
     },
-  },
-  memory: sharedMemory,
-  maxSteps: 100,
-  logger: voltlogger,
-  maxOutputTokens: 64000,
-  observability: voltObservability,
-  hooks: defaultAgentHooks,
-  retriever: chromaRetriever,
-  subagents: [
-    assistantAgent,
-    codingAgent,
-    codeReviewerAgent,
-    contentCuratorAgent,
-    dataScientistAgent,
-    researchCoordinatorAgent,
-    directorAgent,
-    supportAgent,
-    judgeAgent,
-    writerAgent,
-    dataAnalyzerAgent,
-    factCheckerAgent,
-    synthesizerAgent,
-    scrapperAgent,
-  ],
-  generalPurposeAgent: true,
-  task: {
-    systemPrompt:
-      'You are a strategic task manager. Break down complex objectives into atomic, delegatable tasks. Monitor progress and adjust the plan as needed.',
-    taskDescription:
-      'Execute the assigned complex task by coordinating specialized sub-agents.',
+    tools: [countTokensTool, estimateCostTool, truncateTextTool],
+    toolkits: [
+        thinkOnlyToolkit,
+        sharedWorkspaceSearchToolkit,
+        sharedWorkspaceSkillsToolkit,
+    ],
+    toolRouting: {
+        embedding: {
+            model: 'google/gemini-embedding-001',
+            normalize: true,
+            maxBatchSize: 200,
+            topK: 3,
+            toolText: (tool) => {
+                const tags = tool.tags?.join(', ') ?? ''
+                return [tool.name, tool.description, tags]
+                    .filter(Boolean)
+                    .join('\n')
+            },
+        },
+    },
+    memory: sharedMemory,
     maxSteps: 100,
-    supervisorConfig: {
-      includeAgentsMemory: true,
-      fullStreamEventForwarding: {
-        types: [
-          'file',
-          'error',
-          'abort',
-          'source',
-          'tool-call',
-          'tool-result',
-          'tool-error',
-          'tool-approval-request',
-          'tool-output-denied',
-          'text-start',
-          'text-delta',
-          'text-end',
-          'reasoning-start',
-          'reasoning-delta',
-          'reasoning-end',
-          'tool-input-start',
-          'tool-input-delta',
-          'tool-input-end',
-          'start-step',
-          'finish-step',
-          'start',
-          'finish',
-          'raw'
-        ],
-      },
+    logger: voltlogger,
+    maxOutputTokens: 64000,
+    observability: voltObservability,
+    hooks: defaultAgentHooks,
+    retriever: chromaRetriever,
+    subagents: [
+        assistantAgent,
+        codingAgent,
+        codeReviewerAgent,
+        contentCuratorAgent,
+        dataScientistAgent,
+        researchCoordinatorAgent,
+        directorAgent,
+        supportAgent,
+        judgeAgent,
+        writerAgent,
+        dataAnalyzerAgent,
+        factCheckerAgent,
+        synthesizerAgent,
+        scrapperAgent,
+    ],
+    generalPurposeAgent: true,
+    task: {
+        systemPrompt:
+            'You are a strategic task manager. Break down complex objectives into atomic, delegatable tasks. Monitor progress and adjust the plan as needed.',
+        taskDescription:
+            'Execute the assigned complex task by coordinating specialized sub-agents.',
+        maxSteps: 100,
+        supervisorConfig: {
+            includeAgentsMemory: true,
+            fullStreamEventForwarding: {
+                types: [
+                    'file',
+                    'error',
+                    'abort',
+                    'source',
+                    'tool-call',
+                    'tool-result',
+                    'tool-error',
+                    'tool-approval-request',
+                    'tool-output-denied',
+                    'text-start',
+                    'text-delta',
+                    'text-end',
+                    'reasoning-start',
+                    'reasoning-delta',
+                    'reasoning-end',
+                    'tool-input-start',
+                    'tool-input-delta',
+                    'tool-input-end',
+                    'start-step',
+                    'finish-step',
+                    'start',
+                    'finish',
+                    'raw',
+                ],
+            },
+        },
     },
-  },
-  summarization: {
-    triggerTokens: 120000,
-    keepMessages: 6,
-    maxOutputTokens: 8000,
-    systemPrompt:
-      'Summarize the following conversation briefly, focusing on key points and decisions made.',
-    enabled: true,
-    model: 'github-copilot/gpt-5-mini',
-  },
-  filesystem: {
-    backend: new NodeFilesystemBackend({
-      rootDir: sharedWorkspaceRuntime.filesystemRootDir,
-      virtualMode: true,
-      maxFileSizeMb: 25,
-    }),
-    systemPrompt:
-      'You are an expert at managing and organizing files for research purposes. Use the filesystem to store, retrieve, and organize research data effectively.',
-    customToolDescriptions: {
-      lsInfo: 'Use this to get information about a file or directory without listing its contents. Helpful for understanding file types and metadata.',
-      read: 'Use this to read the contents of a file. Only use this for text-based files.',
-      readRaw:
-        'Use this to read the raw contents of a file, including binary files. Be cautious when using this to avoid overwhelming amounts of data.',
-      write: 'Use this to write content to a file. Ensure the content is well-organized and relevant to the research topic.',
-      edit: 'Use this to edit the contents of an existing file. Make sure to maintain the integrity of the data while making necessary updates.',
-      grepRaw:
-        'Use this to search for a specific string or pattern within files, returning raw matching lines. Useful for finding specific data points in large files.',
-      globInfo:
-        'Use this to search for files matching a specific pattern. This is useful for finding related research documents.',
+    summarization: {
+        triggerTokens: 120000,
+        keepMessages: 6,
+        maxOutputTokens: 8000,
+        systemPrompt:
+            'Summarize the following conversation briefly, focusing on key points and decisions made.',
+        enabled: true,
+        model: 'github-copilot/gpt-5-mini',
     },
-    toolTokenLimitBeforeEvict: 12000,
-  },
-  toolResultEviction: {
-    enabled: true,
-    tokenLimit: 12000,
-  },
+    filesystem: {
+        backend: new NodeFilesystemBackend({
+            rootDir: sharedWorkspaceRuntime.filesystemRootDir,
+            virtualMode: true,
+            maxFileSizeMb: 25,
+        }),
+        systemPrompt:
+            'You are an expert at managing and organizing files for research purposes. Use the filesystem to store, retrieve, and organize research data effectively.',
+        customToolDescriptions: {
+            lsInfo: 'Use this to get information about a file or directory without listing its contents. Helpful for understanding file types and metadata.',
+            read: 'Use this to read the contents of a file. Only use this for text-based files.',
+            readRaw:
+                'Use this to read the raw contents of a file, including binary files. Be cautious when using this to avoid overwhelming amounts of data.',
+            write: 'Use this to write content to a file. Ensure the content is well-organized and relevant to the research topic.',
+            edit: 'Use this to edit the contents of an existing file. Make sure to maintain the integrity of the data while making necessary updates.',
+            grepRaw:
+                'Use this to search for a specific string or pattern within files, returning raw matching lines. Useful for finding specific data points in large files.',
+            globInfo:
+                'Use this to search for files matching a specific pattern. This is useful for finding related research documents.',
+        },
+        toolTokenLimitBeforeEvict: 12000,
+    },
+    toolResultEviction: {
+        enabled: true,
+        tokenLimit: 12000,
+    },
 })
