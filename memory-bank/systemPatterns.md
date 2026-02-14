@@ -7,51 +7,74 @@ flowchart TB
     subgraph "Entry Point"
         VoltAgent[VoltAgent Server]
     end
-    
-    subgraph "Agent Layer"
-        Director[Director Agent]
+
+    subgraph "Agent Layer (14+ Agents)"
+        Plan[Plan Agent]
         Assistant[Assistant Agent]
         Writer[Writer Agent]
         Analyzer[Data Analyzer]
         Checker[Fact Checker]
         Synth[Synthesizer]
         Scrapper[Scrapper Agent]
+        Coding[Coding Agent]
+        DataScientist[Data Scientist]
+        Judge[Judge Agent]
+        ContentCurator[Content Curator]
+        ResearchCoord[Research Coordinator]
+        Director[Director Agent]
+        CodeReviewer[Code Reviewer]
+        Support[Support Agent]
     end
-    
-    subgraph "Tools Layer"
+
+    subgraph "Tools Layer (28+ Toolkits)"
         Reasoning[Reasoning Toolkit]
         WebScraper[Web Scraper Toolkit]
         ArXiv[ArXiv Toolkit]
-        DataTools[Data Tools]
+        DataTools[Data Processing]
         FactTools[Fact Check Tools]
         SynthTools[Synthesis Tools]
+        Stock[Stock Market Toolkit]
+        Crypto[Crypto Market Toolkit]
+        AlphaVantage[Alpha Vantage]
+        Financial[Financial Analysis]
+        CodeAnalysis[Code Analysis]
+        Git[Git Toolkit]
+        GitHub[GitHub Toolkit]
+        Test[Test Toolkit]
+        RAG[RAG Toolkit]
+        KnowledgeGraph[Knowledge Graph]
+        PDF[PDF Toolkit]
+        Visualization[Visualization]
+        Weather[Weather Toolkit]
     end
-    
+
     subgraph "Memory Layer"
         LibSQL[(LibSQL Memory)]
         Vector[(Vector Store)]
     end
-    
+
     subgraph "External"
         Gemini[Google Gemini]
         MCP[MCP Servers]
         VoltOps[VoltOps Platform]
+        OpenAI[OpenAI]
     end
-    
-    VoltAgent --> Director
-    Director --> Assistant & Writer & Analyzer & Checker & Synth & Scrapper
-    
+
+    VoltAgent --> Plan
+    Plan --> Assistant & Writer & Analyzer & Checker & Synth & Scrapper & Coding & DataScientist
+
     Assistant --> Reasoning
     Analyzer --> ArXiv & DataTools
     Checker --> FactTools
     Synth --> SynthTools
     Scrapper --> WebScraper
-    
-    Director --> LibSQL
+    Coding --> CodeAnalysis & Git & Test
+
+    Plan --> LibSQL
     Assistant --> Vector
-    
-    Director --> Gemini
-    Director --> MCP
+
+    Plan --> Gemini
+    Plan --> MCP
     VoltAgent --> VoltOps
 ```
 
@@ -59,39 +82,46 @@ flowchart TB
 
 ### 1. Supervisor-Worker Pattern
 
-The Director agent supervises all other agents, routing tasks and aggregating results.
+The Plan Agent supervises all other agents, routing tasks and aggregating results.
 
 ```typescript
-// Director with sub-agents
+// PlanAgent with sub-agents
 new Agent({
-  id: "director",
-  subAgents: [assistant, writer, analyzer, checker, synthesizer, scrapper],
-  // ...
+    id: 'plan',
+    name: 'Plan Agent',
+    subAgents: [
+        assistant,
+        writer,
+        analyzer,
+        checker,
+        synthesizer,
+        scrapper,
+        coding,
+        dataScientist,
+    ],
 })
 ```
 
-### 2. Frontend Animation Orchestration (New)
+### 2. Guardrails Pattern (New)
 
-Synchronizing smooth scrolling with complex animations using GSAP and Lenis.
-
-```typescript
-// Pattern: Lenis + GSAP Sync in SmoothScroll.tsx
-const lenis = new Lenis({...});
-lenis.on("scroll", ScrollTrigger.update);
-gsap.ticker.add((time) => lenis.raf(time * 1000));
-```
-
-### 3. Interactive UI Primitives
-
-Encapsulating interactive behaviors into reusable hooks.
+Input/output validation using VoltAgent built-in guardrails:
 
 ```typescript
-// Pattern: useMagnetic for interactive elements
-const ref = useMagnetic(strength);
-// Uses gsap.quickTo for high-performance position updates
+import {
+    createDefaultInputSafetyGuardrails,
+    createDefaultPIIGuardrails,
+} from '@voltagent/core'
+
+const guardrails = createDefaultInputSafetyGuardrails()
+const piiGuardrails = createDefaultPIIGuardrails()
+
+new Agent({
+    id: 'plan',
+    inputGuardrails: [guardrails, piiGuardrails],
+})
 ```
 
-### 4. Workflow Chain Pattern
+### 3. Workflow Chain Pattern
 
 Type-safe workflow composition with Zod schemas:
 
@@ -104,21 +134,25 @@ createWorkflowChain({
   .andThen({ id: "step2", execute: async ({ data, getStepData }) => {...} })
 ```
 
-### 3. Toolkit Pattern
+### 4. Toolkit Pattern
 
-Group related tools into toolkits for agent consumption:
+Group related tools into toolkits:
 
 ```typescript
 export const webScraperToolkit = [
-  scrapeWebpageMarkdownTool,
-  extractCodeBlocksTool,
-  extractStructuredDataTool,
-  extractTextContentTool,
-  batchScrapePagesTool,
+    scrapeWebpageMarkdownTool,
+    extractCodeBlocksTool,
+    extractStructuredDataTool,
+]
+
+export const stockMarketToolkit = [
+    getStockQuoteTool,
+    getStockHistoryTool,
+    searchStocksTool,
 ]
 ```
 
-### 4. Memory Scoping Pattern
+### 5. Memory Scoping Pattern
 
 User-scoped working memory with Zod schema validation:
 
@@ -135,50 +169,27 @@ workingMemory: {
 
 ## Component Relationships
 
-| Component | Depends On | Used By |
-| --- | --- | --- |
-| Director | All agents, Reasoning | VoltAgent |
-| Assistant | Reasoning, Debug | Director |
-| Writer | Memory | Director |
-| Data Analyzer | ArXiv, DataTools | Director |
-| Fact Checker | FactTools, Reasoning | Director |
-| Synthesizer | SynthTools, Reasoning | Director |
-| Scrapper | WebScraper, Filesystem | Director |
+| Component      | Depends On            | Used By   |
+| -------------- | --------------------- | --------- |
+| Plan Agent     | All agents, Reasoning | VoltAgent |
+| Assistant      | Reasoning, Debug      | Plan      |
+| Writer         | Memory                | Plan      |
+| Data Analyzer  | ArXiv, DataTools      | Plan      |
+| Fact Checker   | FactTools             | Plan      |
+| Synthesizer    | SynthTools            | Plan      |
+| Scrapper       | WebScraper            | Plan      |
+| Coding         | CodeAnalysis, Git     | Plan      |
+| Data Scientist | DataProcessing        | Plan      |
 
 ## Key Technical Decisions
 
-### 1. VoltAgent Framework
-
-**Decision**: Use VoltAgent for multi-agent orchestration.
-**Rationale**: TypeScript-native, built-in workflow chains, VoltOps integration.
-
-### 2. Google Gemini (Primary Model)
-
-**Decision**: Use Gemini 2.5 Flash as the primary LLM.
-**Rationale**: Fast, cost-effective, good reasoning for research tasks.
-
-### 3. LibSQL for Memory
-
-**Decision**: Use LibSQL (SQLite-based) for agent memory.
-**Rationale**: Local persistence, vector search support, no external DB needed.
-
-### 4. Zod Validation
-
-**Decision**: Validate all inputs/outputs with Zod schemas.
-**Rationale**: Type safety, runtime validation, self-documenting APIs.
-
-### 5. Tool-First Design
-
-**Decision**: Give agents specialized tools rather than general capabilities.
-**Rationale**: More control, better observability, easier testing.
-
-## Error Handling
-
-1. **Tool Failures**: Graceful degradation with retry logic
-2. **Agent Timeouts**: Max steps limit (25) prevents infinite loops
-3. **Memory Errors**: Fallback to in-memory caching
-4. **External API Failures**: Rate limiting and circuit breakers
+1. **VoltAgent Framework** - TypeScript-native, workflow chains, VoltOps, guardrails
+2. **Google Gemini** - Primary LLM (gemini-2.5-flash-lite)
+3. **LibSQL** - Local memory + vector storage
+4. **Zod Validation** - Runtime type safety
+5. **Tool-First Design** - Specialized tools over general capabilities
+6. **Guardrails** - PII, safety, input validation
 
 ---
 
-*Last Updated: 2026-01-21
+_Last Updated: 2026-02-14_

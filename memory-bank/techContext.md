@@ -4,64 +4,57 @@
 
 ### Core Framework
 
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| VoltAgent Core | 1.2.10 | Multi-agent orchestration |
-| TypeScript | 5.9.3 | Type-safe language |
-| Node.js | 18+ | Runtime environment |
-| AI SDK | 5.0.103 | Multi-model abstraction |
+| Technology     | Version | Purpose                   |
+| -------------- | ------- | ------------------------- |
+| VoltAgent Core | ^2.4.1  | Multi-agent orchestration |
+| TypeScript     | 5.9.3   | Type-safe language        |
+| Node.js        | 18+     | Runtime environment       |
+| AI SDK         | ^6.0.86 | Multi-model abstraction   |
 
 ### AI Providers
 
-| Provider | Package | Models |
-|----------|---------|--------|
-| Google AI | @ai-sdk/google ^2.0.43 | Gemini 2.5 Flash (primary) |
-| OpenAI | @ai-sdk/openai ^2.0.73 | GPT-4o (optional) |
-| Vertex AI | @ai-sdk/google-vertex ^3.0.80 | Vertex models |
-| OpenRouter | @openrouter/ai-sdk-provider ^1.2.7 | Multi-model routing |
+| Provider  | Package                | Models                     |
+| --------- | ---------------------- | -------------------------- |
+| Google AI | @ai-sdk/google ^3.0.10 | Gemini 2.5 Flash (primary) |
+| OpenAI    | @ai-sdk/openai ^3.0.12 | GPT-5 (optional)           |
+| Vertex AI | @ai-sdk/google-vertex  | Vertex models              |
 
 ### Storage & Memory
 
-| Technology | Package | Purpose |
-|-----------|---------|---------|
-| LibSQL | @voltagent/libsql ^1.0.12 | Memory & vector storage |
-| Supabase | @supabase/supabase-js ^2.86.0 | A2A task storage |
+| Technology | Package                  | Purpose                 |
+| ---------- | ------------------------ | ----------------------- |
+| LibSQL     | @voltagent/libsql ^2.0.2 | Memory & vector storage |
+| Supabase   | @supabase/supabase-js    | A2A task storage        |
 
 ### Observability
 
-| Technology | Package | Purpose |
-|-----------|---------|---------|
-| OpenTelemetry SDK | ^0.207.0 | Tracing infrastructure |
-| VoltOps | @voltagent/core | Platform sync |
-| Langfuse | @voltagent/langfuse-exporter ^1.1.3 | Optional exporter |
+| Technology        | Package         | Purpose                |
+| ----------------- | --------------- | ---------------------- |
+| OpenTelemetry SDK | ^0.210.0        | Tracing infrastructure |
+| VoltOps           | @voltagent/core | Platform sync          |
 
 ### Web Scraping
 
-| Technology | Package | Purpose |
-|-----------|---------|---------|
-| Cheerio | ^1.1.2 | HTML parsing |
-| JSDOM | ^27.2.0 | DOM simulation |
-| Turndown | ^7.2.2 | HTML to Markdown |
-| Playwright | ^1.57.0 | Browser automation |
-| Crawlee | ^3.15.3 | Crawling framework |
+| Technology | Package | Purpose          |
+| ---------- | ------- | ---------------- |
+| Cheerio    | ^1.1.2  | HTML parsing     |
+| JSDOM      | ^27.4.0 | DOM simulation   |
+| Turndown   | ^7.2.2  | HTML to Markdown |
 
 ### Data Processing
 
-| Technology | Package | Purpose |
-|-----------|---------|---------|
-| Zod | ^4.1.13 | Schema validation |
-| fast-xml-parser | ^5.3.2 | XML parsing |
-| convert-csv-to-json | ^3.18.0 | Data conversion |
-| pdf-parse | ^2.4.5 | PDF extraction |
-| marked | ^16.4.2 | Markdown parsing |
+| Technology      | Package | Purpose           |
+| --------------- | ------- | ----------------- |
+| Zod             | ^4.1.13 | Schema validation |
+| fast-xml-parser | ^5.3.3  | XML parsing       |
+| pdf-parse       | ^2.4.5  | PDF extraction    |
 
 ### Testing
 
-| Technology | Package | Purpose |
-|-----------|---------|---------|
-| Vitest | ^4.0.14 | Test framework |
-| @vitest/coverage-v8 | ^4.0.14 | Coverage |
-| viteval | ^0.5.6 | Evaluation framework |
+| Technology          | Package | Purpose        |
+| ------------------- | ------- | -------------- |
+| Vitest              | ^4.0.18 | Test framework |
+| @vitest/coverage-v8 | ^4.0.14 | Coverage       |
 
 ## Development Setup
 
@@ -77,26 +70,26 @@ npm -v   # >= 9.0.0
 ```bash
 # Required
 GOOGLE_GENERATIVE_AI_API_KEY=your_key
-VOLTAGENT_PUBLIC_KEY=your_key
-VOLTAGENT_SECRET_KEY=your_key
 
 # Optional
+VOLTAGENT_PUBLIC_KEY=your_key
+VOLTAGENT_SECRET_KEY=your_key
 SUPABASE_URL=your_url
 SUPABASE_KEY=your_key
 EXA_API_KEY=your_key
-HUGGING_FACE_TOKEN=your_token
-OPENAI_API_KEY=your_key
+ALPHA_VANTAGE_API_KEY=your_key
 ```
 
 ### Commands
 
 ```bash
-npm run dev    # Development with watch mode
-npm run build  # TypeScript compilation
-npm start      # Production server
-npm test       # Run tests
-npm run eval   # Run evaluations
-npm run lint   # ESLint check
+npm run dev       # Development with watch mode (VoltAgent)
+npm run dev:next  # Next.js dev server
+npm run dev:test  # Run both concurrently
+npm run build     # TypeScript compilation
+npm start         # Production server
+npm test          # Run tests
+npm run lint      # ESLint check
 ```
 
 ## Technical Constraints
@@ -104,7 +97,7 @@ npm run lint   # ESLint check
 ### Memory Limits
 
 - `maxHistoryEntries`: 100 per agent
-- `maxSteps`: 25 per request (prevents infinite loops)
+- `maxSteps`: 100 for PlanAgent, 25 for others
 - `maxOutputTokens`: 64000 (model dependent)
 
 ### API Rate Limits
@@ -125,10 +118,11 @@ npm run lint   # ESLint check
 ```mermaid
 flowchart TB
     subgraph "Entry"
-        Index[src/index.ts]
+        Index[voltagent/index.ts]
     end
-    
+
     subgraph "Agents"
+        Plan[plan.agent.ts]
         Dir[director.agent.ts]
         Ast[assistant.agent.ts]
         Wrt[writer.agent.ts]
@@ -136,28 +130,28 @@ flowchart TB
         Fct[fact-checker.agent.ts]
         Syn[synthesizer.agent.ts]
         Scr[scrapper.agent.ts]
+        Cod[coding.agent.ts]
     end
-    
+
     subgraph "Config"
         Log[logger.ts]
         MCP[mcp.ts]
         Obs[observability.ts]
-        Goo[google.ts]
     end
-    
+
     subgraph "Tools"
         Rsn[reasoning-tool.ts]
         Web[web-scraper-toolkit.ts]
         Arx[arxiv-toolkit.ts]
+        Stock[stock-market-toolkit.ts]
+        Crypto[crypto-market-toolkit.ts]
     end
-    
-    Index --> Dir & Ast & Wrt & Ana & Fct & Syn & Scr
+
+    Index --> Plan
+    Plan --> Dir & Ast & Wrt & Ana & Fct & Syn & Scr & Cod
     Index --> Log & MCP & Obs
-    Dir --> Rsn
-    Scr --> Web
-    Ana --> Arx
 ```
 
 ---
 
-*Last Updated: 2025-11-27
+\*Last Updated: 2026-02-14

@@ -4,36 +4,36 @@ import {
   createTriggers,
 } from "@voltagent/core";
 
+import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
   createResumableStreamAdapter,
   createResumableStreamVoltOpsStore,
 } from "@voltagent/resumable-streams";
-import { voltlogger } from "./config/logger.js";
-import { assistantAgent } from "./agents/assistant.agent.js";
-import { writerAgent } from "./agents/writer.agent.js";
-import { directorAgent } from "./agents/director.agent.js";
-import { dataAnalyzerAgent } from "./agents/data-analyzer.agent.js";
-import { factCheckerAgent } from "./agents/fact-checker.agent.js";
-import { synthesizerAgent } from "./agents/synthesizer.agent.js";
-import { NodeSDK } from "@opentelemetry/sdk-node";
-import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { honoServer } from "@voltagent/server-hono";
-import { mcpServer } from "./config/mcpserver.js";
-import { scrapperAgent } from "./agents/scrapper.agent.js";
-import { codingAgent } from "./agents/coding.agent.js";
-import { codeReviewerAgent } from "./agents/code-reviewer.agent";
 import { a2aServer } from "./a2a/server.js";
+import { assistantAgent } from "./agents/assistant.agent.js";
+import { codeReviewerAgent } from "./agents/code-reviewer.agent";
+import { codingAgent } from "./agents/coding.agent.js";
+import { dataAnalyzerAgent } from "./agents/data-analyzer.agent.js";
+import { dataScientistAgent } from "./agents/data-scientist.agent.js";
+import { directorAgent } from "./agents/director.agent.js";
+import { factCheckerAgent } from "./agents/fact-checker.agent.js";
+import { judgeAgent, supportAgent } from "./agents/judge.agent.js";
+import { deepAgent } from "./agents/plan.agent.js";
+import { researchCoordinatorAgent } from "./agents/research-coordinator.agent.js";
+import { scrapperAgent } from "./agents/scrapper.agent.js";
+import { synthesizerAgent } from "./agents/synthesizer.agent.js";
+import { writerAgent } from "./agents/writer.agent.js";
+import { sharedMemory } from "./config/libsql.js";
+import { voltlogger } from "./config/logger.js";
+import { mcpServer } from "./config/mcpserver.js";
 import { voltObservability } from "./config/observability.js";
-import { comprehensiveResearchWorkflow } from "./workflows/comprehensive-research.workflow.js";
 import { comprehensiveResearchDirectorWorkflow } from "./workflows/ai-agent.workflow.js";
+import { comprehensiveResearchWorkflow } from "./workflows/comprehensive-research.workflow.js";
 import { dataPatternAnalyzerWorkflow } from "./workflows/data-pattern-analyzer.workflow.js";
 import { factCheckSynthesisWorkflow } from "./workflows/fact-check-synthesis.workflow.js";
 import { researchAssistantWorkflow } from "./workflows/research-assistant.workflow.js";
-import { judgeAgent, supportAgent } from "./agents/judge.agent.js";
-import { dataScientistAgent } from "./agents/data-scientist.agent.js";
-import { researchCoordinatorAgent } from "./agents/research-coordinator.agent.js";
-import { deepAgent } from "./agents/plan.agent.js";
-import { sharedMemory } from "./config/libsql.js";
 import { sharedWorkspaceRuntime } from "./workspaces/index.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
@@ -56,7 +56,7 @@ const voltOpsClient = new VoltOpsClient({
   }
 });
 
- // Initialize OpenTelemetry SDK
+// Initialize OpenTelemetry SDK
 const sdk = new NodeSDK({
   instrumentations: [getNodeAutoInstrumentations()],
   autoDetectResources: true,
@@ -186,13 +186,13 @@ export const voltAgent = new VoltAgent({
   enableSwaggerUI: true, // Enable Swagger UI for API documentation
   observability: voltObservability,
   voltOpsClient, // enables automatic forwarding
-  mcpServers: {mcpServer},
-  a2aServers: {a2aServer},
+  mcpServers: { mcpServer },
+  a2aServers: { a2aServer },
   triggers: createTriggers((on) => {
     // Airtable integration
-  //  on.airtable.recordCreated(({ payload, agents }) => {
-  //    console.log("New Airtable record:", payload);
-  //  });
+    //  on.airtable.recordCreated(({ payload, agents }) => {
+    //    console.log("New Airtable record:", payload);
+    //  });
     // GitHub integration
     on.github.create(({ payload, agents }) => {
       console.log("New GitHub issue:", payload);
@@ -215,39 +215,39 @@ export const voltAgent = new VoltAgent({
     //github.pull_request, "github.pull_request_review", "github.pull_request_review_comment", "github.push", "github.watch"
     //"github.status", "github.repository", "github.pull_request_review_comment", "github.commit_comment", "github.check_run"
     // Gmail integration
-//    on.gmail.newEmail(({ payload, agents }) => {
-//      console.log("Gmail email received:", payload);
-//      console.log("Gmail email received by agents:", agents);
-//    });
+    //    on.gmail.newEmail(({ payload, agents }) => {
+    //      console.log("Gmail email received:", payload);
+    //      console.log("Gmail email received by agents:", agents);
+    //    });
 
     // Google Drive integration
-//    on.googleDrive.fileChanged(({ payload, agents }) => {
-//      console.log("Google Drive file changed:", payload);
-//      console.log("Google Drive file changed handled by agents:", agents);
-//    });
-//    on.googleDrive.folderChanged(({ payload, agents }) => {
-//      console.log("Google Drive file created:", payload);
-//      console.log("Google Drive file created handled by agents:", agents);
-//    });
+    //    on.googleDrive.fileChanged(({ payload, agents }) => {
+    //      console.log("Google Drive file changed:", payload);
+    //      console.log("Google Drive file changed handled by agents:", agents);
+    //    });
+    //    on.googleDrive.folderChanged(({ payload, agents }) => {
+    //      console.log("Google Drive file created:", payload);
+    //      console.log("Google Drive file created handled by agents:", agents);
+    //    });
 
     // Google Calendar integration
-//    on.googleCalendar.eventCreated(({ payload, agents }) => {
-//      console.log("Google Calendar event created:", payload);
-//      console.log("Google Calendar event created handled by agents:", agents);
-//    });
+    //    on.googleCalendar.eventCreated(({ payload, agents }) => {
+    //      console.log("Google Calendar event created:", payload);
+    //      console.log("Google Calendar event created handled by agents:", agents);
+    //    });
 
     // Webhook integration
-   // on.webhook.received(({ payload, agents }) => {
-   //   console.log("Webhook received:", payload);
-   // });
+    //    on.webhook.received(({ payload }) => {
+    //     console.log("Webhook received:", payload);
+    //    });
   }),
 });
 
 a2aServer.initialize({
- // Provide an agent registry object with the methods A2A expects
- agentRegistry: {
-     getAgent: (id: string) => voltAgent.getAgent(id),
-     getAllAgents: () => voltAgent.getAgents(),
- },
- //  taskStore: redisTaskStore,
+  // Provide an agent registry object with the methods A2A expects
+  agentRegistry: {
+    getAgent: (id: string) => voltAgent.getAgent(id),
+    getAllAgents: () => voltAgent.getAgents(),
+  },
+  //  taskStore: redisTaskStore,
 });
