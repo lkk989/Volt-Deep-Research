@@ -4,7 +4,7 @@ import { NodeFilesystemBackend, PlanAgent } from '@voltagent/core'
 import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
-import { chromaRetriever } from '../retriever/chroma.js'
+import { basedRetriever } from '../retriever/based.js'
 import { thinkOnlyToolkit } from '../tools/reasoning-tool.js'
 import {
     countTokensTool,
@@ -86,7 +86,7 @@ export const deepAgent = new PlanAgent({
         },
         {
             id: 'secondary',
-            model: "google/gemini-3-flash-preview",
+            model: "google/",
             maxRetries: 2,
         },
     ],
@@ -102,7 +102,7 @@ export const deepAgent = new PlanAgent({
             model: 'google/gemini-embedding-001',
             normalize: true,
             maxBatchSize: 200,
-            topK: 3,
+            topK: 5,
             toolText: (tool) => {
                 const tags = tool.tags?.join(', ') ?? ''
                 return [tool.name, tool.description, tags]
@@ -137,7 +137,7 @@ export const deepAgent = new PlanAgent({
             )
         },
     },
-    retriever: chromaRetriever,
+    retriever: basedRetriever,
     subagents: [
         assistantAgent,
         codingAgent,

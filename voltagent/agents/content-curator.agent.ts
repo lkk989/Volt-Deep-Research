@@ -8,6 +8,7 @@ import { thinkOnlyToolkit } from "../tools/reasoning-tool.js"
 
 import { sharedMemory } from "../config/libsql.js"
 import { voltObservability } from "../config/observability.js"
+import { basedRetriever } from "../retriever/based.js"
 import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceRuntime, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js"
 import { contentCuratorPrompt } from "./prompts.js"
 
@@ -218,14 +219,39 @@ export const contentCuratorAgent = new Agent({
     },
   },
   memory: sharedMemory,
+  summarization: false,
+  conversationPersistence: {
+    mode: "step",
+    debounceMs: 200,
+    flushOnToolResult: true,
+  },
+  retriever: basedRetriever,
+  subAgents: [],
+  supervisorConfig: undefined,
   maxHistoryEntries: 100,
+  inputMiddlewares: [],
+  outputMiddlewares: [],
+  maxMiddlewareRetries: 3,
   temperature: 0.4,
   maxOutputTokens: 64000,
   maxSteps: 25,
+  maxRetries: 3,
+  feedback: false,
+  stopWhen: undefined,
   markdown: true,
+  inheritParentSpan: true,
+  voice: undefined,
+  context: {
+    provider: "google",
+    model: "gemini-2.5-flash-lite-preview-09-2025",
+  },
   logger: voltlogger,
   hooks: contentCuratorHooks,
+  voltOpsClient: undefined,
   observability: voltObservability,
   inputGuardrails: [],
   outputGuardrails: [],
+  eval: {
+    scorers: {},
+  },
 })

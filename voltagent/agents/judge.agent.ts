@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { basedRetriever } from "../retriever/based.js";
 import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { judgePrompt, supportPrompt } from "./prompts.js";
 
@@ -20,12 +21,46 @@ export const judgeAgent = new Agent({
   },
   tools: [],
   toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+  toolRouting: undefined,
   workspace: sharedWorkspaceFilesystemToolkit,
   workspaceToolkits: {},
+  workspaceSkillsPrompt: true,
+  memory: sharedMemory,
+  summarization: false,
+  conversationPersistence: {
+    mode: "step",
+    debounceMs: 200,
+    flushOnToolResult: true,
+  },
+  retriever: basedRetriever,
+  subAgents: [],
+  supervisorConfig: undefined,
+  maxHistoryEntries: 100,
+  hooks: undefined,
+  inputGuardrails: [],
+  outputGuardrails: [],
+  inputMiddlewares: [],
+  outputMiddlewares: [],
+  maxMiddlewareRetries: 3,
   maxOutputTokens: 64000,
   temperature: 0.3,
+  maxSteps: 25,
+  maxRetries: 3,
+  feedback: false,
+  stopWhen: undefined,
+  markdown: false,
+  inheritParentSpan: true,
+  voice: undefined,
   logger: voltlogger,
+  voltOpsClient: undefined,
   observability: voltObservability,
+  context: {
+    provider: "github-copilot",
+    model: "grok-code-fast-1",
+  },
+  eval: {
+    scorers: {},
+  },
 });
 
 const judgeSchema = z.object({
@@ -70,6 +105,7 @@ export const supportAgent = new Agent({
   },
   tools: [],
   toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+  toolRouting: undefined,
   workspace: sharedWorkspaceFilesystemToolkit,
   workspaceToolkits: {
       "sandbox": {
@@ -164,13 +200,39 @@ export const supportAgent = new Agent({
       },
     },
   workspaceSkillsPrompt: true,
+  summarization: false,
+  conversationPersistence: {
+    mode: "step",
+    debounceMs: 200,
+    flushOnToolResult: true,
+  },
+  retriever: basedRetriever,
+  subAgents: [],
+  supervisorConfig: undefined,
+  maxHistoryEntries: 100,
+  hooks: undefined,
   maxOutputTokens: 64000,
   memory: sharedMemory,
+  inputMiddlewares: [],
+  outputMiddlewares: [],
+  maxMiddlewareRetries: 3,
   temperature: 0.3,
+  maxSteps: 25,
+  maxRetries: 3,
+  feedback: false,
+  stopWhen: undefined,
+  markdown: false,
+  inheritParentSpan: true,
+  voice: undefined,
   logger: voltlogger,
+  voltOpsClient: undefined,
   observability: voltObservability,
   inputGuardrails: [],
   outputGuardrails: [],
+  context: {
+    provider: "github-copilot",
+    model: "grok-code-fast-1",
+  },
   eval: {
     scorers: {
       satisfaction: {

@@ -3,7 +3,7 @@ import { google } from '@ai-sdk/google'
 import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
-import { chromaRetriever } from '../retriever/chroma.js'
+import { basedRetriever } from '../retriever/based.js'
 import {
     hackernewsTopStoriesTool,
     hackernewsSearchTool,
@@ -155,7 +155,7 @@ export const newsPlanAgent = new PlanAgent({
         },
     },
 
-    retriever: chromaRetriever,
+    retriever: basedRetriever,
 
     subagents: [dataAnalyzerAgent, dataScientistAgent],
 

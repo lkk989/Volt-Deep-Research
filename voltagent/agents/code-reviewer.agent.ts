@@ -4,6 +4,7 @@ import * as crypto from "node:crypto";
 import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
+import { basedRetriever } from "../retriever/based.js";
 import { codeAnalysisToolkit } from "../tools/code-analysis-toolkit.js";
 import { debugTool } from "../tools/debug-tool.js";
 import { gitToolkit } from "../tools/git-toolkit.js";
@@ -146,6 +147,16 @@ export const codeReviewerAgent = new Agent({
     },
   },
   memory: sharedMemory,
+  summarization: false,
+  conversationPersistence: {
+    mode: "step",
+    debounceMs: 200,
+    flushOnToolResult: true,
+  },
+  retriever: basedRetriever,
+  subAgents: [],
+  supervisorConfig: undefined,
+  maxHistoryEntries: 100,
   hooks: {
     onStart: async ({ context }) => {
       const opId = crypto.randomUUID();
@@ -176,9 +187,23 @@ export const codeReviewerAgent = new Agent({
       await Promise.resolve();
     },
   },
+  inputMiddlewares: [],
+  outputMiddlewares: [],
+  maxMiddlewareRetries: 3,
   temperature: 0.1,
   maxOutputTokens: 64000,
   maxSteps: 20,
+  maxRetries: 3,
+  feedback: false,
+  stopWhen: undefined,
+  markdown: true,
+  inheritParentSpan: true,
+  voice: undefined,
+  context: {
+    provider: "google",
+    model: "gemini-2.5-flash-lite-preview-09-2025",
+  },
+  voltOpsClient: undefined,
   observability: voltObservability,
   logger: voltlogger,
   eval: {

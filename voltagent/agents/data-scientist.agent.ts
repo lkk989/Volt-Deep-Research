@@ -3,6 +3,7 @@ import { Agent, createHooks } from '@voltagent/core'
 import { sharedMemory } from '../config/libsql.js'
 import { voltlogger } from '../config/logger.js'
 import { voltObservability } from '../config/observability.js'
+import { basedRetriever } from '../retriever/based.js'
 import {
   binanceAggTradesTool,
   binanceAveragePriceTool,
@@ -314,14 +315,39 @@ export const dataScientistAgent = new Agent({
     },
   },
   memory: sharedMemory,
+  summarization: false,
+  conversationPersistence: {
+    mode: 'step',
+    debounceMs: 200,
+    flushOnToolResult: true,
+  },
+  retriever: basedRetriever,
+  subAgents: [],
+  supervisorConfig: undefined,
   maxHistoryEntries: 100,
+  inputMiddlewares: [],
+  outputMiddlewares: [],
+  maxMiddlewareRetries: 3,
   temperature: 0.2,
   maxOutputTokens: 64000,
   maxSteps: 25,
+  maxRetries: 3,
+  feedback: false,
+  stopWhen: undefined,
   markdown: true,
+  inheritParentSpan: true,
+  voice: undefined,
+  context: {
+    provider: 'google',
+    model: 'gemini-2.5-flash-lite-preview-09-2025',
+  },
   logger: voltlogger,
   hooks: dataScientistHooks,
+  voltOpsClient: undefined,
   observability: voltObservability,
   inputGuardrails: [],
   outputGuardrails: [],
+  eval: {
+    scorers: {},
+  },
 })

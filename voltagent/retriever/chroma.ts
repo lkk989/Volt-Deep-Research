@@ -3,6 +3,19 @@ import { CloudClient, type QueryRowResult, type Metadata } from "chromadb";
 import { GoogleGeminiEmbeddingFunction } from "@chroma-core/google-gemini";
 import type { TextPart } from "@ai-sdk/provider-utils";
 import { voltlogger } from "../config/logger.js";
+import { sampleRecords } from "./sample-records.js";
+
+interface ChromaIngestDocument {
+  id?: string;
+  content: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface SeedRecord {
+  id: string;
+  text: string;
+  metadata: Record<string, unknown>;
+}
 
 // Initialize Chroma client - supports cloud
 const chromaClient = new CloudClient({
@@ -20,6 +33,66 @@ const embeddingFunction = new GoogleGeminiEmbeddingFunction({
 
 const collectionName = "voltagent-knowledge-base";
 
+function toChromaMetadata(input: Record<string, unknown> | undefined): Metadata {
+  if (!input) {
+    return {};
+  }
+
+  const metadata: Metadata = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      metadata[key] = value;
+      continue;
+    }
+
+    if (value === null) {
+      metadata[key] = "null";
+      continue;
+    }
+
+    metadata[key] = JSON.stringify(value);
+  }
+
+  return metadata;
+}
+
+function createDocId(prefix: string, index: number): string {
+  return `${prefix}_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export async function upsertChromaDocuments(
+  documents: ChromaIngestDocument[]
+): Promise<{ count: number; ids: string[] }> {
+  if (documents.length === 0) {
+    return { count: 0, ids: [] };
+  }
+
+  const collection = await chromaClient.getOrCreateCollection({
+    name: collectionName,
+    embeddingFunction,
+  });
+
+  const ids = documents.map((doc, index) => doc.id ?? createDocId("chroma", index));
+  const serializedMetadata = documents.map((doc) => toChromaMetadata(doc.metadata));
+
+  await collection.upsert({
+    documents: documents.map((doc) => doc.content),
+    ids,
+    metadatas: serializedMetadata,
+  });
+
+  voltlogger.info("Upserted documents into Chroma retriever collection", {
+    count: documents.length,
+    collectionName,
+  });
+
+  return { count: documents.length, ids };
+}
+
 
 async function initializeCollection() {
   try {
@@ -28,26 +101,52 @@ async function initializeCollection() {
       embeddingFunction,
     });
 
-    // Sample documents about your domain
-    const sampleDocuments = [
-      "VoltAgent is a TypeScript framework for building AI agents with modular components.",
-      "Chroma is an AI-native open-source vector database that handles embeddings automatically.",
-      "Vector databases store high-dimensional vectors and enable semantic search capabilities.",
-      "Retrieval-Augmented Generation (RAG) combines information retrieval with language generation.",
-      "TypeScript provides static typing for JavaScript, making code more reliable and maintainable.",
-    ];
+    const seedRecords: SeedRecord[] = [];
+    for (const item of sampleRecords) {
+      if (typeof item !== "object" || item === null || Array.isArray(item)) {
+        continue;
+      }
 
-    const sampleIds = sampleDocuments.map((_, index) => `sample_${index + 1}`);
+      const record = item as Record<string, unknown>;
+      const { id, payload: payloadRaw } = record;
+      if (
+        (typeof id !== "string" && typeof id !== "number") ||
+        typeof payloadRaw !== "object" ||
+        payloadRaw === null ||
+        Array.isArray(payloadRaw)
+      ) {
+        continue;
+      }
+
+      const payload = payloadRaw as Record<string, unknown>;
+      const { text } = payload;
+      if (typeof text !== "string" || text.trim().length === 0) {
+        continue;
+      }
+
+      seedRecords.push({
+        id: String(id),
+        text,
+        metadata: {
+          ...payload,
+          source:
+            typeof payload.source === "string" && payload.source.trim().length > 0
+              ? payload.source
+              : "seed://mastervolt/retrieval/shared-corpus",
+        },
+      });
+    }
+
+    if (seedRecords.length === 0) {
+      voltlogger.warn("No valid sample records available for Chroma seed initialization");
+      return;
+    }
 
     // Use upsert to avoid duplicates
     await collection.upsert({
-      documents: sampleDocuments,
-      ids: sampleIds,
-      metadatas: sampleDocuments.map((_, index) => ({
-        type: "sample",
-        index: index + 1,
-        topic: index < 2 ? "frameworks" : index < 4 ? "databases" : "programming",
-      })),
+      documents: seedRecords.map((record) => record.text),
+      ids: seedRecords.map((record) => record.id),
+      metadatas: seedRecords.map((record) => toChromaMetadata(record.metadata)),
     });
 
     voltlogger.info("📚 Sample knowledge base initialized");
@@ -112,8 +211,13 @@ export class ChromaRetriever extends BaseRetriever {
       }
     }
 
+    const normalizedSearchText = searchText.trim();
+    if (normalizedSearchText.length === 0) {
+      return "No relevant documents found in the knowledge base.";
+    }
+
     // Perform semantic search
-    const results = await retrieveDocuments(searchText, 3);
+    const results = await retrieveDocuments(normalizedSearchText, 3);
 
     // Add references to context for tracking
     if (options.context && results.length > 0) {

@@ -4,10 +4,23 @@ import {
   type BaseMessage,
   type RetrieveOptions,
 } from '@voltagent/core'
-import { embed } from 'ai'
+import { embed, embedMany } from 'ai'
 import { googleAIEmbedding } from '../config/google.js'
 import { voltlogger } from '../config/logger.js'
-import { sampleRecords } from './sample-records.js'; // Assuming this exists or I'll check
+import { sampleRecords } from './sample-records.js'
+
+interface QdrantIngestDocument {
+  id?: string | number
+  content: string
+  metadata?: Record<string, unknown>
+}
+
+interface RetrievedDocument {
+  id: string | number
+  content: string
+  metadata: Record<string, unknown>
+  score: number
+}
 
 // Initialize Qdrant client
 const qdrant = new QdrantClient({
@@ -16,6 +29,48 @@ const qdrant = new QdrantClient({
 })
 
 const collectionName = 'voltagent-knowledge-base'
+
+function createDocumentId(index: number): string {
+  return `qdrant_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+export async function upsertQdrantDocuments(
+  documents: QdrantIngestDocument[],
+  namespace?: string
+): Promise<{ count: number; ids: Array<string | number> }> {
+  if (documents.length === 0) {
+    return { count: 0, ids: [] }
+  }
+
+  await initializeCollection()
+
+  const { embeddings } = await embedMany({
+    model: googleAIEmbedding,
+    values: documents.map((doc) => doc.content)
+  })
+
+  const points = documents.map((doc, index) => ({
+    id: doc.id ?? createDocumentId(index),
+    vector: embeddings[index],
+    payload: {
+      ...(doc.metadata ?? {}),
+      text: doc.content,
+      namespace,
+      indexedAt: new Date().toISOString(),
+    },
+  }))
+
+  await qdrant.upsert(collectionName, { points })
+
+  const ids = points.map((point) => point.id)
+  voltlogger.info('Upserted documents into Qdrant retriever collection', {
+    count: points.length,
+    collectionName,
+    namespace,
+  })
+
+  return { count: points.length, ids }
+}
 
 async function initializeCollection(): Promise<void> {
   try {
@@ -160,7 +215,7 @@ initializeCollection().catch((e: unknown) => {
 async function retrieveDocuments(
   query: string,
   topK = 3
-): Promise<Array<{ content: string; metadata: Record<string, unknown>; score: number; id: string | number }>> {
+): Promise<RetrievedDocument[]> {
   try {
     if (!query || typeof query !== 'string') {
       voltlogger.warn('retrieveDocuments called with empty or invalid query')
@@ -302,13 +357,22 @@ export class QdrantRetriever extends BaseRetriever {
         searchText = lastMessage.content
       }
     }
+
+    const normalizedSearchText = searchText.trim()
+    if (normalizedSearchText.length === 0) {
+      return 'No relevant documents found in the knowledge base.'
+    }
+
     // Perform semantic search using Qdrant
-    const results = await retrieveDocuments(searchText, 3)
+    const results = await retrieveDocuments(normalizedSearchText, 3)
     // Add references to context if available
     if (options.context && results.length > 0) {
-      const references = results.map((doc: any, index: number) => ({
+      const references = results.map((doc, index: number) => ({
         id: doc.id,
-        title: Boolean(doc.metadata.topic) || `Document ${index + 1}`,
+        title:
+          typeof doc.metadata.topic === 'string' && doc.metadata.topic.length > 0
+            ? doc.metadata.topic
+            : `Document ${index + 1}`,
         source: 'Qdrant Knowledge Base',
         score: doc.score,
         category: doc.metadata.category,
@@ -321,7 +385,7 @@ export class QdrantRetriever extends BaseRetriever {
     }
     return results
       .map(
-        (doc: any, index: number) =>
+        (doc, index: number) =>
           `Document ${index + 1} (ID: ${doc.id}, Score: ${doc.score.toFixed(4)}, Category: ${doc.metadata.category}):\n${doc.content}`
       )
       .join('\n\n---\n\n')
