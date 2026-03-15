@@ -1191,15 +1191,24 @@ export async function fetchVoltConversationMessages(
     userId: string,
     agentId?: string
 ): Promise<UIMessage[]> {
-    const result = await getVoltAgentSuccessData<VoltAgentMemoryMessagesResult>(
-        `/api/memory/conversations/${conversationId}/messages`,
-        {
-            agentId,
-            userId,
-        }
-    )
+    try {
+        return await getVoltAgentSuccessData<UIMessage[]>(
+            `/api/conversations/${conversationId}/messages`,
+            {
+                userId,
+            }
+        )
+    } catch {
+        const result = await getVoltAgentSuccessData<VoltAgentMemoryMessagesResult>(
+            `/api/memory/conversations/${conversationId}/messages`,
+            {
+                agentId,
+                userId,
+            }
+        )
 
-    return result.messages
+        return result.messages
+    }
 }
 
 export async function fetchVoltMemoryConversationMessages(
@@ -1235,15 +1244,31 @@ export async function fetchVoltConversations(
     agentId: string,
     userId: string
 ): Promise<VoltAgentMemoryConversation[]> {
-    const result = await getVoltAgentSuccessData<VoltAgentConversationListResult>(
-        '/api/memory/conversations',
-        {
-            agentId,
+    try {
+        const conversations = await getVoltAgentSuccessData<
+            VoltAgentMemoryConversation[]
+        >('/api/conversations', {
             userId,
-        }
-    )
+        })
 
-    return result.conversations
+        if (agentId.trim().length === 0) {
+            return conversations
+        }
+
+        return conversations.filter(
+            (conversation) => conversation.agentId === agentId
+        )
+    } catch {
+        const result = await getVoltAgentSuccessData<VoltAgentConversationListResult>(
+            '/api/memory/conversations',
+            {
+                agentId,
+                userId,
+            }
+        )
+
+        return result.conversations
+    }
 }
 
 export async function fetchVoltMemoryConversations(

@@ -1,5 +1,6 @@
 'use client'
 
+import { messageHelpers } from '@voltagent/core'
 import { useState, useMemo, useCallback } from 'react'
 import {
     Tooltip,
@@ -47,7 +48,7 @@ export function ChatHeader({
     onNewChat,
     onDelete,
 }: ChatHeaderProps) {
-    const [title, setTitle] = useState<string>('New Conversation')
+    const [customTitle, setCustomTitle] = useState('')
     const [isEditing, setIsEditing] = useState(false)
     const [showMenu, setShowMenu] = useState(false)
     const { data: agents = [], isLoading: isAgentsLoading } = useVoltAgentList()
@@ -62,18 +63,20 @@ export function ChatHeader({
             return 'New Conversation'
         }
 
-        const text = extractTextFromMessage(firstUserMessage)
+        const text = messageHelpers.extractText(firstUserMessage)
         return text.length > 0 ? truncateText(text, 40) : 'New Conversation'
     }, [messages])
 
-    const displayedTitle = isEditing ? title : derivedTitle
+    const effectiveTitle =
+        customTitle.trim().length > 0 ? customTitle : derivedTitle
+    const displayedTitle = isEditing ? effectiveTitle : effectiveTitle
     const isLoading = isAgentsLoading || isAgentLoading || isMessagesLoading
     const threadCount = messages.length
 
     const handleTitleSubmit = useCallback((newTitle: string) => {
         const trimmed = newTitle.trim()
         if (trimmed) {
-            setTitle(trimmed)
+            setCustomTitle(trimmed)
         }
         setIsEditing(false)
     }, [])
@@ -208,14 +211,6 @@ export function ChatHeader({
             </div>
         </div>
     )
-}
-
-function extractTextFromMessage(message: { parts?: Array<{ type: string; text?: string }> }): string {
-    if (!Array.isArray(message.parts)) return ''
-    return message.parts
-        .filter((part) => part.type === 'text' && typeof part.text === 'string')
-        .map((part) => part.text ?? '')
-        .join('')
 }
 
 function truncateText(text: string, maxLength: number): string {

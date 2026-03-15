@@ -4,6 +4,7 @@
 
 ### Frontend & UI (New)
 
+- [x] **README / Architecture Docs Refresh** - Public project documentation now reflects the current Next.js dashboard, richer backend/runtime detail, direct VoltAgent client transport, workspace + skills runtime, registered agent/workflow counts, `chat-messages.tsx` as a typed rendering layer, and updated package versions with professional Mermaid diagrams for GitHub dark mode.
 - [x] **Production Landing Page** - High-performance Next.js landing page with GSAP animations.
 - [x] **Smooth Scrolling** - Sync'd Lenis + ScrollTrigger implementation in `SmoothScroll.tsx`.
 - [x] **Interactive Components** - `MissionControlHero` with parallax gradients and interactive elements.

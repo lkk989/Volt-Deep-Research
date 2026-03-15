@@ -62,7 +62,7 @@ const registeredAgents = {
   "deep-research-agent": deepAgent,
   "research-orchestrator": researchPlanAgent,
   "news-orchestrator": newsPlanAgent,
-  "content-cordinator": contentCuratorAgent,
+  "content-curator": contentCuratorAgent,
 } as const;
 
 const registeredWorkflows = {

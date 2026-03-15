@@ -8,6 +8,7 @@
 
 ### 2026-03-15
 
+- **README Refresh**: Rewrote `README.md` to match the current runtime and frontend architecture, including updated package versions, direct VoltAgent chat transport details, workspace + skills coverage, refreshed dashboard surface description, explicit note that `chat-messages.tsx` is a typed render layer rather than a hook consumer, and GitHub-dark-mode Mermaid diagrams for platform architecture, streaming flow, and workspace/skills design
 - **Model Refresh**: Updated agent defaults, plan orchestrators, live eval configs, and UI settings to `gemini-3.1-flash-lite-preview`
 - **Embedding Refresh**: Migrated runtime embedding references to `gemini-embedding-2-preview` across agent routing, memory, retrievers, RAG tools, and workspace search
 - **Migration Note**: `gemini-embedding-2-preview` uses an incompatible embedding space versus `gemini-embedding-001`; vector indexes must be rebuilt or re-embedded after deployment

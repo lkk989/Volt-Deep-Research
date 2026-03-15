@@ -251,9 +251,21 @@ import {
 } from 'ai'
 import { messageHelpers } from '@voltagent/core'
 
+type ChatMessageStatus = 'submitted' | 'streaming' | 'ready' | 'error' | undefined
+type MessagePart = UIMessagePart<UIDataTypes, UITools>
+type CodeBlockLanguage =
+    | 'typescript'
+    | 'javascript'
+    | 'python'
+    | 'json'
+    | 'bash'
+    | 'html'
+    | 'css'
+    | 'markdown'
+
 interface ChatMessagesProps {
     messages: UIMessage[]
-    status: string
+    status: ChatMessageStatus
     error: Error | undefined
     onSuggestionClick: (suggestion: string) => void
     onCopyMessage?: (messageId: string, content: string) => void
@@ -264,7 +276,6 @@ interface SourceDocument {
     title?: string
     url?: string
     description?: string
-    sourceDocument?: string
 }
 
 // Example prompts for research-focused chat
@@ -335,45 +346,10 @@ export function ChatMessages({
         () => validatedMessages,
         [validatedMessages]
     )
-
-    // Extract sources from message parts
-    const getSourcesFromParts = (
-        parts: UIMessage['parts']
-    ): SourceDocument[] => {
-        const sources: SourceDocument[] = []
-        for (const part of parts) {
-            if (isSourceUrlPart(part)) {
-                const candidate: SourceDocument = {
-                    title: part.title,
-                    url: part.url,
-                    description: part.url,
-                }
-                if (
-                    !sources.some((source) =>
-                        isDeepEqualData(source, candidate)
-                    )
-                ) {
-                    sources.push(candidate)
-                }
-                continue
-            }
-
-            if (isSourceDocumentPart(part)) {
-                const candidate: SourceDocument = {
-                    title: part.title,
-                    description: part.filename ?? part.mediaType,
-                }
-                if (
-                    !sources.some((source) =>
-                        isDeepEqualData(source, candidate)
-                    )
-                ) {
-                    sources.push(candidate)
-                }
-            }
-        }
-        return sources
-    }
+    const latestRenderedMessage = useMemo(
+        () => getLastMessage(renderedMessages),
+        [renderedMessages]
+    )
 
     return (
         <Conversation className="min-h-0 flex-1">
@@ -411,15 +387,16 @@ export function ChatMessages({
                             const { role, id } = message
                             const isUser = role === 'user'
                             const isAssistant = role === 'assistant'
-                            const messageText = messageHelpers.hasContent(
-                                message
-                            )
+                            const isLatestRenderedMessage =
+                                latestRenderedMessage?.id === id
+                            const messageText = messageHelpers.hasContent(message)
                                 ? messageHelpers.extractText(message)
                                 : ''
                             const modelLabel = getModelLabel(message.metadata)
 
                             // Get sources from parts
-                            const messageParts = message.parts ?? []
+                            const messageParts: readonly MessagePart[] =
+                                message.parts ?? []
                             const subAgentName =
                                 getSubagentNameFromParts(messageParts)
                             const sources = getSourcesFromParts(messageParts)
@@ -433,10 +410,7 @@ export function ChatMessages({
                                                 variant="obsidian"
                                                 state={
                                                     status === 'streaming' &&
-                                                    renderedMessages[
-                                                        renderedMessages.length -
-                                                            1
-                                                    ]?.id === id
+                                                    isLatestRenderedMessage
                                                         ? 'thinking'
                                                         : 'idle'
                                                 }
@@ -563,70 +537,37 @@ export function ChatMessages({
 
                                             // Render text parts with proper typing
                                             if (isTextUIPart(part)) {
-                                                const textPart =
-                                                    part as TextUIPart
-                                                return (
-                                                    <MessageResponse
-                                                        key={`text-${id}-${idx}`}
-                                                    >
-                                                        {textPart.text ?? ''}
-                                                    </MessageResponse>
+                                                return renderTextPart(
+                                                    part,
+                                                    `text-${id}-${idx}`
                                                 )
                                             }
 
                                             // Render reasoning parts with proper typing
                                             if (isReasoningUIPart(part)) {
-                                                const reasoningPart =
-                                                    part as ReasoningUIPart
-                                                const reasoningText =
-                                                    reasoningPart.text ?? ''
-                                                if (!reasoningText) return null
-
-                                                return (
-                                                    <Reasoning
-                                                        key={`reasoning-${id}-${idx}`}
-                                                        isStreaming={
-                                                            status ===
-                                                                'streaming' &&
-                                                            renderedMessages[
-                                                                renderedMessages.length -
-                                                                    1
-                                                            ]?.id === id
-                                                        }
-                                                    >
-                                                        <ReasoningTrigger />
-                                                        <ReasoningContent>
-                                                            {reasoningText}
-                                                        </ReasoningContent>
-                                                    </Reasoning>
+                                                return renderReasoningPart(
+                                                    part,
+                                                    `reasoning-${id}-${idx}`,
+                                                    status === 'streaming' &&
+                                                        isLatestRenderedMessage
                                                 )
                                             }
 
                                             // Render tool invocation parts
                                             if (isToolUIPart(part)) {
-                                                const toolPart = part as
-                                                    | ToolUIPart
-                                                    | DynamicToolUIPart
-                                                const toolName =
-                                                    getToolName(toolPart)
-                                                const toolType =
-                                                    getToolType(toolPart)
+                                                const toolName = getToolName(part)
+                                                const toolType = getToolType(part)
                                                 const isLastTool =
                                                     idx ===
                                                     messageParts.length - 1
                                                 const isStreaming =
                                                     status === 'streaming' &&
-                                                    renderedMessages[
-                                                        renderedMessages.length -
-                                                            1
-                                                    ]?.id === id &&
+                                                    isLatestRenderedMessage &&
                                                     isLastTool
 
                                                 return (
                                                     <Tool
-                                                        key={
-                                                            toolPart.toolCallId
-                                                        }
+                                                        key={part.toolCallId}
                                                         defaultOpen={
                                                             isStreaming
                                                         }
@@ -637,35 +578,35 @@ export function ChatMessages({
                                                             state={
                                                                 isStreaming
                                                                     ? 'input-available'
-                                                                    : toolPart.state
+                                                                    : part.state
                                                             }
                                                         />
                                                         <ToolContent>
                                                             <Fragment>
                                                                 {Boolean(
-                                                                    toolPart.input
+                                                                    part.input
                                                                 ) && (
                                                                     <ToolInput
                                                                         input={
-                                                                            toolPart.input
+                                                                            part.input
                                                                         }
                                                                     />
                                                                 )}
 
                                                                 {/* Render enhanced output types from tool output */}
-                                                                {toolPart.output !==
+                                                                {part.output !==
                                                                     undefined &&
-                                                                    toolPart.output !==
+                                                                    part.output !==
                                                                         null && (
                                                                     <Fragment>
                                                                         {/* Terminal output */}
                                                                         {isTerminalOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 <Terminal
                                                                                     output={
-                                                                                        toolPart
+                                                                                        part
                                                                                             .output
                                                                                             .content
                                                                                     }
@@ -686,12 +627,12 @@ export function ChatMessages({
 
                                                                         {/* Stack trace output */}
                                                                         {isStackTrace(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 <StackTrace
                                                                                     trace={
-                                                                                        toolPart
+                                                                                        part
                                                                                             .output
                                                                                             .trace
                                                                                     }
@@ -718,27 +659,21 @@ export function ChatMessages({
 
                                                                         {/* Code output */}
                                                                         {isCodeOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 <CodeBlock
                                                                                     code={
-                                                                                        toolPart
+                                                                                        part
                                                                                             .output
                                                                                             .code
                                                                                     }
                                                                                     language={
-                                                                                        toolPart
-                                                                                            .output
-                                                                                            .language as
-                                                                                            | 'typescript'
-                                                                                            | 'javascript'
-                                                                                            | 'python'
-                                                                                            | 'json'
-                                                                                            | 'bash'
-                                                                                            | 'html'
-                                                                                            | 'css'
-                                                                                            | 'markdown'
+                                                                                        toCodeBlockLanguage(
+                                                                                            part
+                                                                                                .output
+                                                                                                .language
+                                                                                        )
                                                                                     }
                                                                                     showLineNumbers
                                                                                 />
@@ -747,7 +682,7 @@ export function ChatMessages({
 
                                                                         {/* File tree output */}
                                                                         {isFileTree(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 <FileTree
@@ -760,7 +695,7 @@ export function ChatMessages({
                                                                                     }
                                                                                 >
                                                                                     {renderFileTree(
-                                                                                        toolPart
+                                                                                        part
                                                                                             .output
                                                                                             .files
                                                                                     )}
@@ -770,11 +705,11 @@ export function ChatMessages({
 
                                                                         {/* Test results output */}
                                                                         {isTestResults(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderTestResults(
-                                                                                    toolPart
+                                                                                    part
                                                                                         .output
                                                                                         .suites
                                                                                 )}
@@ -783,50 +718,50 @@ export function ChatMessages({
 
                                                                         {/* Agent output */}
                                                                         {isAgentOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 <Agent>
                                                                                     <AgentHeader
                                                                                         name={
-                                                                                            toolPart
+                                                                                            part
                                                                                                 .output
                                                                                                 .agent
                                                                                                 .name
                                                                                         }
                                                                                         model={
-                                                                                            toolPart
+                                                                                            part
                                                                                                 .output
                                                                                                 .agent
                                                                                                 .model
                                                                                         }
                                                                                     />
                                                                                     <AgentContent>
-                                                                                        {toolPart
+                                                                                        {part
                                                                                             .output
                                                                                             .agent
                                                                                             .instructions && (
                                                                                             <AgentInstructions>
                                                                                                 {
-                                                                                                    toolPart
+                                                                                                    part
                                                                                                         .output
                                                                                                         .agent
                                                                                                         .instructions
                                                                                                 }
                                                                                             </AgentInstructions>
                                                                                         )}
-                                                                                        {toolPart
+                                                                                        {part
                                                                                             .output
                                                                                             .agent
                                                                                             .tools &&
-                                                                                            toolPart
+                                                                                            part
                                                                                                 .output
                                                                                                 .agent
                                                                                                 .tools
                                                                                                 .length >
                                                                                                 0 && (
                                                                                                 <AgentTools type="multiple">
-                                                                                                    {toolPart.output.agent.tools.map(
+                                                                                                    {part.output.agent.tools.map(
                                                                                                         (
                                                                                                             tool,
                                                                                                             tIdx
@@ -851,7 +786,7 @@ export function ChatMessages({
 
                                                                         {/* Sandbox output */}
                                                                         {isSandboxOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 <Sandbox
@@ -859,50 +794,50 @@ export function ChatMessages({
                                                                                 >
 
                                                                         {isWorkspaceCommandOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderWorkspaceCommandOutput(
-                                                                                    toolPart.output,
+                                                                                    part.output,
                                                                                     isStreaming,
-                                                                                    toolPart.state,
+                                                                                    part.state,
                                                                                     toolName
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isWorkspaceListingOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderWorkspaceListingOutput(
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isWorkspaceReadOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderWorkspaceReadOutput(
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isWorkspaceSearchOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderWorkspaceSearchOutput(
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 )}
                                                                             </div>
                                                                         )}
                                                                                     <SandboxHeader
                                                                                         title={
-                                                                                            toolPart
+                                                                                            part
                                                                                                 .output
                                                                                                 .sandbox
                                                                                                 .title ||
@@ -911,18 +846,18 @@ export function ChatMessages({
                                                                                         state={
                                                                                             isStreaming
                                                                                                 ? 'output-available'
-                                                                                                : toolPart.state
+                                                                                                : part.state
                                                                                         }
                                                                                     />
                                                                                     <SandboxContent>
                                                                                         <SandboxTabs
                                                                                             defaultValue={
-                                                                                                toolPart
+                                                                                                part
                                                                                                     .output
                                                                                                     .sandbox
                                                                                                     .terminal
                                                                                                     ? 'terminal'
-                                                                                                    : toolPart
+                                                                                                    : part
                                                                                                             .output
                                                                                                             .sandbox
                                                                                                             .files
@@ -932,7 +867,7 @@ export function ChatMessages({
                                                                                         >
                                                                                             <SandboxTabsBar>
                                                                                                 <SandboxTabsList>
-                                                                                                    {toolPart
+                                                                                                    {part
                                                                                                         .output
                                                                                                         .sandbox
                                                                                                         .terminal && (
@@ -940,7 +875,7 @@ export function ChatMessages({
                                                                                                             Terminal
                                                                                                         </SandboxTabsTrigger>
                                                                                                     )}
-                                                                                                    {toolPart
+                                                                                                    {part
                                                                                                         .output
                                                                                                         .sandbox
                                                                                                         .files && (
@@ -951,7 +886,7 @@ export function ChatMessages({
                                                                                                             </span>
                                                                                                         </SandboxTabsTrigger>
                                                                                                     )}
-                                                                                                    {toolPart
+                                                                                                    {part
                                                                                                         .output
                                                                                                         .sandbox
                                                                                                         .testResults && (
@@ -962,14 +897,14 @@ export function ChatMessages({
                                                                                                 </SandboxTabsList>
                                                                                             </SandboxTabsBar>
 
-                                                                                            {toolPart
-                                                                                                .output
+                                                                                                    {part
+                                                                                                        .output
                                                                                                 .sandbox
                                                                                                 .terminal && (
                                                                                                 <SandboxTabContent value="terminal">
                                                                                                     <Terminal
                                                                                                         output={
-                                                                                                            toolPart
+                                                                                                            part
                                                                                                                 .output
                                                                                                                 .sandbox
                                                                                                                 .terminal
@@ -983,7 +918,7 @@ export function ChatMessages({
                                                                                                 </SandboxTabContent>
                                                                                             )}
 
-                                                                                            {toolPart
+                                                                                            {part
                                                                                                 .output
                                                                                                 .sandbox
                                                                                                 .files && (
@@ -998,7 +933,7 @@ export function ChatMessages({
                                                                                                         }
                                                                                                     >
                                                                                                         {renderFileTree(
-                                                                                                            toolPart
+                                                                                                            part
                                                                                                                 .output
                                                                                                                 .sandbox
                                                                                                                 .files!
@@ -1007,13 +942,13 @@ export function ChatMessages({
                                                                                                 </SandboxTabContent>
                                                                                             )}
 
-                                                                                            {toolPart
+                                                                                            {part
                                                                                                 .output
                                                                                                 .sandbox
                                                                                                 .testResults && (
                                                                                                 <SandboxTabContent value="tests">
                                                                                                     {renderTestResults(
-                                                                                                        toolPart
+                                                                                                        part
                                                                                                             .output
                                                                                                             .sandbox
                                                                                                             .testResults!
@@ -1030,129 +965,129 @@ export function ChatMessages({
                                                                         {/* Fallback to standard output */}
                                                                         {!(
                                                                             isTerminalOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isStackTrace(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isCodeOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isFileTree(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isTestResults(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isAgentOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isSandboxOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isWorkspaceCommandOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isWorkspaceListingOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isWorkspaceReadOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isWorkspaceSearchOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isSchemaOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isSnippetOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isPackageInfoOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isCheckpointOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isConfirmationOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             ) ||
                                                                             isJsxPreviewOutput(
-                                                                                toolPart.output
+                                                                                part.output
                                                                             )
                                                                         ) && (
                                                                             <ToolOutput
                                                                                 output={
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 }
                                                                                 errorText={
-                                                                                    toolPart.errorText
+                                                                                    part.errorText
                                                                                 }
                                                                             />
                                                                         )}
 
                                                                         {/* Render additional output types */}
                                                                         {isSchemaOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderSchema(
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isSnippetOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderSnippet(
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isPackageInfoOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderPackageInfo(
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isCheckpointOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderCheckpoint(
-                                                                                    toolPart.output
+                                                                                    part.output
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isConfirmationOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2">
                                                                                 {renderConfirmation(
-                                                                                    toolPart.output,
-                                                                                    toolPart.state
+                                                                                    part.output,
+                                                                                    part.state
                                                                                 )}
                                                                             </div>
                                                                         )}
 
                                                                         {isJsxPreviewOutput(
-                                                                            toolPart.output
+                                                                            part.output
                                                                         ) && (
                                                                             <div className="mt-2 space-y-2">
                                                                                 <JSXPreview
                                                                                     jsx={getJsxPreviewContent(
-                                                                                        toolPart.output
+                                                                                        part.output
                                                                                     )}
                                                                                     isStreaming={
-                                                                                        toolPart
+                                                                                        part
                                                                                             .output
                                                                                             .isStreaming ??
                                                                                         false
@@ -1168,17 +1103,17 @@ export function ChatMessages({
                                                                 )}
 
                                                                 {/* Tool error fallback when no structured output is provided */}
-                                                                {toolPart.state ===
+                                                                {part.state ===
                                                                     'output-error' &&
-                                                                    !toolPart.output && (
+                                                                    !part.output && (
                                                                         <ToolOutput
                                                                             output={{
                                                                                 error:
-                                                                                    toolPart.errorText ||
+                                                                                    part.errorText ||
                                                                                     'Tool execution failed',
                                                                             }}
                                                                             errorText={
-                                                                                toolPart.errorText ||
+                                                                                part.errorText ||
                                                                                 'Tool execution failed'
                                                                             }
                                                                         />
@@ -1255,9 +1190,13 @@ export function ChatMessages({
                                         <MessageActions>
                                             <MessageAction
                                                 tooltip="Copy"
-                                                onClick={() =>
-                                                    handleCopy(id, messageText)
-                                                }
+                                                onClick={() => {
+                                                    if (messageText.trim().length === 0) {
+                                                        return
+                                                    }
+
+                                                    void handleCopy(id, messageText)
+                                                }}
                                             >
                                                 {copiedId === id ? (
                                                     <CheckIcon className="size-4" />
@@ -1296,8 +1235,7 @@ export function ChatMessages({
 
                         {/* Streaming indicator */}
                         {status === 'streaming' &&
-                            renderedMessages[renderedMessages.length - 1]
-                                ?.role !== 'assistant' && (
+                            latestRenderedMessage?.role !== 'assistant' && (
                                 <Message from="assistant">
                                     <div className="mb-2 flex items-center gap-2">
                                         <Persona
@@ -1338,19 +1276,19 @@ export function ChatMessages({
 }
 
 function isSourceUrlPart(
-    part: UIMessagePart<UIDataTypes, UITools>
+    part: MessagePart
 ): part is SourceUrlUIPart {
     return part.type === 'source-url'
 }
 
 function isSourceDocumentPart(
-    part: UIMessagePart<UIDataTypes, UITools>
+    part: MessagePart
 ): part is SourceDocumentUIPart {
     return part.type === 'source-document'
 }
 
 function isStepStartPart(
-    part: UIMessagePart<UIDataTypes, UITools>
+    part: MessagePart
 ): part is StepStartUIPart {
     return part.type === 'step-start'
 }
@@ -1362,6 +1300,52 @@ function getToolType(part: ToolUIPart | DynamicToolUIPart): `tool-${string}` {
 
     return part.type as `tool-${string}`
 }
+
+function renderTextPart(part: TextUIPart, key: string): React.ReactNode {
+    return <MessageResponse key={key}>{part.text ?? ''}</MessageResponse>
+}
+
+function renderReasoningPart(
+    part: ReasoningUIPart,
+    key: string,
+    isStreaming: boolean
+): React.ReactNode {
+    const reasoningText = part.text ?? ''
+
+    if (reasoningText.length === 0) {
+        return null
+    }
+
+    return (
+        <Reasoning key={key} isStreaming={isStreaming}>
+            <ReasoningTrigger />
+            <ReasoningContent>{reasoningText}</ReasoningContent>
+        </Reasoning>
+    )
+}
+
+function getLastMessage(
+    messages: readonly UIMessage[]
+): UIMessage | undefined {
+    return messages.at(-1)
+}
+
+function toCodeBlockLanguage(language: string): CodeBlockLanguage {
+    switch (language) {
+        case 'typescript':
+        case 'javascript':
+        case 'python':
+        case 'json':
+        case 'bash':
+        case 'html':
+        case 'css':
+        case 'markdown':
+            return language
+        default:
+            return 'json'
+    }
+}
+
 interface MessageMetadataShape {
     model?: {
         id?: string
@@ -1372,18 +1356,16 @@ interface MessageMetadataShape {
 function getModelLabel(
     metadata: MessageMetadataShape | unknown
 ): string | undefined {
-    if (!metadata || typeof metadata !== 'object') {
+    if (!isRecord(metadata)) {
         return undefined
     }
 
-    const record = metadata as Record<string, unknown>
-    const { model } = record
-    if (!model || typeof model !== 'object') {
+    const { model } = metadata
+    if (!isRecord(model)) {
         return undefined
     }
 
-    const modelRecord = model as Record<string, unknown>
-    const { id } = modelRecord
+    const { id } = model
     return typeof id === 'string' && id.trim().length > 0 ? id : undefined
 }
 
@@ -1408,7 +1390,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null
 
 function isSubagentResultPart(
-    part: UIMessage['parts'][number]
+    part: MessagePart
 ): part is SubagentResultPart {
     if (
         !isDataUIPart<UIDataTypes>(part) ||
@@ -1420,7 +1402,7 @@ function isSubagentResultPart(
 }
 
 function isSubagentStreamPart(
-    part: UIMessage['parts'][number]
+    part: MessagePart
 ): part is SubagentStreamPart {
     return (
         isDataUIPart<UIDataTypes>(part) && part.type === 'data-subagent-stream'
@@ -1428,7 +1410,7 @@ function isSubagentStreamPart(
 }
 
 function getSubagentNameFromParts(
-    parts: UIMessage['parts']
+    parts: readonly MessagePart[]
 ): string | undefined {
     for (const part of parts) {
         if (isSubagentResultPart(part) && part.data.subAgentName) {
@@ -1456,6 +1438,39 @@ function getSubagentStreamTextDelta(data: Record<string, unknown>): string {
         return inputTextDelta
     }
     return ''
+}
+
+function getSourcesFromParts(parts: readonly MessagePart[]): SourceDocument[] {
+    const sources: SourceDocument[] = []
+
+    for (const part of parts) {
+        if (isSourceUrlPart(part)) {
+            const candidate: SourceDocument = {
+                title: part.title,
+                url: part.url,
+                description: part.url,
+            }
+
+            if (!sources.some((source) => isDeepEqualData(source, candidate))) {
+                sources.push(candidate)
+            }
+
+            continue
+        }
+
+        if (isSourceDocumentPart(part)) {
+            const candidate: SourceDocument = {
+                title: part.title,
+                description: part.filename ?? part.mediaType,
+            }
+
+            if (!sources.some((source) => isDeepEqualData(source, candidate))) {
+                sources.push(candidate)
+            }
+        }
+    }
+
+    return sources
 }
 
 // Type guards for detecting content types from tool outputs
@@ -2020,13 +2035,12 @@ interface PackageData {
 function isPackageInfoOutput(
     output: ToolOutputValue
 ): output is PackageInfoOutput {
-    if (output && typeof output === 'object') {
-        const obj = output as Record<string, unknown>
+    if (isRecord(output)) {
+        const { package: packageData } = output
         return (
-            obj.type === 'package-info' &&
-            obj.package != null &&
-            typeof obj.package === 'object' &&
-            typeof (obj.package as Record<string, unknown>).name === 'string'
+            output.type === 'package-info' &&
+            isRecord(packageData) &&
+            typeof packageData.name === 'string'
         )
     }
     return false
