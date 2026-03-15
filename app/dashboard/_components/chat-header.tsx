@@ -34,6 +34,7 @@ interface ChatHeaderProps {
     chatId: string
     userId: string
     selectedModel?: string
+    activeOptionCount?: number
     onAgentChange?: (agentId: string) => void
     onNewChat?: () => void
     onDelete?: () => void
@@ -44,6 +45,7 @@ export function ChatHeader({
     chatId,
     userId,
     selectedModel,
+    activeOptionCount = 0,
     onAgentChange,
     onNewChat,
     onDelete,
@@ -139,6 +141,11 @@ export function ChatHeader({
                     <span>{threadCount} messages</span>
                     {activeAgent?.isTelemetryEnabled ? (
                         <Badge variant="outline">Telemetry on</Badge>
+                    ) : null}
+                    {activeOptionCount > 0 ? (
+                        <Badge variant="outline">
+                            {activeOptionCount} option{activeOptionCount === 1 ? '' : 's'} active
+                        </Badge>
                     ) : null}
                 </div>
             </div>

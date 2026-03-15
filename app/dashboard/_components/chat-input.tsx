@@ -66,6 +66,8 @@ interface TokenUsage {
 
 interface ChatInputProps {
     onSubmit: (message: PromptInputMessage) => Promise<void>
+    status?: ChatStatus
+    onStop?: () => void
     tokenUsage?: TokenUsage
     selectedModel?: string
     defaultModelId?: string
@@ -77,6 +79,8 @@ interface ChatInputProps {
 
 export function ChatInput({
     onSubmit,
+    status: externalStatus,
+    onStop,
     tokenUsage,
     selectedModel = '',
     defaultModelId = '',
@@ -85,18 +89,19 @@ export function ChatInput({
     showWebPreview = false,
     onWebPreviewToggle,
 }: ChatInputProps) {
-    const [status, setStatus] = useState<ChatStatus | undefined>(undefined)
+    const [localStatus, setLocalStatus] = useState<ChatStatus | undefined>(undefined)
     const [showModelSelector, setShowModelSelector] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const status = externalStatus ?? localStatus
 
     const handleSubmit = useCallback(
         async (message: PromptInputMessage) => {
-            setStatus('submitted')
+            setLocalStatus('submitted')
             try {
                 await onSubmit(message)
-                setStatus(undefined)
+                setLocalStatus(undefined)
             } catch {
-                setStatus('error')
+                setLocalStatus('error')
             }
         },
         [onSubmit]
@@ -421,6 +426,16 @@ export function ChatInput({
                             </TooltipProvider>
 
                             <PromptInputSubmit status={status} size="sm" />
+                            {(status === 'streaming' || status === 'submitted') && onStop ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={onStop}
+                                >
+                                    Stop
+                                </Button>
+                            ) : null}
                         </div>
                     </PromptInputFooter>
                 </PromptInput>

@@ -11,6 +11,7 @@ import { ChatPanel } from '../../_components/chat-panel'
 import { ChatHeader } from '../../_components/chat-header'
 import { ChatInput } from '../../_components/chat-input'
 import { ChatMessages } from '../../_components/chat-messages'
+import { ChatAdvancedOptions } from '../../_components/chat-advanced-options'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
@@ -23,6 +24,12 @@ import {
 	getVoltAgentChatEndpoint,
 	getVoltAgentChatResumeEndpoint,
 } from '@/lib/voltagent-client'
+import {
+	buildChatRequestOptions,
+	countActiveAdvancedChatOptions,
+	DEFAULT_ADVANCED_CHAT_OPTIONS,
+	type AdvancedChatOptions,
+} from '../../_components/chat-options'
 
 export default function AgentChatPage() {
 	const router = useRouter()
@@ -32,7 +39,13 @@ export default function AgentChatPage() {
 	const [selectedModel, setSelectedModel] = useState('')
 	const [showWebPreview, setShowWebPreview] = useState(false)
 	const [knownModels, setKnownModels] = useState<string[]>([])
+	const [advancedOptions, setAdvancedOptions] =
+		useState<AdvancedChatOptions>(DEFAULT_ADVANCED_CHAT_OPTIONS)
 	const userId = 'user-1'
+	const activeOptionCount = useMemo(
+		() => countActiveAdvancedChatOptions(advancedOptions),
+		[advancedOptions]
+	)
 
 	const { data: activeAgent } = useVoltAgent(activeAgentId)
 	const { data: conversationMessages = [], isLoading: isMessagesLoading } =
@@ -60,7 +73,7 @@ export default function AgentChatPage() {
 		[conversationMessages]
 	)
 
-	const { messages, setMessages, sendMessage, regenerate, status, error } =
+	const { messages, setMessages, sendMessage, regenerate, status, error, stop } =
 		useChat({
 			id: chatId,
 			messages: allMessages,
@@ -74,33 +87,16 @@ export default function AgentChatPage() {
 					const lastMessage =
 						outgoingMessages[outgoingMessages.length - 1]
 
-					const trimmedModelId = selectedModel.trim()
-					const [provider, ...modelParts] = trimmedModelId.split('/')
-					const model = modelParts.join('/')
-					const hasProviderAndModel =
-						provider.length > 0 && model.length > 0
-
 					return {
 						body: {
 							input: [lastMessage],
-							options: {
-								agentId: activeAgentId,
+							options: buildChatRequestOptions({
+								activeAgentId,
 								conversationId: id,
 								userId,
-								context: {
-									timezone:
-										Intl.DateTimeFormat().resolvedOptions()
-											.timeZone,
-									...(trimmedModelId.length > 0 &&
-									hasProviderAndModel
-										? {
-											  provider,
-											  model,
-											  modelId: trimmedModelId,
-										  }
-										: {}),
-								},
-							},
+								selectedModel,
+								advancedOptions,
+							}),
 						},
 					}
 				},
@@ -116,6 +112,23 @@ export default function AgentChatPage() {
 				console.error('Chat error:', chatError)
 			},
 		})
+
+	const handleAdvancedOptionChange = useCallback(
+		<K extends keyof AdvancedChatOptions>(
+			key: K,
+			value: AdvancedChatOptions[K]
+		) => {
+			setAdvancedOptions((current) => ({
+				...current,
+				[key]: value,
+			}))
+		},
+		[]
+	)
+
+	const handleResetAdvancedOptions = useCallback(() => {
+		setAdvancedOptions(DEFAULT_ADVANCED_CHAT_OPTIONS)
+	}, [])
 
 	useEffect(() => {
 		setMessages(allMessages)
@@ -205,6 +218,7 @@ export default function AgentChatPage() {
 				chatId={chatId}
 				userId={userId}
 				selectedModel={selectedModel}
+				activeOptionCount={activeOptionCount}
 				onAgentChange={handleAgentChange}
 				onNewChat={handleNewChat}
 				onDelete={handleDeleteChat}
@@ -226,8 +240,20 @@ export default function AgentChatPage() {
 						onRegenerate={handleRegenerate}
 					/>
 
+					<div className="border-t xl:hidden">
+						<ChatAdvancedOptions
+							options={advancedOptions}
+							activeOptionCount={activeOptionCount}
+							onChange={handleAdvancedOptionChange}
+							onReset={handleResetAdvancedOptions}
+							className="m-4"
+						/>
+					</div>
+
 					<ChatInput
 						onSubmit={handleSubmit}
+						status={status}
+						onStop={stop}
 						selectedModel={selectedModel}
 						defaultModelId={activeAgent?.model}
 						onModelChange={setSelectedModel}
@@ -241,6 +267,10 @@ export default function AgentChatPage() {
 					chatId={chatId}
 					userId={userId}
 					selectedModel={selectedModel}
+					advancedOptions={advancedOptions}
+					activeOptionCount={activeOptionCount}
+					onAdvancedOptionChange={handleAdvancedOptionChange}
+					onResetAdvancedOptions={handleResetAdvancedOptions}
 				/>
 			</div>
 		</div>

@@ -11,10 +11,17 @@ import type { PromptInputMessage } from '@/components/ai-elements/prompt-input'
 import { Spinner } from '@/components/ui/spinner'
 import { ChatInput } from './chat-input'
 import { ChatMessages } from './chat-messages'
+import { ChatAdvancedOptions } from './chat-advanced-options'
 import {
     getVoltAgentChatEndpoint,
     getVoltAgentChatResumeEndpoint,
 } from '@/lib/voltagent-client'
+import {
+    buildChatRequestOptions,
+    countActiveAdvancedChatOptions,
+    DEFAULT_ADVANCED_CHAT_OPTIONS,
+    type AdvancedChatOptions,
+} from './chat-options'
 import {
     useVoltAgent,
     useVoltConversationMessages,
@@ -44,6 +51,12 @@ export function ChatThread({
     const { data: activeAgent } = useVoltAgent(activeAgentId)
     const [knownModels, setKnownModels] = useState<string[]>([])
     const [showWebPreview, setShowWebPreview] = useState(false)
+    const [advancedOptions, setAdvancedOptions] =
+        useState<AdvancedChatOptions>(DEFAULT_ADVANCED_CHAT_OPTIONS)
+    const activeOptionCount = useMemo(
+        () => countActiveAdvancedChatOptions(advancedOptions),
+        [advancedOptions]
+    )
 
     const validatedLoadedMessages = useMemo(
         () => conversationMessages,
@@ -54,7 +67,7 @@ export function ChatThread({
             ? validatedLoadedMessages
             : initialMessages
 
-    const { messages, setMessages, sendMessage, regenerate, status, error } =
+    const { messages, setMessages, sendMessage, regenerate, status, error, stop } =
         useChat({
             id: chatId,
             messages: allMessages,
@@ -68,34 +81,16 @@ export function ChatThread({
                     const lastMessage =
                         outgoingMessages[outgoingMessages.length - 1]
 
-                    const trimmedModelId = selectedModel.trim()
-                    const [provider, ...modelParts] = trimmedModelId.split('/')
-                    const model = modelParts.join('/')
-
-                    const hasProviderAndModel =
-                        provider.length > 0 && model.length > 0
-
                     return {
                         body: {
                             input: [lastMessage],
-                            options: {
-                                agentId: activeAgentId,
+                            options: buildChatRequestOptions({
+                                activeAgentId,
                                 conversationId: id,
                                 userId,
-                                context: {
-                                    timezone:
-                                        Intl.DateTimeFormat().resolvedOptions()
-                                            .timeZone,
-                                    ...(trimmedModelId.length > 0 &&
-                                    hasProviderAndModel
-                                        ? {
-                                              provider,
-                                              model,
-                                              modelId: trimmedModelId,
-                                          }
-                                        : {}),
-                                },
-                            },
+                                selectedModel,
+                                advancedOptions,
+                            }),
                         },
                     }
                 },
@@ -111,6 +106,23 @@ export function ChatThread({
                 console.error('Chat error:', err)
             },
         })
+
+    const handleAdvancedOptionChange = useCallback(
+        <K extends keyof AdvancedChatOptions>(
+            key: K,
+            value: AdvancedChatOptions[K]
+        ) => {
+            setAdvancedOptions((current) => ({
+                ...current,
+                [key]: value,
+            }))
+        },
+        []
+    )
+
+    const handleResetAdvancedOptions = useCallback(() => {
+        setAdvancedOptions(DEFAULT_ADVANCED_CHAT_OPTIONS)
+    }, [])
 
     useEffect(() => {
         setMessages(allMessages)
@@ -208,8 +220,20 @@ export function ChatThread({
                 onRegenerate={handleRegenerate}
             />
 
+            <div className="border-t xl:hidden">
+                <ChatAdvancedOptions
+                    options={advancedOptions}
+                    activeOptionCount={activeOptionCount}
+                    onChange={handleAdvancedOptionChange}
+                    onReset={handleResetAdvancedOptions}
+                    className="m-4"
+                />
+            </div>
+
             <ChatInput
                 onSubmit={handleSubmit}
+                status={status}
+                onStop={stop}
                 selectedModel={selectedModel}
                 defaultModelId={activeAgent?.model}
                 onModelChange={onSelectedModelChange}

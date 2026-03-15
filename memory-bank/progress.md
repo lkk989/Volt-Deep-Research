@@ -14,6 +14,8 @@
 - [x] **Dashboard Chat Transport** - Dashboard chat uses `@ai-sdk/react` `useChat` with `DefaultChatTransport` and resumable stream reconnect support.
 - [x] **UI Message Validation** - Restored chat history is validated with `safeValidateUIMessages` before being injected into the frontend chat state.
 - [x] **Rich ai-elements Rendering** - `chat-messages.tsx` now supports persona display, reasoning, sources, tool outputs, and structured `DataUIPart` payloads for plan/task/queue/chain-of-thought style content.
+- [x] **Advanced Chat Controls** - The dashboard chat route and shared chat components now expose serializable VoltAgent/AI SDK request options for memory, semantic retrieval, generation tuning, provider-specific settings, dynamic context, and stream stop control through reusable advanced-options UI.
+- [x] **Persona Activity Mapping** - Latest assistant messages now drive `Persona` state from actual reasoning/tool/subagent activity in `chat-messages.tsx`, improving the accuracy of `listening` vs `thinking` vs `idle` feedback without forcing unsupported states like `speaking`.
 - [x] **Workspace Output Adaptation** - Chat rendering now recognizes raw workspace toolkit outputs (`execute_command`, filesystem listings, `read_file`, `workspace_search`) and presents them as sandbox, terminal, file tree, code artifact, and search result UI instead of raw JSON.
 - [x] **Direct VoltAgent Queries** - Dashboard chat metadata now loads through TanStack hooks backed by built-in VoltAgent routes for agents, tools, workflows, logs, MCP servers/tools/prompts, and memory conversation data.
 - [x] **Real Agent Picker Flow** - Agents page uses live VoltAgent agent data and navigates into chat by selected `agentId` instead of a hardcoded chat target.

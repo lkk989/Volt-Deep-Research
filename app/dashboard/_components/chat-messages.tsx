@@ -38,7 +38,10 @@ import {
     SourcesContent,
     Source,
 } from '@/components/ai-elements/sources'
-import { Persona } from '@/components/ai-elements/persona'
+import {
+    Persona,
+    type PersonaState,
+} from '@/components/ai-elements/persona'
 import {
     Artifact,
     ArtifactHeader,
@@ -253,6 +256,7 @@ import { messageHelpers } from '@voltagent/core'
 
 type ChatMessageStatus = 'submitted' | 'streaming' | 'ready' | 'error' | undefined
 type MessagePart = UIMessagePart<UIDataTypes, UITools>
+type ToolMessagePart = ToolUIPart | DynamicToolUIPart
 type CodeBlockLanguage =
     | 'typescript'
     | 'javascript'
@@ -389,14 +393,20 @@ export function ChatMessages({
                             const isAssistant = role === 'assistant'
                             const isLatestRenderedMessage =
                                 latestRenderedMessage?.id === id
+                            const messageParts: readonly MessagePart[] =
+                                message.parts ?? []
                             const messageText = messageHelpers.hasContent(message)
                                 ? messageHelpers.extractText(message)
                                 : ''
                             const modelLabel = getModelLabel(message.metadata)
+                            const personaState = getAssistantPersonaState(
+                                status,
+                                isLatestRenderedMessage,
+                                error,
+                                messageParts
+                            )
 
                             // Get sources from parts
-                            const messageParts: readonly MessagePart[] =
-                                message.parts ?? []
                             const subAgentName =
                                 getSubagentNameFromParts(messageParts)
                             const sources = getSourcesFromParts(messageParts)
@@ -408,12 +418,7 @@ export function ChatMessages({
                                         <div className="mb-2 flex items-center gap-2">
                                             <Persona
                                                 variant="obsidian"
-                                                state={
-                                                    status === 'streaming' &&
-                                                    isLatestRenderedMessage
-                                                        ? 'thinking'
-                                                        : 'idle'
-                                                }
+                                                state={personaState}
                                                 className="size-8"
                                             />
                                             <span className="text-xs font-medium text-muted-foreground">
@@ -592,6 +597,8 @@ export function ChatMessages({
                                                                         }
                                                                     />
                                                                 )}
+
+                                                                {renderToolApproval(part)}
 
                                                                 {/* Render enhanced output types from tool output */}
                                                                 {part.output !==
@@ -1118,6 +1125,10 @@ export function ChatMessages({
                                                                             }
                                                                         />
                                                                     )}
+
+                                                                {renderToolExecutionMetadata(
+                                                                    part
+                                                                )}
                                                             </Fragment>
                                                         </ToolContent>
                                                     </Tool>
@@ -1240,7 +1251,10 @@ export function ChatMessages({
                                     <div className="mb-2 flex items-center gap-2">
                                         <Persona
                                             variant="obsidian"
-                                            state="thinking"
+                                            state={getPendingAssistantPersonaState(
+                                                status,
+                                                error
+                                            )}
                                             className="size-8"
                                         />
                                         <span className="text-xs font-medium text-muted-foreground">
@@ -1301,6 +1315,88 @@ function getToolType(part: ToolUIPart | DynamicToolUIPart): `tool-${string}` {
     return part.type as `tool-${string}`
 }
 
+function renderToolApproval(part: ToolMessagePart): React.ReactNode {
+    if (!part.approval) {
+        return null
+    }
+
+    return (
+        <div className="mt-2">
+            <Confirmation approval={part.approval} state={part.state}>
+                <ConfirmationTitle>
+                    Tool execution approval
+                </ConfirmationTitle>
+                <ConfirmationRequest>
+                    <ConfirmationActions>
+                        <ConfirmationAction variant="default">
+                            Approve
+                        </ConfirmationAction>
+                        <ConfirmationAction variant="destructive">
+                            Deny
+                        </ConfirmationAction>
+                    </ConfirmationActions>
+                </ConfirmationRequest>
+                <ConfirmationAccepted>
+                    <div className="mt-2 text-sm text-green-600 dark:text-green-400">
+                        Approved
+                        {part.approval.reason
+                            ? ` - ${part.approval.reason}`
+                            : ''}
+                    </div>
+                </ConfirmationAccepted>
+                <ConfirmationRejected>
+                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                        Rejected
+                        {part.approval.reason
+                            ? ` - ${part.approval.reason}`
+                            : ''}
+                    </div>
+                </ConfirmationRejected>
+            </Confirmation>
+        </div>
+    )
+}
+
+function renderToolExecutionMetadata(part: ToolMessagePart): React.ReactNode {
+    const details: Record<string, unknown> = {}
+
+    if (part.providerExecuted !== undefined) {
+        details.providerExecuted = part.providerExecuted
+    }
+
+    if ('preliminary' in part && part.preliminary !== undefined) {
+        details.preliminary = part.preliminary
+    }
+
+    if (part.callProviderMetadata !== undefined) {
+        details.callProviderMetadata = part.callProviderMetadata
+    }
+
+    if (Object.keys(details).length === 0) {
+        return null
+    }
+
+    return (
+        <Artifact>
+            <ArtifactHeader>
+                <div className="flex items-center gap-2">
+                    <HistoryIcon className="size-4 text-muted-foreground" />
+                    <ArtifactTitle className="text-sm">
+                        Tool execution metadata
+                    </ArtifactTitle>
+                </div>
+            </ArtifactHeader>
+            <ArtifactContent className="p-0">
+                <CodeBlock
+                    code={safeJsonStringify(details)}
+                    language="json"
+                    showLineNumbers
+                />
+            </ArtifactContent>
+        </Artifact>
+    )
+}
+
 function renderTextPart(part: TextUIPart, key: string): React.ReactNode {
     return <MessageResponse key={key}>{part.text ?? ''}</MessageResponse>
 }
@@ -1328,6 +1424,76 @@ function getLastMessage(
     messages: readonly UIMessage[]
 ): UIMessage | undefined {
     return messages.at(-1)
+}
+
+function getAssistantPersonaState(
+    status: ChatMessageStatus,
+    isLatestMessage: boolean,
+    chatError: Error | undefined,
+    parts: readonly MessagePart[]
+): PersonaState {
+    if (chatError) {
+        return 'asleep'
+    }
+
+    if (!isLatestMessage) {
+        return 'idle'
+    }
+
+    if (status === 'submitted') {
+        return 'listening'
+    }
+
+    if (hasActiveAssistantParts(parts)) {
+        return 'thinking'
+    }
+
+    if (status === 'streaming') {
+        return 'thinking'
+    }
+
+    return 'idle'
+}
+
+function getPendingAssistantPersonaState(
+    status: ChatMessageStatus,
+    chatError: Error | undefined
+): PersonaState {
+    if (chatError) {
+        return 'asleep'
+    }
+
+    if (status === 'submitted') {
+        return 'listening'
+    }
+
+    if (status === 'streaming') {
+        return 'thinking'
+    }
+
+    return 'idle'
+}
+
+function hasActiveAssistantParts(parts: readonly MessagePart[]): boolean {
+    return parts.some((part) => {
+        if (isSubagentStreamPart(part)) {
+            return getSubagentStreamTextDelta(part.data).trim().length > 0
+        }
+
+        if (isReasoningUIPart(part)) {
+            return (part.text ?? '').trim().length > 0
+        }
+
+        if (isToolUIPart(part)) {
+            return isActiveToolState(part.state)
+        }
+
+        return false
+    })
+}
+
+function isActiveToolState(state: ToolMessagePart['state']): boolean {
+    return state === 'input-streaming' || state === 'input-available'
 }
 
 function toCodeBlockLanguage(language: string): CodeBlockLanguage {

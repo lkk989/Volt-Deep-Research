@@ -14,6 +14,8 @@ import {
     FileTreeName,
 } from '@/components/ai-elements/file-tree'
 import { DEFAULT_VOLTAGENT_BASE_URL } from '@/lib/voltagent-client'
+import { ChatAdvancedOptions } from './chat-advanced-options'
+import type { AdvancedChatOptions } from './chat-options'
 import {
     useVoltAgent,
     useVoltAgentLogs,
@@ -34,6 +36,13 @@ interface ChatPanelProps {
     chatId: string
     userId: string
     selectedModel?: string
+    advancedOptions: AdvancedChatOptions
+    activeOptionCount: number
+    onAdvancedOptionChange: <K extends keyof AdvancedChatOptions>(
+        key: K,
+        value: AdvancedChatOptions[K]
+    ) => void
+    onResetAdvancedOptions: () => void
 }
 
 export function ChatPanel({
@@ -41,6 +50,10 @@ export function ChatPanel({
     chatId,
     userId,
     selectedModel,
+    advancedOptions,
+    activeOptionCount,
+    onAdvancedOptionChange,
+    onResetAdvancedOptions,
 }: ChatPanelProps) {
     const { data: workingMemory } = useVoltConversationWorkingMemory(
         chatId,
@@ -65,6 +78,13 @@ export function ChatPanel({
     return (
         <aside className="hidden w-88 shrink-0 border-l bg-muted/20 xl:flex xl:flex-col">
             <div className="space-y-4 overflow-y-auto p-4">
+                <ChatAdvancedOptions
+                    options={advancedOptions}
+                    activeOptionCount={activeOptionCount}
+                    onChange={onAdvancedOptionChange}
+                    onReset={onResetAdvancedOptions}
+                />
+
                 <Card size="sm">
                     <CardHeader>
                         <CardTitle>Agent</CardTitle>
