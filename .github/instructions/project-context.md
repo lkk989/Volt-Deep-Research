@@ -27,7 +27,7 @@ description: 'Comprehensive project context for Mastervolt Deep Research system'
 
 ## Technology Stack
 
-- **AI Models**: Google Gemini (gemini-2.5-flash-lite-preview-09-2025 primary), OpenAI support, Vertex AI
+- **AI Models**: Google Gemini (`gemini-3.1-flash-lite-preview` primary, `gemini-embedding-2-preview` embeddings), OpenAI support, Vertex AI
 - **Memory**: LibSQL per-agent databases (.voltagent/{agent-id}-memory.db) with semantic embeddings
 - **Vector Store**: Shared LibSQL vector store (.voltagent/memory.db) with Google text-embedding-004
 - **Server**: Hono web framework via @voltagent/server-hono with Swagger UI

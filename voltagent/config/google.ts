@@ -4,6 +4,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 export const google = createGoogleGenerativeAI({
     apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 })
+export const GOOGLE_FLASH_LITE_MODEL_ID = 'gemini-3.1-flash-lite-preview'
+export const GOOGLE_EMBEDDING_MODEL_ID = 'gemini-embedding-2-preview'
 // Gemini 2.5 Flash model for general-purpose applications
 /*
  * googleAI: Main Gemini 2.5 Flash model for general-purpose applications
@@ -18,20 +20,20 @@ export const googleAI = google('gemini-2.5-flash-preview-09-2025')
     * Why use: Opt for this model when your application demands superior performance and can benefit from the advanced features it offers, despite the higher associated costs.
  */
 export const googleAIPro = google('gemini-2.5-pro')
-// Gemini 2.5 Flash Lite model for free-tier applications
+// Gemini 3.1 Flash Lite Preview model for fast, low-cost multimodal workflows
 /*
- * googleAIFlashLite: Gemini 2.5 Flash Lite model for free-tier applications
-    * When to use: This model is suitable for applications with basic text generation and reasoning needs, especially when operating under budget constraints or within a free-tier usage plan.
-    * Why use: Select this model when you need to minimize costs while still leveraging the capabilities of the Gemini series for simpler tasks.
+ * googleAIFlashLite: Gemini 3.1 Flash Lite Preview model for fast, low-cost applications
+    * When to use: This model is suitable for large-context, multimodal reasoning and tool-using workflows that need low latency and low cost.
+    * Why use: Select this model when you want the latest Flash Lite capabilities, including structured outputs, search grounding, and strong tool calling support.
  */
-export const googleAIFlashLite = google('gemini-2.5-flash-lite-preview-09-2025')
-// Gemini Embedding 001 model for generating text embeddings
+export const googleAIFlashLite = google(GOOGLE_FLASH_LITE_MODEL_ID)
+// Gemini Embedding 2 Preview model for generating text embeddings
 /*
- * googleAIEmbedding: Gemini Embedding 001 model for generating text embeddings
-    * When to use: This model is ideal for tasks that require the conversion of text into high-dimensional vector representations, such as semantic search, clustering, and recommendation systems.
-    * Why use: Utilize this model when you need efficient and effective text embeddings to enhance the performance of applications involving natural language understanding and information retrieval.
+ * googleAIEmbedding: Gemini Embedding 2 Preview model for generating text embeddings
+    * When to use: This model is ideal for tasks that require higher-quality embeddings across semantic search, clustering, and retrieval workflows.
+    * Why use: Utilize this model when you are ready to re-embed your vector data and want the latest embedding space and flexible dimensions.
  */
-export const googleAIEmbedding = google.embedding('gemini-embedding-001')
+export const googleAIEmbedding = google.embedding(GOOGLE_EMBEDDING_MODEL_ID)
 // Gemini Computer Use model for tasks requiring higher accuracy and reliability
 /*
  * googleAIComputerUse: Gemini Computer Use model for tasks requiring higher accuracy and reliability

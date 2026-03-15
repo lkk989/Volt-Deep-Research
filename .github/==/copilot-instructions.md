@@ -133,7 +133,7 @@ const agentMemory = new Memory({
       goals: z.array(z.string()).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-2-preview")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true,
 });
@@ -142,7 +142,7 @@ export const agentName = new Agent({
   id: "agent-id",
   name: "Agent Name",
   purpose: "Clear description of agent's role",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: google("gemini-3.1-flash-lite-preview"),
   instructions: `Detailed system instructions...`,
   tools: [],
   toolkits: [thinkOnlyToolkit],

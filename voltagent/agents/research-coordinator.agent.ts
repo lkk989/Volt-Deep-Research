@@ -32,6 +32,7 @@ import { sharedMemory } from '../config/libsql.js'
 import { voltObservability } from '../config/observability.js'
 import {
   sharedWorkspaceFilesystemToolkit,
+  sharedWorkspaceRuntime,
   sharedWorkspaceSearchToolkit,
   sharedWorkspaceSkillsToolkit,
 } from '../workspaces/index.js'
@@ -90,7 +91,7 @@ export const researchCoordinatorAgent = new Agent({
     const provider = (context.get('provider') as string) || 'google'
     const model =
       (context.get('model') as string) ||
-      'gemini-2.5-flash-lite-preview-09-2025'
+      'gemini-3.1-flash-lite-preview'
     return `${provider}/${model}`
   },
   instructions: ({ context }) => {
@@ -134,10 +135,8 @@ export const researchCoordinatorAgent = new Agent({
   toolkits: [
     thinkOnlyToolkit,
     apiIntegrationToolkit,
-    sharedWorkspaceSearchToolkit,
-    sharedWorkspaceSkillsToolkit,
   ],
-  workspace: sharedWorkspaceFilesystemToolkit,
+  workspace: sharedWorkspaceRuntime,
   workspaceToolkits: {
     sandbox: {
       customToolDescription:
@@ -245,7 +244,7 @@ export const researchCoordinatorAgent = new Agent({
   workspaceSkillsPrompt: true,
   toolRouting: {
     embedding: {
-      model: 'google/gemini-embedding-001',
+      model: 'google/gemini-embedding-2-preview',
       normalize: true,
       topK: 3,
       toolText: (tool) => {
@@ -280,7 +279,7 @@ export const researchCoordinatorAgent = new Agent({
   voice: undefined,
   context: {
     provider: 'google',
-    model: 'gemini-2.5-flash-lite-preview-09-2025',
+    model: 'gemini-3.1-flash-lite-preview',
   },
   eval: {
     scorers: {},

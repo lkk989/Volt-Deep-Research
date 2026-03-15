@@ -31,7 +31,7 @@ export const supaMemory = new Memory({
          }).optional(),
        }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-2-preview",)),
   vector: new InMemoryVectorAdapter(),
   enableCache: true, // optional embedding cache
   cacheSize: 1000, // optional cache size

@@ -12,7 +12,7 @@ description: 'Detailed agent system architecture and configuration for Mastervol
 ### 1. assistantAgent (Query Generation & Coordination)
 
 - **Purpose**: Generate effective search queries and coordinate research tasks
-- **Model**: gemini-2.5-flash-lite-preview-09-2025
+- **Model**: gemini-3.1-flash-lite-preview
 - **Temperature**: 0.7 (creative query generation)
 - **Tools**: `get_weather` (demo tool), thinkOnlyToolkit (reasoning)
 - **Memory**: assistant-memory.db with user profile schema
@@ -31,7 +31,7 @@ description: 'Detailed agent system architecture and configuration for Mastervol
 ### 3. directorAgent (Multi-Agent Orchestration)
 
 - **Purpose**: Orchestrate comprehensive research projects using specialized agents
-- **Model**: gemini-2.5-flash-lite-preview-09-2025
+- **Model**: gemini-3.1-flash-lite-preview
 - **Temperature**: 0.3 (consistent orchestration decisions)
 - **Max Steps**: 30 (complex multi-agent workflows)
 - **Sub-Agents**: All 6 other agents under supervision
@@ -41,7 +41,7 @@ description: 'Detailed agent system architecture and configuration for Mastervol
 ### 4. dataAnalyzerAgent (Pattern Analysis & Insights)
 
 - **Purpose**: Analyze research data, extract patterns and insights
-- **Model**: gemini-2.5-flash-lite-preview-09-2025
+- **Model**: gemini-3.1-flash-lite-preview
 - **Temperature**: 0.3 (consistent analytical approach)
 - **Tools**: `analyze_data_patterns`, `extract_key_insights`, thinkOnlyToolkit
 - **Analysis Types**: patterns, trends, correlations, anomalies
@@ -51,7 +51,7 @@ description: 'Detailed agent system architecture and configuration for Mastervol
 ### 5. factCheckerAgent (Verification & Bias Detection)
 
 - **Purpose**: Verify information accuracy, detect bias, ensure research integrity
-- **Model**: gemini-2.5-flash-lite-preview-09-2025
+- **Model**: gemini-3.1-flash-lite-preview
 - **Temperature**: 0.2 (maximum factual consistency)
 - **Tools**: `verify_claim`, `cross_reference_sources`, `detect_bias`, thinkOnlyToolkit
 - **Verification Levels**: High (95%+), Medium (70-94%), Low (<70%)
@@ -61,7 +61,7 @@ description: 'Detailed agent system architecture and configuration for Mastervol
 ### 6. synthesizerAgent (Information Integration)
 
 - **Purpose**: Combine multiple research streams, resolve contradictions
-- **Model**: gemini-2.5-flash-lite-preview-09-2025
+- **Model**: gemini-3.1-flash-lite-preview
 - **Temperature**: 0.4 (moderate creativity for synthesis)
 - **Tools**: `synthesize_information`, `resolve_contradictions`, `create_unified_narrative`
 - **Resolution Methods**: Majority Rule, Recency, Authority, Evidence-Based, Synthesis
@@ -71,7 +71,7 @@ description: 'Detailed agent system architecture and configuration for Mastervol
 ### 7. scrapperAgent (Web Data Extraction)
 
 - **Purpose**: Extract and collect data from web sources for research
-- **Model**: gemini-2.5-flash-lite-preview-09-2025
+- **Model**: gemini-3.1-flash-lite-preview
 - **Temperature**: 0.3 (consistent extraction approach)
 - **Toolkit**: webScraperToolkit (5 specialized tools)
 - **Capabilities**: Markdown conversion, code extraction, structured data, batch scraping
@@ -90,7 +90,7 @@ description: 'Detailed agent system architecture and configuration for Mastervol
 
 ### Model Configuration
 
-- **Primary Model**: gemini-2.5-flash-lite-preview-09-2025 (6 agents)
+- **Primary Model**: gemini-3.1-flash-lite-preview
 - **Enhanced Model**: gemini-2.5-flash-preview-09-2025 (writer only)
 - **Max Output Tokens**: 64,000 (all agents)
 - **Max Steps**: 25 (standard), 30 (director), 50 (writer)

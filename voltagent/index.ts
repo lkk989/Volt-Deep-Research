@@ -35,12 +35,51 @@ import { dataPatternAnalyzerWorkflow } from "./workflows/data-pattern-analyzer.w
 import { factCheckSynthesisWorkflow } from "./workflows/fact-check-synthesis.workflow.js";
 import { researchAssistantWorkflow } from "./workflows/research-assistant.workflow.js";
 import { sharedWorkspaceRuntime } from "./workspaces/index.js";
+import { researchPlanAgent } from "./agents/research-plan.agent.js";
+import { newsPlanAgent } from "./agents/news-plan.agent.js";
+import { contentCuratorAgent } from "./agents/content-curator.agent.js";
+import { LibTaskStore } from "./a2a/store.js";
 //import { VoltAgentExporter } from "@voltagent/vercel-ai-exporter";
 
 voltlogger.info("Volt Initilizing");
 
 await sharedWorkspaceRuntime.init();
 
+const registeredAgents = {
+  "assistant": assistantAgent,
+  "support-agent": supportAgent,
+  "satisfaction-judge": judgeAgent,
+  "research-coordinator": researchCoordinatorAgent,
+  "writer": writerAgent,
+  "director": directorAgent,
+  "data-analyzer": dataAnalyzerAgent,
+  "data-scientist": dataScientistAgent,
+  "fact-checker": factCheckerAgent,
+  "synthesizer": synthesizerAgent,
+  "scrapper": scrapperAgent,
+  "coding-agent": codingAgent,
+  "code-reviewer": codeReviewerAgent,
+  "deep-research-agent": deepAgent,
+  "research-orchestrator": researchPlanAgent,
+  "news-orchestrator": newsPlanAgent,
+  "content-cordinator": contentCuratorAgent,
+} as const;
+
+const registeredWorkflows = {
+  "research-assistant-demo": researchAssistantWorkflow,
+  "comprehensive-research": comprehensiveResearchWorkflow,
+  "comprehensive-research-director": comprehensiveResearchDirectorWorkflow,
+  "data-pattern-analyzer": dataPatternAnalyzerWorkflow,
+  "fact-check-synthesis": factCheckSynthesisWorkflow,
+} as const;
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Internal server error";
+}
 
 const streamStore = await createResumableStreamVoltOpsStore();
 const resumableStreamAdapter = await createResumableStreamAdapter({ streamStore });
@@ -65,29 +104,8 @@ sdk.start();
 
 // Register with VoltOps
 export const voltAgent = new VoltAgent({
-  agents: {
-    "assistant": assistantAgent,
-    "support-agent": supportAgent,
-    "satisfaction-judge": judgeAgent,
-    "research-coordinator": researchCoordinatorAgent,
-    "writer": writerAgent,
-    "director": directorAgent,
-    "data-analyzer": dataAnalyzerAgent,
-    "data-scientist": dataScientistAgent,
-    "fact-checker": factCheckerAgent,
-    "synthesizer": synthesizerAgent,
-    "scrapper": scrapperAgent,
-    "coding-agent": codingAgent,
-    "code-reviewer": codeReviewerAgent,
-    "deep-research-agent": deepAgent,
-  },
-  workflows: {
-    "research-assistant-demo": researchAssistantWorkflow,
-    "comprehensive-research": comprehensiveResearchWorkflow,
-    "comprehensive-research-director": comprehensiveResearchDirectorWorkflow,
-    "data-pattern-analyzer": dataPatternAnalyzerWorkflow,
-    "fact-check-synthesis": factCheckSynthesisWorkflow,
-  },
+  agents: registeredAgents,
+  workflows: registeredWorkflows,
   server: honoServer({
     port: 3141,
     enableSwaggerUI: true,
@@ -108,7 +126,7 @@ export const voltAgent = new VoltAgent({
         try {
           const userId = c.req.query("userId");
 
-          if (!userId) {
+          if (typeof userId !== "string" || userId.trim().length === 0) {
             return c.json(
               {
                 success: false,
@@ -129,12 +147,12 @@ export const voltAgent = new VoltAgent({
             success: true,
             data: conversations,
           });
-        } catch (error: any) {
-          voltlogger.error("Error fetching conversations:", error);
+        } catch (error: unknown) {
+          voltlogger.error("Error fetching conversations", { error });
           return c.json(
             {
               success: false,
-              error: error.message || "Internal server error",
+              error: getErrorMessage(error),
             },
             500,
           );
@@ -150,7 +168,7 @@ export const voltAgent = new VoltAgent({
           const conversationId = c.req.param("conversationId");
           const userId = c.req.query("userId");
 
-          if (!userId) {
+          if (typeof userId !== "string" || userId.trim().length === 0) {
             return c.json(
               {
                 success: false,
@@ -167,12 +185,12 @@ export const voltAgent = new VoltAgent({
             success: true,
             data: messages,
           });
-        } catch (error: any) {
-          voltlogger.error("Error fetching messages:", error);
+        } catch (error: unknown) {
+          voltlogger.error("Error fetching messages", { error });
           return c.json(
             {
               success: false,
-              error: error.message || "Internal server error",
+              error: getErrorMessage(error),
             },
             500,
           );
@@ -195,21 +213,17 @@ export const voltAgent = new VoltAgent({
     //  });
     // GitHub integration
     on.github.create(({ payload, agents }) => {
-      console.log("New GitHub issue:", payload);
-      console.log("GitHub issue created by agents:", agents);
+      voltlogger.info("New GitHub issue", { agents, payload });
     });
     on.github.any(({ payload, agents }) => {
-      console.log("GitHub event received:", payload);
-      console.log("GitHub event received by agents:", agents);
+      voltlogger.info("GitHub event received", { agents, payload });
     });
     on.github.fork(({ payload, agents }) => {
-      console.log("GitHub fork event received:", payload);
-      console.log("GitHub fork event received by agents:", agents);
+      voltlogger.info("GitHub fork event received", { agents, payload });
     });
     // Cron integration
     on.cron.schedule(({ payload, agents }) => {
-      console.log("Hourly cron triggered:", payload);
-      console.log("Cron event handled by agents:", agents);
+      voltlogger.info("Hourly cron triggered", { agents, payload });
     });
     // Other GitHub events can be added similarly using on.github.<event_name>
     //github.pull_request, "github.pull_request_review", "github.pull_request_review_comment", "github.push", "github.watch"
@@ -249,5 +263,5 @@ a2aServer.initialize({
     getAgent: (id: string) => voltAgent.getAgent(id),
     getAllAgents: () => voltAgent.getAgents(),
   },
-  //  taskStore: redisTaskStore,
+    taskStore: new LibTaskStore(),
 });

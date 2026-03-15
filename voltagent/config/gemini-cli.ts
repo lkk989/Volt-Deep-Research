@@ -38,9 +38,9 @@ export const geminiAIFlash = gemini('gemini-3-flash', {
     functionCalling: true,
     structuredOutput: true,
 });
-export const geminiAIFlashLite = gemini('gemini-2.5-flash-lite', {
+export const geminiAIFlashLite = gemini('gemini-3.1-flash-lite-preview', {
     contextWindow: 1048576, // 1MB
-    maxTokens: 64000,
+    maxTokens: 65536,
     supportsStreaming: true,
     thinkingBudget: -1,
     showThoughts: true,

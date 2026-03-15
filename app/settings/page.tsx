@@ -30,7 +30,9 @@ import {
 import { useState } from 'react'
 
 export default function SettingsPage() {
-    const [defaultModel, setDefaultModel] = useState('gemini-2.0-flash-exp')
+    const [defaultModel, setDefaultModel] = useState(
+        'gemini-3.1-flash-lite-preview'
+    )
     const [enableCache, setEnableCache] = useState(true)
     const [voltOpsSync, setVoltOpsSync] = useState(true)
 
@@ -155,11 +157,11 @@ export default function SettingsPage() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="gemini-2.0-flash-exp">
-                                        Google Gemini 2.0 Flash (Experimental)
+                                    <SelectItem value="gemini-3.1-flash-lite-preview">
+                                        Google Gemini 3.1 Flash Lite (Preview)
                                     </SelectItem>
-                                    <SelectItem value="gemini-2.5-flash-lite">
-                                        Google Gemini 2.5 Flash Lite (Preview)
+                                    <SelectItem value="gemini-2.5-flash">
+                                        Google Gemini 2.5 Flash
                                     </SelectItem>
                                     <SelectItem value="gpt-4o">
                                         OpenAI GPT-4o

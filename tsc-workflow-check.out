@@ -1,0 +1,3 @@
+components/ai-elements/schema-display.tsx(110,34): error TS2322: Type 'string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...>' is not assignable to type 'string | TrustedHTML'.
+  Type 'number' is not assignable to type 'string | TrustedHTML'.
+voltagent/tools/github-toolkit.ts(56,30): error TS2322: Type 'string' is not assignable to type 'number'.

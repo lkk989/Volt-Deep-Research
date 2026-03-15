@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
     Tooltip,
     TooltipContent,
@@ -9,67 +9,66 @@ import {
 } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import {
     PencilIcon,
     TrashIcon,
     MoreHorizontalIcon,
     BotIcon,
 } from 'lucide-react'
+import {
+    useVoltAgent,
+    useVoltAgentList,
+    useVoltConversationMessages,
+} from '@/hooks/use-voltagent'
 
 interface ChatHeaderProps {
+    activeAgentId: string
     chatId: string
     userId: string
     selectedModel?: string
+    onAgentChange?: (agentId: string) => void
     onNewChat?: () => void
     onDelete?: () => void
 }
 
 export function ChatHeader({
+    activeAgentId,
     chatId,
     userId,
     selectedModel,
+    onAgentChange,
     onNewChat,
     onDelete,
 }: ChatHeaderProps) {
     const [title, setTitle] = useState<string>('New Conversation')
     const [isEditing, setIsEditing] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
     const [showMenu, setShowMenu] = useState(false)
+    const { data: agents = [], isLoading: isAgentsLoading } = useVoltAgentList()
+    const { data: activeAgent, isLoading: isAgentLoading } =
+        useVoltAgent(activeAgentId)
+    const { data: messages = [], isLoading: isMessagesLoading } =
+        useVoltConversationMessages(chatId, userId, activeAgentId)
 
-    // Load conversation title from messages
-    useEffect(() => {
-        const loadTitle = async () => {
-            try {
-                const response = await fetch(
-                    `/api/messages?conversationId=${encodeURIComponent(chatId)}&userId=${encodeURIComponent(userId)}`
-                )
-
-                if (!response.ok) {
-                    throw new Error('Failed to load')
-                }
-
-                const data = await response.json()
-                const messages = data.data || []
-
-                if (messages.length > 0) {
-                    const firstUserMessage = messages.find(
-                        (m: { role: string }) => m.role === 'user'
-                    )
-                    if (firstUserMessage) {
-                        const text = extractTextFromMessage(firstUserMessage)
-                        if (text) {
-                            setTitle(truncateText(text, 40))
-                        }
-                    }
-                }
-            } catch {
-                // Use default title
-            } finally {
-                setIsLoading(false)
-            }
+    const derivedTitle = useMemo(() => {
+        const firstUserMessage = messages.find((message) => message.role === 'user')
+        if (!firstUserMessage) {
+            return 'New Conversation'
         }
 
-        void loadTitle()
-    }, [chatId, userId])
+        const text = extractTextFromMessage(firstUserMessage)
+        return text.length > 0 ? truncateText(text, 40) : 'New Conversation'
+    }, [messages])
+
+    const displayedTitle = isEditing ? title : derivedTitle
+    const isLoading = isAgentsLoading || isAgentLoading || isMessagesLoading
+    const threadCount = messages.length
 
     const handleTitleSubmit = useCallback((newTitle: string) => {
         const trimmed = newTitle.trim()
@@ -92,7 +91,10 @@ export function ChatHeader({
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                         <BotIcon className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                    <div className="space-y-2">
+                        <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                        <div className="h-3 w-40 animate-pulse rounded bg-muted/70" />
+                    </div>
                 </div>
             </div>
         )
@@ -107,7 +109,7 @@ export function ChatHeader({
                 {isEditing ? (
                     <input
                         type="text"
-                        defaultValue={title}
+                        defaultValue={displayedTitle}
                         aria-label="Conversation title"
                         className="w-64 rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         onBlur={(e) => handleTitleSubmit(e.target.value)}
@@ -125,13 +127,32 @@ export function ChatHeader({
                         onClick={() => setIsEditing(true)}
                         className="flex items-center gap-2 text-sm font-medium hover:text-primary"
                     >
-                        <span>{title}</span>
+                        <span>{displayedTitle}</span>
                         <PencilIcon className="h-3 w-3 opacity-50" />
                     </button>
                 )}
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <Badge variant="secondary">{activeAgent?.name ?? activeAgentId}</Badge>
+                    <span>{threadCount} messages</span>
+                    {activeAgent?.isTelemetryEnabled ? (
+                        <Badge variant="outline">Telemetry on</Badge>
+                    ) : null}
+                </div>
             </div>
 
             <div className="relative flex items-center gap-2">
+                <Select value={activeAgentId} onValueChange={onAgentChange}>
+                    <SelectTrigger className="min-w-52" size="sm">
+                        <SelectValue placeholder="Select agent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {agents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id}>
+                                {agent.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 {selectedModel && selectedModel.trim().length > 0 && (
                     <span className="rounded-md border bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground">
                         {selectedModel}
@@ -189,17 +210,15 @@ export function ChatHeader({
     )
 }
 
-function extractTextFromMessage(message: {
-    parts?: Array<{ type: string; text?: string }>
-}): string {
-    if (!message.parts) return ''
+function extractTextFromMessage(message: { parts?: Array<{ type: string; text?: string }> }): string {
+    if (!Array.isArray(message.parts)) return ''
     return message.parts
-        .filter((part) => part.type === 'text' && part.text)
-        .map((part) => part.text!)
+        .filter((part) => part.type === 'text' && typeof part.text === 'string')
+        .map((part) => part.text ?? '')
         .join('')
 }
 
 function truncateText(text: string, maxLength: number): string {
     if (text.length <= maxLength) return text
-    return text.slice(0, maxLength).trim() + '...'
+    return text.slice(0, maxLength).trim() + '…'
 }

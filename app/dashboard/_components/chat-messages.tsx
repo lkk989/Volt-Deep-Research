@@ -157,6 +157,45 @@ import {
     PackageInfoDependency,
 } from '@/components/ai-elements/package-info'
 import {
+    Plan,
+    PlanAction,
+    PlanContent,
+    PlanDescription,
+    PlanHeader,
+    PlanTitle,
+    PlanTrigger,
+} from '@/components/ai-elements/plan'
+import {
+    Task,
+    TaskContent,
+    TaskItem,
+    TaskItemFile,
+    TaskTrigger,
+} from '@/components/ai-elements/task'
+import {
+    ChainOfThought,
+    ChainOfThoughtContent,
+    ChainOfThoughtHeader,
+    ChainOfThoughtSearchResult,
+    ChainOfThoughtSearchResults,
+    ChainOfThoughtStep,
+} from '@/components/ai-elements/chain-of-thought'
+import {
+    Queue,
+    QueueItem,
+    QueueItemAttachment,
+    QueueItemContent,
+    QueueItemDescription,
+    QueueItemFile,
+    QueueItemImage,
+    QueueItemIndicator,
+    QueueList,
+    QueueSection,
+    QueueSectionContent,
+    QueueSectionLabel,
+    QueueSectionTrigger,
+} from '@/components/ai-elements/queue'
+import {
     CodeIcon,
     FileJsonIcon,
     HistoryIcon,
@@ -170,9 +209,20 @@ import {
     FileIcon,
     FolderIcon,
 } from 'lucide-react'
-import { useState, useCallback, useMemo, memo } from 'react'
+import {
+    useState,
+    useCallback,
+    useMemo,
+    Fragment,
+    memo,
+    useEffect,
+} from 'react'
 import type {
+    FileUIPart,
     DataUIPart,
+    UIMessagePart,
+    UITools,
+    ProviderMetadata,
     ReasoningUIPart,
     SourceDocumentUIPart,
     SourceUrlUIPart,
@@ -185,12 +235,19 @@ import type {
     UIMessage,
 } from 'ai'
 import {
+    safeValidateUIMessages,
+    getTextFromDataUrl,
     getToolName,
+    isDeepEqualData,
     isDataUIPart,
     isFileUIPart,
     isReasoningUIPart,
     isTextUIPart,
     isToolUIPart,
+    InvalidResponseDataError,
+    InvalidMessageRoleError,
+    InvalidArgumentError,
+    UIMessageStreamError,
 } from 'ai'
 import { messageHelpers } from '@voltagent/core'
 
@@ -227,6 +284,42 @@ export function ChatMessages({
     onRegenerate,
 }: ChatMessagesProps) {
     const [copiedId, setCopiedId] = useState<string | null>(null)
+    const [validatedMessages, setValidatedMessages] =
+        useState<UIMessage[]>(messages)
+    const [validationError, setValidationError] = useState<string | undefined>()
+
+    useEffect(() => {
+        let isActive = true
+
+        const validateMessages = async () => {
+            const result = await safeValidateUIMessages<UIMessage>({
+                messages,
+            })
+
+            if (!isActive) {
+                return
+            }
+
+            if (result.success) {
+                setValidatedMessages((current) =>
+                    areMessagesEquivalent(current, result.data)
+                        ? current
+                        : result.data
+                )
+                setValidationError(undefined)
+                return
+            }
+
+            setValidatedMessages(messages)
+            setValidationError(describeMessageValidationError(result.error))
+        }
+
+        void validateMessages()
+
+        return () => {
+            isActive = false
+        }
+    }, [messages])
 
     const handleCopy = useCallback(
         async (messageId: string, content: string) => {
@@ -238,33 +331,54 @@ export function ChatMessages({
         [onCopyMessage]
     )
 
+    const renderedMessages = useMemo(
+        () => validatedMessages,
+        [validatedMessages]
+    )
+
     // Extract sources from message parts
-    const getSourcesFromParts = (parts: UIMessage['parts']): SourceDocument[] => {
+    const getSourcesFromParts = (
+        parts: UIMessage['parts']
+    ): SourceDocument[] => {
         const sources: SourceDocument[] = []
         for (const part of parts) {
             if (isSourceUrlPart(part)) {
-                sources.push({
+                const candidate: SourceDocument = {
                     title: part.title,
                     url: part.url,
                     description: part.url,
-                })
+                }
+                if (
+                    !sources.some((source) =>
+                        isDeepEqualData(source, candidate)
+                    )
+                ) {
+                    sources.push(candidate)
+                }
                 continue
             }
 
             if (isSourceDocumentPart(part)) {
-                sources.push({
+                const candidate: SourceDocument = {
                     title: part.title,
                     description: part.filename ?? part.mediaType,
-                })
+                }
+                if (
+                    !sources.some((source) =>
+                        isDeepEqualData(source, candidate)
+                    )
+                ) {
+                    sources.push(candidate)
+                }
             }
         }
         return sources
     }
 
     return (
-        <Conversation className="flex-1">
+        <Conversation className="min-h-0 flex-1">
             <ConversationContent className="space-y-6 p-6">
-                {messages.length === 0 ? (
+                {renderedMessages.length === 0 ? (
                     <ConversationEmptyState
                         title="Welcome to Mastervolt Deep Research"
                         description="Start a conversation by selecting a suggestion below or type your own research query"
@@ -292,24 +406,23 @@ export function ChatMessages({
                         </div>
                     </ConversationEmptyState>
                 ) : (
-                    <>
-                        {messages.map((message) => {
+                    <Fragment>
+                        {renderedMessages.map((message) => {
                             const { role, id } = message
                             const isUser = role === 'user'
                             const isAssistant = role === 'assistant'
-                            const messageText = messageHelpers.hasContent(message)
+                            const messageText = messageHelpers.hasContent(
+                                message
+                            )
                                 ? messageHelpers.extractText(message)
                                 : ''
                             const modelLabel = getModelLabel(message.metadata)
 
                             // Get sources from parts
                             const messageParts = message.parts ?? []
-                            const subAgentName = getSubagentNameFromParts(
-                                messageParts
-                            )
-                            const sources = getSourcesFromParts(
-                                messageParts
-                            )
+                            const subAgentName =
+                                getSubagentNameFromParts(messageParts)
+                            const sources = getSourcesFromParts(messageParts)
 
                             return (
                                 <Message key={id} from={role}>
@@ -320,8 +433,9 @@ export function ChatMessages({
                                                 variant="obsidian"
                                                 state={
                                                     status === 'streaming' &&
-                                                    messages[
-                                                        messages.length - 1
+                                                    renderedMessages[
+                                                        renderedMessages.length -
+                                                            1
                                                     ]?.id === id
                                                         ? 'thinking'
                                                         : 'idle'
@@ -407,6 +521,37 @@ export function ChatMessages({
                                                     )
                                                 }
 
+                                                if (
+                                                    canReadFilePartAsText(part)
+                                                ) {
+                                                    return (
+                                                        <Artifact
+                                                            key={`file-${id}-${idx}`}
+                                                        >
+                                                            <ArtifactHeader>
+                                                                <div className="flex items-center gap-2">
+                                                                    <FileJsonIcon className="size-4 text-muted-foreground" />
+                                                                    <ArtifactTitle className="text-sm">
+                                                                        {part.filename ??
+                                                                            'Attached text file'}
+                                                                    </ArtifactTitle>
+                                                                </div>
+                                                            </ArtifactHeader>
+                                                            <ArtifactContent className="p-0">
+                                                                <CodeBlock
+                                                                    code={readTextFromFilePart(
+                                                                        part
+                                                                    )}
+                                                                    language={inferCodeLanguage(
+                                                                        part
+                                                                    )}
+                                                                    showLineNumbers
+                                                                />
+                                                            </ArtifactContent>
+                                                        </Artifact>
+                                                    )
+                                                }
+
                                                 return (
                                                     <MessageResponse
                                                         key={`file-${id}-${idx}`}
@@ -418,7 +563,8 @@ export function ChatMessages({
 
                                             // Render text parts with proper typing
                                             if (isTextUIPart(part)) {
-                                                const textPart = part as TextUIPart
+                                                const textPart =
+                                                    part as TextUIPart
                                                 return (
                                                     <MessageResponse
                                                         key={`text-${id}-${idx}`}
@@ -430,8 +576,10 @@ export function ChatMessages({
 
                                             // Render reasoning parts with proper typing
                                             if (isReasoningUIPart(part)) {
-                                                const reasoningPart = part as ReasoningUIPart
-                                                const reasoningText = reasoningPart.text ?? ''
+                                                const reasoningPart =
+                                                    part as ReasoningUIPart
+                                                const reasoningText =
+                                                    reasoningPart.text ?? ''
                                                 if (!reasoningText) return null
 
                                                 return (
@@ -440,8 +588,8 @@ export function ChatMessages({
                                                         isStreaming={
                                                             status ===
                                                                 'streaming' &&
-                                                            messages[
-                                                                messages.length -
+                                                            renderedMessages[
+                                                                renderedMessages.length -
                                                                     1
                                                             ]?.id === id
                                                         }
@@ -468,8 +616,9 @@ export function ChatMessages({
                                                     messageParts.length - 1
                                                 const isStreaming =
                                                     status === 'streaming' &&
-                                                    messages[
-                                                        messages.length - 1
+                                                    renderedMessages[
+                                                        renderedMessages.length -
+                                                            1
                                                     ]?.id === id &&
                                                     isLastTool
 
@@ -484,9 +633,7 @@ export function ChatMessages({
                                                     >
                                                         <ToolHeader
                                                             title={toolName}
-                                                            type={
-                                                                toolType
-                                                            }
+                                                            type={toolType}
                                                             state={
                                                                 isStreaming
                                                                     ? 'input-available'
@@ -494,7 +641,7 @@ export function ChatMessages({
                                                             }
                                                         />
                                                         <ToolContent>
-                                                            <>
+                                                            <Fragment>
                                                                 {Boolean(
                                                                     toolPart.input
                                                                 ) && (
@@ -506,8 +653,11 @@ export function ChatMessages({
                                                                 )}
 
                                                                 {/* Render enhanced output types from tool output */}
-                                                                {toolPart.output && (
-                                                                    <>
+                                                                {toolPart.output !==
+                                                                    undefined &&
+                                                                    toolPart.output !==
+                                                                        null && (
+                                                                    <Fragment>
                                                                         {/* Terminal output */}
                                                                         {isTerminalOutput(
                                                                             toolPart.output
@@ -588,6 +738,7 @@ export function ChatMessages({
                                                                                             | 'bash'
                                                                                             | 'html'
                                                                                             | 'css'
+                                                                                            | 'markdown'
                                                                                     }
                                                                                     showLineNumbers
                                                                                 />
@@ -684,7 +835,9 @@ export function ChatMessages({
                                                                                                                 key={
                                                                                                                     tIdx
                                                                                                                 }
-                                                                                                                tool={tool}
+                                                                                                                tool={
+                                                                                                                    tool
+                                                                                                                }
                                                                                                                 value={`tool-${tIdx}`}
                                                                                                             />
                                                                                                         )
@@ -704,6 +857,49 @@ export function ChatMessages({
                                                                                 <Sandbox
                                                                                     defaultOpen
                                                                                 >
+
+                                                                        {isWorkspaceCommandOutput(
+                                                                            toolPart.output
+                                                                        ) && (
+                                                                            <div className="mt-2">
+                                                                                {renderWorkspaceCommandOutput(
+                                                                                    toolPart.output,
+                                                                                    isStreaming,
+                                                                                    toolPart.state,
+                                                                                    toolName
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {isWorkspaceListingOutput(
+                                                                            toolPart.output
+                                                                        ) && (
+                                                                            <div className="mt-2">
+                                                                                {renderWorkspaceListingOutput(
+                                                                                    toolPart.output
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {isWorkspaceReadOutput(
+                                                                            toolPart.output
+                                                                        ) && (
+                                                                            <div className="mt-2">
+                                                                                {renderWorkspaceReadOutput(
+                                                                                    toolPart.output
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {isWorkspaceSearchOutput(
+                                                                            toolPart.output
+                                                                        ) && (
+                                                                            <div className="mt-2">
+                                                                                {renderWorkspaceSearchOutput(
+                                                                                    toolPart.output
+                                                                                )}
+                                                                            </div>
+                                                                        )}
                                                                                     <SandboxHeader
                                                                                         title={
                                                                                             toolPart
@@ -854,6 +1050,18 @@ export function ChatMessages({
                                                                             isSandboxOutput(
                                                                                 toolPart.output
                                                                             ) ||
+                                                                            isWorkspaceCommandOutput(
+                                                                                toolPart.output
+                                                                            ) ||
+                                                                            isWorkspaceListingOutput(
+                                                                                toolPart.output
+                                                                            ) ||
+                                                                            isWorkspaceReadOutput(
+                                                                                toolPart.output
+                                                                            ) ||
+                                                                            isWorkspaceSearchOutput(
+                                                                                toolPart.output
+                                                                            ) ||
                                                                             isSchemaOutput(
                                                                                 toolPart.output
                                                                             ) ||
@@ -956,38 +1164,48 @@ export function ChatMessages({
                                                                                 <JSXPreviewError />
                                                                             </div>
                                                                         )}
-                                                                    </>
+                                                                    </Fragment>
                                                                 )}
 
                                                                 {/* Tool error fallback when no structured output is provided */}
                                                                 {toolPart.state ===
                                                                     'output-error' &&
                                                                     !toolPart.output && (
-                                                                    <ToolOutput
-                                                                        output={{
-                                                                            error:
+                                                                        <ToolOutput
+                                                                            output={{
+                                                                                error:
+                                                                                    toolPart.errorText ||
+                                                                                    'Tool execution failed',
+                                                                            }}
+                                                                            errorText={
                                                                                 toolPart.errorText ||
-                                                                                'Tool execution failed',
-                                                                        }}
-                                                                        errorText={
-                                                                            toolPart.errorText ||
-                                                                            'Tool execution failed'
-                                                                        }
-                                                                    />
-                                                                )}
-                                                            </>
+                                                                                'Tool execution failed'
+                                                                            }
+                                                                        />
+                                                                    )}
+                                                            </Fragment>
                                                         </ToolContent>
                                                     </Tool>
                                                 )
                                             }
 
-                                            if (isDataUIPart<UIDataTypes>(part)) {
+                                            if (
+                                                isDataUIPart<UIDataTypes>(part)
+                                            ) {
                                                 return (
-                                                    <DataPartArtifact
-                                                        key={`data-${id}-${idx}`}
-                                                        partType={part.type}
-                                                        data={part.data}
-                                                    />
+                                                    <Fragment key={`data-${id}-${idx}`}>
+                                                        {renderStructuredDataPart(
+                                                            part.type,
+                                                            part.data
+                                                        ) ?? (
+                                                            <DataPartArtifact
+                                                                partType={
+                                                                    part.type
+                                                                }
+                                                                data={part.data}
+                                                            />
+                                                        )}
+                                                    </Fragment>
                                                 )
                                             }
 
@@ -1063,27 +1281,42 @@ export function ChatMessages({
                             )
                         })}
 
-                        {/* Streaming indicator */}
-                        {status === 'streaming' && (
-                            <Message from="assistant">
-                                <div className="mb-2 flex items-center gap-2">
-                                    <Persona
-                                        variant="obsidian"
-                                        state="thinking"
-                                        className="size-8"
-                                    />
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                        Assistant
-                                    </span>
+                        {validationError && (
+                            <div className="flex justify-center">
+                                <div className="max-w-2xl rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+                                    <p className="font-semibold">
+                                        Message validation warning
+                                    </p>
+                                    <p className="opacity-90">
+                                        {validationError}
+                                    </p>
                                 </div>
-                                <MessageContent>
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Spinner className="h-4 w-4" />
-                                        <span>Thinking...</span>
-                                    </div>
-                                </MessageContent>
-                            </Message>
+                            </div>
                         )}
+
+                        {/* Streaming indicator */}
+                        {status === 'streaming' &&
+                            renderedMessages[renderedMessages.length - 1]
+                                ?.role !== 'assistant' && (
+                                <Message from="assistant">
+                                    <div className="mb-2 flex items-center gap-2">
+                                        <Persona
+                                            variant="obsidian"
+                                            state="thinking"
+                                            className="size-8"
+                                        />
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            Assistant
+                                        </span>
+                                    </div>
+                                    <MessageContent>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Spinner className="h-4 w-4" />
+                                            <span>Thinking...</span>
+                                        </div>
+                                    </MessageContent>
+                                </Message>
+                            )}
 
                         {/* Error display */}
                         {error && (
@@ -1096,7 +1329,7 @@ export function ChatMessages({
                                 </div>
                             </div>
                         )}
-                    </>
+                    </Fragment>
                 )}
             </ConversationContent>
             <ConversationScrollButton />
@@ -1104,32 +1337,41 @@ export function ChatMessages({
     )
 }
 
-function isSourceUrlPart(part: UIMessage['parts'][number]): part is SourceUrlUIPart {
+function isSourceUrlPart(
+    part: UIMessagePart<UIDataTypes, UITools>
+): part is SourceUrlUIPart {
     return part.type === 'source-url'
 }
 
 function isSourceDocumentPart(
-    part: UIMessage['parts'][number]
+    part: UIMessagePart<UIDataTypes, UITools>
 ): part is SourceDocumentUIPart {
     return part.type === 'source-document'
 }
 
 function isStepStartPart(
-    part: UIMessage['parts'][number]
+    part: UIMessagePart<UIDataTypes, UITools>
 ): part is StepStartUIPart {
     return part.type === 'step-start'
 }
 
-function getToolType(
-    part: ToolUIPart | DynamicToolUIPart
-): `tool-${string}` {
+function getToolType(part: ToolUIPart | DynamicToolUIPart): `tool-${string}` {
     if (part.type === 'dynamic-tool') {
         return `tool-${part.toolName}`
     }
 
     return part.type as `tool-${string}`
 }
-function getModelLabel(metadata: unknown): string | undefined {
+interface MessageMetadataShape {
+    model?: {
+        id?: string
+        providerMetadata?: ProviderMetadata
+    }
+}
+
+function getModelLabel(
+    metadata: MessageMetadataShape | unknown
+): string | undefined {
     if (!metadata || typeof metadata !== 'object') {
         return undefined
     }
@@ -1165,18 +1407,29 @@ type SubagentStreamPart = DataUIPart<{
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null
 
-function isSubagentResultPart(part: UIMessage['parts'][number]): part is SubagentResultPart {
-    if (!isDataUIPart<UIDataTypes>(part) || part.type !== 'data-subagent-result') {
+function isSubagentResultPart(
+    part: UIMessage['parts'][number]
+): part is SubagentResultPart {
+    if (
+        !isDataUIPart<UIDataTypes>(part) ||
+        part.type !== 'data-subagent-result'
+    ) {
         return false
     }
     return isRecord(part.data) && typeof part.data.text === 'string'
 }
 
-function isSubagentStreamPart(part: UIMessage['parts'][number]): part is SubagentStreamPart {
-    return isDataUIPart<UIDataTypes>(part) && part.type === 'data-subagent-stream'
+function isSubagentStreamPart(
+    part: UIMessage['parts'][number]
+): part is SubagentStreamPart {
+    return (
+        isDataUIPart<UIDataTypes>(part) && part.type === 'data-subagent-stream'
+    )
 }
 
-function getSubagentNameFromParts(parts: UIMessage['parts']): string | undefined {
+function getSubagentNameFromParts(
+    parts: UIMessage['parts']
+): string | undefined {
     for (const part of parts) {
         if (isSubagentResultPart(part) && part.data.subAgentName) {
             return part.data.subAgentName
@@ -1206,9 +1459,7 @@ function getSubagentStreamTextDelta(data: Record<string, unknown>): string {
 }
 
 // Type guards for detecting content types from tool outputs
-function isTerminalOutput(
-    output: ToolOutputValue
-): output is TerminalOutput {
+function isTerminalOutput(output: ToolOutputValue): output is TerminalOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'terminal' && typeof obj.content === 'string'
@@ -1216,9 +1467,7 @@ function isTerminalOutput(
     return false
 }
 
-function isStackTrace(
-    output: ToolOutputValue
-): output is StackTraceOutput {
+function isStackTrace(output: ToolOutputValue): output is StackTraceOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'stack-trace' && typeof obj.trace === 'string'
@@ -1226,9 +1475,7 @@ function isStackTrace(
     return false
 }
 
-function isCodeOutput(
-    output: ToolOutputValue
-): output is CodeOutput {
+function isCodeOutput(output: ToolOutputValue): output is CodeOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1247,9 +1494,7 @@ interface FileNode {
     children?: FileNode[]
 }
 
-function isFileTree(
-    output: ToolOutputValue
-): output is FileTreeOutput {
+function isFileTree(output: ToolOutputValue): output is FileTreeOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'file-tree' && Array.isArray(obj.files)
@@ -1338,6 +1583,51 @@ type JsxPreviewOutput = {
     isStreaming?: boolean
 }
 
+interface WorkspaceCommandOutput {
+    stdout: string
+    stderr: string
+    exitCode: number
+    durationMs?: number
+    timedOut?: boolean
+    aborted?: boolean
+    stdoutTruncated?: boolean
+    stderrTruncated?: boolean
+}
+
+interface WorkspaceFileEntry {
+    path: string
+    is_dir: boolean
+    modified_at?: string
+    size?: number
+}
+
+interface WorkspaceListingOutput {
+    path: string
+    entries: WorkspaceFileEntry[]
+}
+
+interface WorkspaceReadOutput {
+    path: string
+    content: string
+}
+
+interface WorkspaceSearchResultItem {
+    path: string
+    score: number
+    snippet?: string
+    lineRange?: [number, number]
+    content?: string
+    scoreDetails?: {
+        bm25?: number
+        vector?: number
+    }
+}
+
+interface WorkspaceSearchOutput {
+    query: string
+    results: WorkspaceSearchResultItem[]
+}
+
 type ToolOutputValue =
     | ToolUIPart['output']
     | DynamicToolUIPart['output']
@@ -1353,10 +1643,12 @@ type ToolOutputValue =
     | CheckpointOutput
     | ConfirmationOutput
     | JsxPreviewOutput
+    | WorkspaceCommandOutput
+    | WorkspaceListingOutput
+    | WorkspaceReadOutput
+    | WorkspaceSearchOutput
 
-function isTestResults(
-    output: ToolOutputValue
-): output is TestResultsOutput {
+function isTestResults(output: ToolOutputValue): output is TestResultsOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'test-results' && Array.isArray(obj.suites)
@@ -1407,6 +1699,77 @@ function isSandboxOutput(
     return false
 }
 
+function isWorkspaceCommandOutput(
+    output: ToolOutputValue
+): output is WorkspaceCommandOutput {
+    if (!output || typeof output !== 'object') {
+        return false
+    }
+
+    const obj = output as Record<string, unknown>
+    return (
+        typeof obj.stdout === 'string' &&
+        typeof obj.stderr === 'string' &&
+        typeof obj.exitCode === 'number' &&
+        !('type' in obj)
+    )
+}
+
+function isWorkspaceListingOutput(
+    output: ToolOutputValue
+): output is WorkspaceListingOutput {
+    if (!output || typeof output !== 'object') {
+        return false
+    }
+
+    const obj = output as Record<string, unknown>
+    return (
+        typeof obj.path === 'string' &&
+        Array.isArray(obj.entries) &&
+        obj.entries.every(
+            (entry) =>
+                isRecord(entry) &&
+                typeof entry.path === 'string' &&
+                typeof entry.is_dir === 'boolean'
+        )
+    )
+}
+
+function isWorkspaceReadOutput(
+    output: ToolOutputValue
+): output is WorkspaceReadOutput {
+    if (!output || typeof output !== 'object') {
+        return false
+    }
+
+    const obj = output as Record<string, unknown>
+    return (
+        typeof obj.path === 'string' &&
+        typeof obj.content === 'string' &&
+        !Array.isArray(obj.content)
+    )
+}
+
+function isWorkspaceSearchOutput(
+    output: ToolOutputValue
+): output is WorkspaceSearchOutput {
+    if (!output || typeof output !== 'object') {
+        return false
+    }
+
+    const obj = output as Record<string, unknown>
+    return (
+        typeof obj.query === 'string' &&
+        Array.isArray(obj.results) &&
+        obj.results.every(
+            (result) =>
+                isRecord(result) &&
+                typeof result.path === 'string' &&
+                typeof result.score === 'number'
+        )
+    )
+}
+
 // Render file tree from FileNode structure
 function renderFileTree(files: FileNode[], basePath = ''): React.ReactNode {
     return files.map((file) => {
@@ -1427,6 +1790,126 @@ function renderFileTree(files: FileNode[], basePath = ''): React.ReactNode {
             </FileTreeFile>
         )
     })
+}
+
+function renderWorkspaceCommandOutput(
+    output: WorkspaceCommandOutput,
+    isStreaming: boolean,
+    toolState: ToolUIPart['state'],
+    toolName: string
+): React.ReactNode {
+    const terminalOutput = formatWorkspaceCommandOutput(output)
+
+    return (
+        <Sandbox defaultOpen>
+            <SandboxHeader
+                title={toolName === 'execute_command' ? 'Workspace Sandbox' : toolName}
+                state={isStreaming ? 'output-available' : toolState}
+            />
+            <SandboxContent>
+                <SandboxTabs defaultValue="terminal">
+                    <SandboxTabsBar>
+                        <SandboxTabsList>
+                            <SandboxTabsTrigger value="terminal">
+                                Terminal
+                            </SandboxTabsTrigger>
+                        </SandboxTabsList>
+                    </SandboxTabsBar>
+                    <SandboxTabContent value="terminal">
+                        <Terminal output={terminalOutput} isStreaming={isStreaming}>
+                            <TerminalContent />
+                        </Terminal>
+                    </SandboxTabContent>
+                </SandboxTabs>
+            </SandboxContent>
+        </Sandbox>
+    )
+}
+
+function renderWorkspaceListingOutput(
+    output: WorkspaceListingOutput
+): React.ReactNode {
+    return (
+        <Artifact>
+            <ArtifactHeader>
+                <div className="flex items-center gap-2">
+                    <FolderIcon className="size-4 text-muted-foreground" />
+                    <ArtifactTitle className="text-sm">
+                        {output.path}
+                    </ArtifactTitle>
+                </div>
+            </ArtifactHeader>
+            <ArtifactContent>
+                <FileTree defaultExpanded={new Set([''])}>
+                    {renderFileTree(workspaceEntriesToFileNodes(output.entries, output.path))}
+                </FileTree>
+            </ArtifactContent>
+        </Artifact>
+    )
+}
+
+function renderWorkspaceReadOutput(output: WorkspaceReadOutput): React.ReactNode {
+    return (
+        <Artifact>
+            <ArtifactHeader>
+                <div className="flex items-center gap-2">
+                    <FileJsonIcon className="size-4 text-muted-foreground" />
+                    <ArtifactTitle className="text-sm">{output.path}</ArtifactTitle>
+                </div>
+            </ArtifactHeader>
+            <ArtifactContent className="p-0">
+                <CodeBlock
+                    code={output.content}
+                    language={inferCodeLanguageFromPath(output.path)}
+                    showLineNumbers
+                />
+            </ArtifactContent>
+        </Artifact>
+    )
+}
+
+function renderWorkspaceSearchOutput(
+    output: WorkspaceSearchOutput
+): React.ReactNode {
+    return (
+        <Artifact>
+            <ArtifactHeader>
+                <div className="flex items-center gap-2">
+                    <HistoryIcon className="size-4 text-muted-foreground" />
+                    <ArtifactTitle className="text-sm">
+                        Workspace search: {output.query}
+                    </ArtifactTitle>
+                </div>
+            </ArtifactHeader>
+            <ArtifactContent className="space-y-3">
+                {output.results.length === 0 ? (
+                    <ArtifactDescription>No matching workspace results.</ArtifactDescription>
+                ) : (
+                    output.results.map((result) => (
+                        <div key={`${result.path}-${result.score}`} className="rounded-md border p-3">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="truncate font-medium text-sm">{result.path}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Score: {result.score.toFixed(3)}
+                                        {result.lineRange
+                                            ? ` • Lines ${result.lineRange[0]}-${result.lineRange[1]}`
+                                            : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            {result.snippet ? (
+                                <CodeBlock
+                                    code={result.snippet}
+                                    language={inferCodeLanguageFromPath(result.path)}
+                                />
+                            ) : null}
+                        </div>
+                    ))
+                )}
+            </ArtifactContent>
+        </Artifact>
+    )
 }
 
 // Render test results
@@ -1517,9 +2000,7 @@ function isSchemaOutput(output: ToolOutputValue): output is SchemaOutput {
     return false
 }
 
-function isSnippetOutput(
-    output: ToolOutputValue
-): output is SnippetOutput {
+function isSnippetOutput(output: ToolOutputValue): output is SnippetOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return obj.type === 'snippet' && typeof obj.code === 'string'
@@ -1551,7 +2032,9 @@ function isPackageInfoOutput(
     return false
 }
 
-function isCheckpointOutput(output: ToolOutputValue): output is CheckpointOutput {
+function isCheckpointOutput(
+    output: ToolOutputValue
+): output is CheckpointOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1563,7 +2046,9 @@ function isCheckpointOutput(output: ToolOutputValue): output is CheckpointOutput
     return false
 }
 
-function isConfirmationOutput(output: ToolOutputValue): output is ConfirmationOutput {
+function isConfirmationOutput(
+    output: ToolOutputValue
+): output is ConfirmationOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1575,7 +2060,9 @@ function isConfirmationOutput(output: ToolOutputValue): output is ConfirmationOu
     return false
 }
 
-function isJsxPreviewOutput(output: ToolOutputValue): output is JsxPreviewOutput {
+function isJsxPreviewOutput(
+    output: ToolOutputValue
+): output is JsxPreviewOutput {
     if (output && typeof output === 'object') {
         const obj = output as Record<string, unknown>
         return (
@@ -1609,7 +2096,9 @@ const DataPartArtifact = memo(function DataPartArtifact({
             <ArtifactHeader>
                 <div className="flex items-center gap-2">
                     <FileJsonIcon className="size-4 text-muted-foreground" />
-                    <ArtifactTitle className="text-sm">{partType}</ArtifactTitle>
+                    <ArtifactTitle className="text-sm">
+                        {partType}
+                    </ArtifactTitle>
                 </div>
             </ArtifactHeader>
             <ArtifactContent className="p-0">
@@ -1629,6 +2118,394 @@ function safeJsonStringify(value: unknown): string {
     } catch {
         return String(value)
     }
+}
+
+function formatWorkspaceCommandOutput(output: WorkspaceCommandOutput): string {
+    const sections: string[] = []
+
+    sections.push(
+        [
+            `$ exitCode=${output.exitCode}`,
+            typeof output.durationMs === 'number'
+                ? `duration=${output.durationMs}ms`
+                : undefined,
+            output.timedOut ? 'timedOut=true' : undefined,
+            output.aborted ? 'aborted=true' : undefined,
+        ]
+            .filter(Boolean)
+            .join(' ')
+    )
+
+    if (output.stdout.length > 0) {
+        sections.push(output.stdout)
+    }
+
+    if (output.stderr.length > 0) {
+        sections.push(output.stdout.length > 0 ? `\n[stderr]\n${output.stderr}` : `[stderr]\n${output.stderr}`)
+    }
+
+    if (output.stdoutTruncated || output.stderrTruncated) {
+        sections.push('\n[output truncated]')
+    }
+
+    return sections.join('\n')
+}
+
+function workspaceEntriesToFileNodes(
+    entries: WorkspaceFileEntry[],
+    rootPath: string
+): FileNode[] {
+    const rootNodes: FileNode[] = []
+
+    const ensureFolder = (nodes: FileNode[], name: string, path: string): FileNode => {
+        const existing = nodes.find(
+            (node) => node.type === 'folder' && node.name === name
+        )
+        if (existing) {
+            existing.children ??= []
+            return existing
+        }
+
+        const folder: FileNode = {
+            name,
+            path,
+            type: 'folder',
+            children: [],
+        }
+        nodes.push(folder)
+        return folder
+    }
+
+    for (const entry of entries) {
+        const relativePath = toRelativeWorkspacePath(entry.path, rootPath)
+        const segments = relativePath.split('/').filter(Boolean)
+        if (segments.length === 0) {
+            continue
+        }
+
+        let level = rootNodes
+        let currentPath = ''
+
+        for (let index = 0; index < segments.length; index += 1) {
+            const segment = segments[index]
+            currentPath = currentPath ? `${currentPath}/${segment}` : segment
+            const isLeaf = index === segments.length - 1
+
+            if (isLeaf && !entry.is_dir) {
+                level.push({
+                    name: segment,
+                    path: currentPath,
+                    type: 'file',
+                })
+                continue
+            }
+
+            const folder = ensureFolder(level, segment, currentPath)
+            level = folder.children ?? []
+            folder.children = level
+        }
+    }
+
+    return sortFileNodes(rootNodes)
+}
+
+function sortFileNodes(nodes: FileNode[]): FileNode[] {
+    return [...nodes]
+        .sort((left, right) => {
+            if (left.type !== right.type) {
+                return left.type === 'folder' ? -1 : 1
+            }
+            return left.name.localeCompare(right.name)
+        })
+        .map((node) =>
+            node.type === 'folder' && node.children
+                ? { ...node, children: sortFileNodes(node.children) }
+                : node
+        )
+}
+
+function toRelativeWorkspacePath(path: string, rootPath: string): string {
+    const normalizedPath = path.replace(/\\/g, '/').replace(/^\/+/, '')
+    const normalizedRoot = rootPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+
+    if (normalizedRoot.length === 0) {
+        return normalizedPath
+    }
+
+    return normalizedPath.startsWith(`${normalizedRoot}/`)
+        ? normalizedPath.slice(normalizedRoot.length + 1)
+        : normalizedPath
+}
+
+function inferCodeLanguageFromPath(
+    path: string
+): 'typescript' | 'javascript' | 'python' | 'json' | 'bash' | 'html' | 'css' {
+    return inferCodeLanguage({
+        type: 'file',
+        filename: path.split('/').pop(),
+        mediaType: 'text/plain',
+        url: path,
+    })
+}
+
+interface PlanStepData {
+    title: string
+    description?: string
+}
+
+interface PlanDataShape {
+    title: string
+    description?: string
+    steps?: PlanStepData[]
+    isStreaming?: boolean
+}
+
+interface TaskDataShape {
+    title: string
+    items: Array<{
+        text: string
+        file?: string
+    }>
+}
+
+interface QueueAttachmentData {
+    type: 'image' | 'file'
+    url?: string
+    filename?: string
+}
+
+interface QueueItemData {
+    id: string
+    title: string
+    description?: string
+    status?: 'pending' | 'completed'
+    attachments?: QueueAttachmentData[]
+}
+
+interface QueueSectionData {
+    id: string
+    label: string
+    items: QueueItemData[]
+}
+
+interface QueueDataShape {
+    sections: QueueSectionData[]
+}
+
+interface ChainOfThoughtStepData {
+    label: string
+    description?: string
+    status?: 'complete' | 'active' | 'pending'
+}
+
+interface ChainOfThoughtDataShape {
+    title?: string
+    steps: ChainOfThoughtStepData[]
+    searchResults?: string[]
+}
+
+function renderStructuredDataPart(
+    partType: string,
+    data: unknown
+): React.ReactNode | null {
+    if (isPlanDataPart(partType, data)) {
+        return renderPlanData(data)
+    }
+
+    if (isTaskDataPart(partType, data)) {
+        return renderTaskData(data)
+    }
+
+    if (isQueueDataPart(partType, data)) {
+        return renderQueueData(data)
+    }
+
+    if (isChainOfThoughtDataPart(partType, data)) {
+        return renderChainOfThoughtData(data)
+    }
+
+    return null
+}
+
+function isPlanDataPart(partType: string, data: unknown): data is PlanDataShape {
+    return (
+        partType.includes('plan') &&
+        isRecord(data) &&
+        typeof data.title === 'string'
+    )
+}
+
+function isTaskDataPart(partType: string, data: unknown): data is TaskDataShape {
+    return (
+        partType.includes('task') &&
+        isRecord(data) &&
+        typeof data.title === 'string' &&
+        Array.isArray(data.items)
+    )
+}
+
+function isQueueDataPart(
+    partType: string,
+    data: unknown
+): data is QueueDataShape {
+    return partType.includes('queue') && isRecord(data) && Array.isArray(data.sections)
+}
+
+function isChainOfThoughtDataPart(
+    partType: string,
+    data: unknown
+): data is ChainOfThoughtDataShape {
+    return (
+        (partType.includes('chain') || partType.includes('thought')) &&
+        isRecord(data) &&
+        Array.isArray(data.steps)
+    )
+}
+
+function renderPlanData(data: PlanDataShape): React.ReactNode {
+    return (
+        <Plan defaultOpen isStreaming={data.isStreaming ?? false}>
+            <PlanHeader>
+                <div>
+                    <PlanTitle>{data.title}</PlanTitle>
+                    {data.description ? (
+                        <PlanDescription>{data.description}</PlanDescription>
+                    ) : null}
+                </div>
+                <PlanAction>
+                    <PlanTrigger />
+                </PlanAction>
+            </PlanHeader>
+            {Array.isArray(data.steps) && data.steps.length > 0 ? (
+                <PlanContent className="space-y-2">
+                    {data.steps.map((step, index) => (
+                        <TaskItem key={`${step.title}-${index}`}>
+                            {index + 1}. {step.title}
+                            {step.description ? ` — ${step.description}` : ''}
+                        </TaskItem>
+                    ))}
+                </PlanContent>
+            ) : null}
+        </Plan>
+    )
+}
+
+function renderTaskData(data: TaskDataShape): React.ReactNode {
+    return (
+        <Task defaultOpen>
+            <TaskTrigger title={data.title} />
+            <TaskContent>
+                {data.items.map((item, index) => (
+                    <TaskItem key={`${item.text}-${index}`}>
+                        {item.text}
+                        {item.file ? <TaskItemFile>{item.file}</TaskItemFile> : null}
+                    </TaskItem>
+                ))}
+            </TaskContent>
+        </Task>
+    )
+}
+
+function renderQueueData(data: QueueDataShape): React.ReactNode {
+    return (
+        <Queue>
+            {data.sections.map((section) => (
+                <QueueSection key={section.id} defaultOpen>
+                    <QueueSectionTrigger>
+                        <QueueSectionLabel
+                            count={section.items.length}
+                            label={section.label}
+                        />
+                    </QueueSectionTrigger>
+                    <QueueSectionContent>
+                        <QueueList>
+                            {section.items.map((item) => {
+                                const completed = item.status === 'completed'
+
+                                return (
+                                    <QueueItem key={item.id}>
+                                        <div className="flex items-start gap-2">
+                                            <QueueItemIndicator
+                                                completed={completed}
+                                            />
+                                            <QueueItemContent
+                                                completed={completed}
+                                            >
+                                                {item.title}
+                                            </QueueItemContent>
+                                        </div>
+                                        {item.description ? (
+                                            <QueueItemDescription
+                                                completed={completed}
+                                            >
+                                                {item.description}
+                                            </QueueItemDescription>
+                                        ) : null}
+                                        {Array.isArray(item.attachments) &&
+                                        item.attachments.length > 0 ? (
+                                            <QueueItemAttachment>
+                                                {item.attachments.map(
+                                                    (attachment, index) =>
+                                                        attachment.type ===
+                                                            'image' &&
+                                                        attachment.url ? (
+                                                            <QueueItemImage
+                                                                key={`${item.id}-image-${index}`}
+                                                                src={attachment.url}
+                                                            />
+                                                        ) : (
+                                                            <QueueItemFile
+                                                                key={`${item.id}-file-${index}`}
+                                                            >
+                                                                {attachment.filename ??
+                                                                    attachment.url ??
+                                                                    'attachment'}
+                                                            </QueueItemFile>
+                                                        )
+                                                )}
+                                            </QueueItemAttachment>
+                                        ) : null}
+                                    </QueueItem>
+                                )
+                            })}
+                        </QueueList>
+                    </QueueSectionContent>
+                </QueueSection>
+            ))}
+        </Queue>
+    )
+}
+
+function renderChainOfThoughtData(
+    data: ChainOfThoughtDataShape
+): React.ReactNode {
+    return (
+        <ChainOfThought defaultOpen>
+            <ChainOfThoughtHeader>
+                {data.title ?? 'Chain of Thought'}
+            </ChainOfThoughtHeader>
+            <ChainOfThoughtContent>
+                {Array.isArray(data.searchResults) &&
+                data.searchResults.length > 0 ? (
+                    <ChainOfThoughtSearchResults>
+                        {data.searchResults.map((result, index) => (
+                            <ChainOfThoughtSearchResult key={`${result}-${index}`}>
+                                {result}
+                            </ChainOfThoughtSearchResult>
+                        ))}
+                    </ChainOfThoughtSearchResults>
+                ) : null}
+                {data.steps.map((step, index) => (
+                    <ChainOfThoughtStep
+                        key={`${step.label}-${index}`}
+                        label={step.label}
+                        description={step.description}
+                        status={step.status ?? 'complete'}
+                    />
+                ))}
+            </ChainOfThoughtContent>
+        </ChainOfThought>
+    )
 }
 
 // Render schema display
@@ -1675,7 +2552,10 @@ function renderSchema(output: ToolOutputValue): React.ReactNode {
                     <SchemaDisplayRequest>
                         <SchemaDisplayBody>
                             {output.requestBody.map((prop) => (
-                                <SchemaDisplayProperty key={prop.name} {...prop} />
+                                <SchemaDisplayProperty
+                                    key={prop.name}
+                                    {...prop}
+                                />
                             ))}
                         </SchemaDisplayBody>
                     </SchemaDisplayRequest>
@@ -1685,7 +2565,10 @@ function renderSchema(output: ToolOutputValue): React.ReactNode {
                     <SchemaDisplayResponse>
                         <SchemaDisplayBody>
                             {output.responseBody.map((prop) => (
-                                <SchemaDisplayProperty key={prop.name} {...prop} />
+                                <SchemaDisplayProperty
+                                    key={prop.name}
+                                    {...prop}
+                                />
                             ))}
                         </SchemaDisplayBody>
                     </SchemaDisplayResponse>
@@ -1695,9 +2578,17 @@ function renderSchema(output: ToolOutputValue): React.ReactNode {
             <SchemaDisplayExample>
                 <div className="flex items-center gap-2">
                     <CodeIcon className="size-4" />
-                    <span className="font-mono text-sm">{output.method} {output.path}</span>
+                    <span className="font-mono text-sm">
+                        {output.method} {output.path}
+                    </span>
                 </div>
-                <pre className="mt-2">{JSON.stringify({ method: output.method, path: output.path }, null, 2)}</pre>
+                <pre className="mt-2">
+                    {JSON.stringify(
+                        { method: output.method, path: output.path },
+                        null,
+                        2
+                    )}
+                </pre>
             </SchemaDisplayExample>
 
             {/* Use artifact components to surface a small source summary (exercise Artifact imports) */}
@@ -1769,14 +2660,20 @@ function renderPackageInfo(output: ToolOutputValue): React.ReactNode {
             {pkg.dependencies && Object.keys(pkg.dependencies).length > 0 && (
                 <PackageInfoContent>
                     <PackageInfoDependencies>
-                        {Object.entries(pkg.dependencies).map(([depName, depVersion]) => (
-                            <PackageInfoDependency key={depName} name={''}>
-                                <div className="flex items-center justify-between w-full">
-                                    <span className="truncate">{depName}</span>
-                                    <span className="text-xs text-muted-foreground ml-2">{depVersion}</span>
-                                </div>
-                            </PackageInfoDependency>
-                        ))}
+                        {Object.entries(pkg.dependencies).map(
+                            ([depName, depVersion]) => (
+                                <PackageInfoDependency key={depName} name={''}>
+                                    <div className="flex items-center justify-between w-full">
+                                        <span className="truncate">
+                                            {depName}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                            {depVersion}
+                                        </span>
+                                    </div>
+                                </PackageInfoDependency>
+                            )
+                        )}
                     </PackageInfoDependencies>
                 </PackageInfoContent>
             )}
@@ -1865,3 +2762,95 @@ function renderConfirmation(
 
 // Memoize for performance
 export const MemoizedChatMessages = memo(ChatMessages)
+
+function areMessagesEquivalent(left: UIMessage[], right: UIMessage[]): boolean {
+    if (left.length !== right.length) {
+        return false
+    }
+
+    return left.every((message, index) => {
+        const candidate = right[index]
+
+        return (
+            message.id === candidate?.id &&
+            message.role === candidate?.role &&
+            isDeepEqualData(
+                message.metadata ?? null,
+                candidate?.metadata ?? null
+            ) &&
+            isDeepEqualData(message.parts, candidate?.parts)
+        )
+    })
+}
+
+function describeMessageValidationError(validationError: Error): string {
+    if (validationError instanceof InvalidResponseDataError) {
+        return 'The server returned UI message data that does not match the expected structure.'
+    }
+
+    if (validationError instanceof InvalidMessageRoleError) {
+        return 'A restored message used an unsupported role.'
+    }
+
+    if (validationError instanceof InvalidArgumentError) {
+        return 'The conversation payload was missing a required argument during validation.'
+    }
+
+    if (validationError instanceof UIMessageStreamError) {
+        return 'A streamed UI message chunk could not be reconstructed cleanly.'
+    }
+
+    return validationError.message
+}
+
+function canReadFilePartAsText(part: FileUIPart): boolean {
+    return (
+        part.url.startsWith('data:text/') ||
+        part.mediaType.startsWith('text/') ||
+        part.mediaType === 'application/json'
+    )
+}
+
+function readTextFromFilePart(part: FileUIPart): string {
+    try {
+        if (part.url.startsWith('data:')) {
+            return getTextFromDataUrl(part.url)
+        }
+    } catch {
+        // Fall through to link fallback.
+    }
+
+    return `${part.filename ?? 'Attached file'}\n${part.url}`
+}
+
+function inferCodeLanguage(
+    part: FileUIPart
+): 'typescript' | 'javascript' | 'python' | 'json' | 'bash' | 'html' | 'css' {
+    const filename = part.filename?.toLowerCase() ?? ''
+
+    if (filename.endsWith('.ts') || filename.endsWith('.tsx')) {
+        return 'typescript'
+    }
+
+    if (filename.endsWith('.js') || filename.endsWith('.jsx')) {
+        return 'javascript'
+    }
+
+    if (filename.endsWith('.py')) {
+        return 'python'
+    }
+
+    if (filename.endsWith('.html')) {
+        return 'html'
+    }
+
+    if (filename.endsWith('.css')) {
+        return 'css'
+    }
+
+    if (filename.endsWith('.sh')) {
+        return 'bash'
+    }
+
+    return 'json'
+}

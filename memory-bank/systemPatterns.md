@@ -184,7 +184,7 @@ workingMemory: {
 ## Key Technical Decisions
 
 1. **VoltAgent Framework** - TypeScript-native, workflow chains, VoltOps, guardrails
-2. **Google Gemini** - Primary LLM (gemini-2.5-flash-lite)
+2. **Google Gemini** - Primary LLM (`gemini-3.1-flash-lite-preview`) with `gemini-embedding-2-preview` for routing and retrieval
 3. **LibSQL** - Local memory + vector storage
 4. **Zod Validation** - Runtime type safety
 5. **Tool-First Design** - Specialized tools over general capabilities
@@ -192,4 +192,4 @@ workingMemory: {
 
 ---
 
-_Last Updated: 2026-02-14_
+_Last Updated: 2026-03-15_

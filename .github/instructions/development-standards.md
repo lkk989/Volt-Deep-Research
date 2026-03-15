@@ -95,7 +95,7 @@ export const agentName = new Agent({
   id: "agent-id",
   name: "Agent Name",
   purpose: "Clear description of agent's role and responsibilities",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: google("gemini-3.1-flash-lite-preview"),
   instructions: "Detailed system prompt with specific guidelines",
   tools: [], // Agent-specific tools
   toolkits: [thinkOnlyToolkit], // Shared toolkits

@@ -8,6 +8,8 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
+    PromptInputActionAddAttachments,
+    PromptInputActionAddScreenshot,
     PromptInput,
     PromptInputBody,
     PromptInputFooter,
@@ -17,11 +19,28 @@ import {
     PromptInputTools,
     PromptInputActionMenu,
     PromptInputActionMenuContent,
-    PromptInputActionMenuItem,
     PromptInputActionMenuTrigger,
     PromptInputProvider,
+    usePromptInputAttachments,
+    usePromptInputController,
 } from '@/components/ai-elements/prompt-input'
+import {
+    Attachment,
+    Attachments,
+    AttachmentHoverCard,
+    AttachmentHoverCardContent,
+    AttachmentHoverCardTrigger,
+    AttachmentInfo,
+    AttachmentPreview,
+    AttachmentRemove,
+} from '@/components/ai-elements/attachments'
 import { SpeechInput } from '@/components/ai-elements/speech-input'
+import {
+    WebPreview,
+    WebPreviewBody,
+    WebPreviewNavigation,
+    WebPreviewUrl,
+} from '@/components/ai-elements/web-preview'
 import {
     ModelSelector,
     ModelSelectorContent,
@@ -34,9 +53,9 @@ import {
     ModelSelectorName,
 } from '@/components/ai-elements/model-selector'
 import { cn } from '@/lib/utils'
-import { ImageIcon, PaperclipIcon } from 'lucide-react'
-import { useState, useCallback, useRef } from 'react'
-// ChatStatus type based on Vercel AI SDK behavior
+import { GlobeIcon } from 'lucide-react'
+import { useState, useCallback, useMemo, useRef } from 'react'
+// ChatStatus type based on Vercel AI SDK behavior, Im not using Vercel AI SDK, im using Voltagent with AI SDK but the status values are similar enough that this type is still relevant for managing the submit button state in the UI. If we had a more direct integration with Vercel AI SDK, we might be able to use their types directly instead of defining our own ChatStatus type here.
 type ChatStatus = 'streaming' | 'submitted' | 'ready' | 'error' | undefined
 
 interface TokenUsage {
@@ -49,6 +68,7 @@ interface ChatInputProps {
     onSubmit: (message: PromptInputMessage) => Promise<void>
     tokenUsage?: TokenUsage
     selectedModel?: string
+    defaultModelId?: string
     onModelChange?: (model: string) => void
     modelOptions?: string[]
     showWebPreview?: boolean
@@ -59,6 +79,7 @@ export function ChatInput({
     onSubmit,
     tokenUsage,
     selectedModel = '',
+    defaultModelId = '',
     onModelChange,
     modelOptions = [],
     showWebPreview = false,
@@ -98,7 +119,9 @@ export function ChatInput({
         [onModelChange]
     )
 
-    const selectedProvider = getProviderFromModelId(selectedModel)
+    const effectiveModelId =
+        selectedModel.trim().length > 0 ? selectedModel : defaultModelId
+    const selectedProvider = getProviderFromModelId(effectiveModelId)
 
     return (
         <div className="border-t bg-background">
@@ -152,6 +175,10 @@ export function ChatInput({
                             placeholder="Ask about your research..."
                             className="min-h-15 max-h-50 w-full resize-none bg-transparent text-sm placeholder:text-muted-foreground focus-visible:outline-none"
                         />
+
+                        <ChatInputAttachments />
+
+                        {showWebPreview ? <ChatInputWebPreview /> : null}
                     </PromptInputBody>
 
                     <PromptInputFooter>
@@ -249,14 +276,8 @@ export function ChatInput({
                                     align="start"
                                     className="w-48"
                                 >
-                                    <PromptInputActionMenuItem>
-                                        <ImageIcon className="mr-2 size-4" />
-                                        Upload Image
-                                    </PromptInputActionMenuItem>
-                                    <PromptInputActionMenuItem>
-                                        <PaperclipIcon className="mr-2 size-4" />
-                                        Attach File
-                                    </PromptInputActionMenuItem>
+                                    <PromptInputActionAddAttachments />
+                                    <PromptInputActionAddScreenshot />
                                 </PromptInputActionMenuContent>
                             </PromptInputActionMenu>
 
@@ -386,9 +407,9 @@ export function ChatInput({
                                                 />
                                             )}
                                             <span className="truncate max-w-40">
-                                                {selectedModel.trim().length >
+                                                {effectiveModelId.trim().length >
                                                 0
-                                                    ? selectedModel
+                                                    ? effectiveModelId
                                                     : 'Model: (agent default)'}
                                             </span>
                                         </Button>
@@ -404,6 +425,79 @@ export function ChatInput({
                     </PromptInputFooter>
                 </PromptInput>
             </PromptInputProvider>
+        </div>
+    )
+}
+
+function ChatInputAttachments() {
+    const attachments = usePromptInputAttachments()
+
+    if (attachments.files.length === 0) {
+        return null
+    }
+
+    return (
+        <Attachments className="px-3 pb-1" variant="grid">
+            {attachments.files.map((file) => (
+                <Attachment
+                    key={file.id}
+                    data={file}
+                    onRemove={() => attachments.remove(file.id)}
+                >
+                    <AttachmentHoverCard>
+                        <AttachmentHoverCardTrigger asChild>
+                            <div className="size-full cursor-pointer">
+                                <AttachmentPreview />
+                            </div>
+                        </AttachmentHoverCardTrigger>
+                        <AttachmentHoverCardContent>
+                            <div className="min-w-56 max-w-80">
+                                <AttachmentPreview className="h-40 w-full rounded-md" />
+                                <AttachmentInfo
+                                    className="mt-2"
+                                    showMediaType
+                                />
+                            </div>
+                        </AttachmentHoverCardContent>
+                    </AttachmentHoverCard>
+                    <AttachmentRemove />
+                </Attachment>
+            ))}
+        </Attachments>
+    )
+}
+
+function ChatInputWebPreview() {
+    const controller = usePromptInputController()
+    const previewUrl = useMemo(
+        () => extractFirstUrl(controller.textInput.value),
+        [controller.textInput.value]
+    )
+
+    if (!previewUrl) {
+        return (
+            <div className="px-3 pb-2 text-xs text-muted-foreground">
+                Type a URL in your message to preview it here.
+            </div>
+        )
+    }
+
+    return (
+        <div className="px-3 pb-2">
+            <WebPreview
+                key={previewUrl}
+                defaultUrl={previewUrl}
+                className="h-72 overflow-hidden"
+            >
+                <WebPreviewNavigation>
+                    <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                        <GlobeIcon className="size-3.5" />
+                        <span>Web preview</span>
+                    </div>
+                    <WebPreviewUrl />
+                </WebPreviewNavigation>
+                <WebPreviewBody />
+            </WebPreview>
         </div>
     )
 }
@@ -432,6 +526,22 @@ function groupModelIdsByProvider(modelIds: string[]): Record<string, string[]> {
         result[provider].push(trimmed)
     }
     return result
+}
+
+function extractFirstUrl(text: string): string | undefined {
+    const match = text.match(/https?:\/\/[^\s]+/i)
+    const candidate = match?.[0]?.trim()
+
+    if (!candidate) {
+        return undefined
+    }
+
+    try {
+        const url = new URL(candidate)
+        return url.toString()
+    } catch {
+        return undefined
+    }
 }
 
 // Helper component for empty state

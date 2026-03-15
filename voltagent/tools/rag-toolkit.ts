@@ -850,7 +850,7 @@ export const chunkContentSemanticTool = createTool({
     ) => {
         ensureActive(context)
         const embedder = new AiSdkEmbeddingAdapter(
-            google.embedding('gemini-embedding-001')
+            google.embedding('gemini-embedding-2-preview')
         )
         const chunker = new SemanticChunker()
         const chunks = await chunker.chunk(content, {
@@ -930,7 +930,7 @@ export const chunkContentSemanticMarkdownTool = createTool({
     ) => {
         ensureActive(context)
         const embedder = new AiSdkEmbeddingAdapter(
-            google.embedding('gemini-embedding-001')
+            google.embedding('gemini-embedding-2-preview')
         )
         const chunker = new SemanticMarkdownChunker()
         const chunks = await chunker.chunk(content, {
@@ -1109,7 +1109,7 @@ export const createChunkEmbeddingsTool = createTool({
         ensureActive(context)
 
         const { embeddings } = await embedMany({
-            model: google.embedding('gemini-embedding-001'),
+            model: google.embedding('gemini-embedding-2-preview'),
             values: chunks.map((chunk) => chunk.content),
         })
 
@@ -1168,7 +1168,7 @@ export const indexChunksTool = createTool({
         ensureActive(context)
 
         const { embeddings } = await embedMany({
-            model: google.embedding('gemini-embedding-001'),
+            model: google.embedding('gemini-embedding-2-preview'),
             values: chunks.map((chunk) => chunk.content),
         })
 

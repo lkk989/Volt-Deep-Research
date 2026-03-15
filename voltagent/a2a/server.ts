@@ -7,6 +7,3 @@ export const a2aServer = new A2AServer({
   description: "VoltAgent A2A example",
 });
 
-
-
-

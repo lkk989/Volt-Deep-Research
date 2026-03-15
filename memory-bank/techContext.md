@@ -13,11 +13,9 @@
 
 ### AI Providers
 
-| Provider  | Package                | Models                     |
-| --------- | ---------------------- | -------------------------- |
-| Google AI | @ai-sdk/google ^3.0.10 | Gemini 2.5 Flash (primary) |
-| OpenAI    | @ai-sdk/openai ^3.0.12 | GPT-5 (optional)           |
-| Vertex AI | @ai-sdk/google-vertex  | Vertex models              |
+- **Google AI** (`@ai-sdk/google ^3.0.10`) - `gemini-3.1-flash-lite-preview` for primary agent execution and `gemini-embedding-2-preview` for embeddings
+- **OpenAI** (`@ai-sdk/openai ^3.0.12`) - GPT-5 (optional)
+- **Vertex AI** (`@ai-sdk/google-vertex`) - Vertex-hosted models
 
 ### Storage & Memory
 
@@ -154,4 +152,4 @@ flowchart TB
 
 ---
 
-\*Last Updated: 2026-02-14
+\*Last Updated: 2026-03-15

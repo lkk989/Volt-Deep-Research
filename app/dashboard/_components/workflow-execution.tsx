@@ -1,63 +1,39 @@
 'use client'
 
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Canvas } from "@/components/ai-elements/canvas"
-import { Node, NodeHeader, NodeTitle, NodeContent } from "@/components/ai-elements/node"
-import { Edge } from "@/components/ai-elements/edge"
-import { Connection } from "@/components/ai-elements/connection"
-import { Panel } from "@/components/ai-elements/panel"
-import { Controls } from "@/components/ai-elements/controls"
-import { Loader2, X, CheckCircle2, AlertCircle } from "lucide-react"
-import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react"
-import { useEffect, useState, useRef } from "react"
-
-const VOLTAGENT_API_URL = process.env.NEXT_PUBLIC_VOLTAGENT_URL || 'http://localhost:3141'
+import { useEffect, useRef, useState } from 'react'
+import { AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { DEFAULT_VOLTAGENT_BASE_URL } from '@/lib/voltagent-client'
+import { useVoltAgentWorkflow } from '@/hooks/use-voltagent'
+import {
+    WorkflowVisualizer,
+    type WorkflowNodeStatus,
+    type WorkflowVisualizationEvent,
+} from './workflow-visualizer'
 
 interface WorkflowExecutionProps {
     workflowId: string
-    input: any
+    input: unknown
     onClose?: () => void
     userId?: string
 }
 
 interface WorkflowStreamEvent {
     type: string
-    executionId: string
-    from: string
-    input?: any
-    output?: any
-    status: "pending" | "running" | "success" | "error" | "suspended"
-    timestamp: string
+    executionId?: string
+    from?: string
+    input?: unknown
+    output?: unknown
+    status?: WorkflowNodeStatus | 'completed'
+    timestamp?: string
     stepIndex?: number
     stepType?: string
-    metadata?: any
-    error?: any
-}
-
-const nodeTypes = {
-    workflow: ({ data }: { data: any }) => (
-        <Node handles={{ target: true, source: true }}>
-            <NodeHeader>
-                <div className="flex items-center justify-between w-full">
-                    <NodeTitle>{data.label}</NodeTitle>
-                    {data.status && (
-                        <Badge variant={data.status === "running" ? "secondary" : data.status === "success" ? "default" : "destructive"}>
-                            {data.status}
-                        </Badge>
-                    )}
-                </div>
-            </NodeHeader>
-            <NodeContent>
-                <span className="text-xs text-muted-foreground">{data.type}</span>
-            </NodeContent>
-        </Node>
-    ),
-}
-
-const edgeTypes = {
-    default: Edge.Animated,
+    metadata?: Record<string, unknown>
+    error?: {
+        message?: string
+    }
 }
 
 export function WorkflowExecution({
@@ -66,8 +42,9 @@ export function WorkflowExecution({
     onClose,
     userId = "user-1"
 }: WorkflowExecutionProps) {
-    const [nodes, setNodes] = useState<FlowNode[]>([])
-    const [edges, setEdges] = useState<FlowEdge[]>([])
+    const { data: workflow, isLoading: isWorkflowLoading } =
+        useVoltAgentWorkflow(workflowId)
+    const [events, setEvents] = useState<WorkflowVisualizationEvent[]>([])
     const [status, setStatus] = useState<'loading' | 'idle' | 'error'>('loading')
     const [error, setError] = useState<string | null>(null)
     const [executionId, setExecutionId] = useState<string>("")
@@ -83,10 +60,12 @@ export function WorkflowExecution({
     const startExecution = async () => {
         try {
             setStatus('loading')
+            setError(null)
+            setEvents([])
             abortControllerRef.current = new AbortController()
             
             const response = await fetch(
-                `${VOLTAGENT_API_URL}/workflows/${workflowId}/stream`,
+                `${DEFAULT_VOLTAGENT_BASE_URL}/workflows/${workflowId}/stream`,
                 {
                     method: 'POST',
                     headers: {
@@ -135,11 +114,13 @@ export function WorkflowExecution({
                     }
                 }
             }
-        } catch (err: any) {
-            if (err.name !== 'AbortError') {
+        } catch (err: unknown) {
+            if (!(err instanceof Error) || err.name !== 'AbortError') {
                 console.error('Execution error:', err)
                 setStatus('error')
-                setError(err.message)
+                setError(
+                    err instanceof Error ? err.message : 'Workflow execution failed'
+                )
             }
         }
     }
@@ -155,57 +136,14 @@ export function WorkflowExecution({
             return
         }
 
+        setEvents((current) => [...current, event])
+
         if (event.type.startsWith('step-') || event.type === 'workflow-start') {
-            updateVisualization(event)
+            setStatus('loading')
         }
     }
 
-    const updateVisualization = (event: WorkflowStreamEvent) => {
-        setNodes(prev => {
-            const existing = prev.find(n => n.id === event.from)
-
-            const newNode: FlowNode = {
-                id: event.from || `step-${prev.length}`,
-                type: "workflow",
-                position: {
-                    x: existing ? existing.position.x : 100 + prev.length * 250,
-                    y: existing ? existing.position.y : 100
-                },
-                data: {
-                    label: event.from || event.stepType || 'Step',
-                    status: event.status,
-                    type: event.stepType || event.type,
-                },
-            }
-
-            if (existing) {
-                return prev.map(n => n.id === event.from ? newNode : n)
-            }
-
-            const updated = [...prev, newNode]
-            
-            // Create edge from previous node to this one
-            if (updated.length > 1) {
-                setEdges(prevEdges => {
-                    const edgeExists = prevEdges.some(e => e.target === newNode.id)
-                    if (!edgeExists) {
-                        const sourceNode = updated[updated.length - 2]
-                        return [...prevEdges, {
-                            id: `edge-${prevEdges.length}`,
-                            source: sourceNode.id,
-                            target: newNode.id,
-                            type: "default",
-                        }]
-                    }
-                    return prevEdges
-                })
-            }
-
-            return updated
-        })
-    }
-
-    const isComplete = status === 'idle' && nodes.length > 0
+    const isComplete = status === 'idle' && events.length > 0
     const isError = status === 'error'
 
     return (
@@ -232,21 +170,19 @@ export function WorkflowExecution({
                 </Button>
             </div>
 
-            <Card className="h-150">
-                <Canvas
-                    nodes={nodes}
-                    edges={edges}
-                    nodeTypes={nodeTypes}
-                    edgeTypes={edgeTypes}
-                    connectionLineComponent={Connection}
-                    fitView
-                >
-                    <Panel position="top-left">
-                        <div className="text-sm font-medium">Workflow: {workflowId}</div>
-                    </Panel>
-                    <Controls />
-                </Canvas>
-            </Card>
+            {isWorkflowLoading || !workflow ? (
+                <Card className="flex h-[600px] items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </Card>
+            ) : (
+                <WorkflowVisualizer
+                    workflowId={workflow.id}
+                    workflowName={workflow.name}
+                    workflowPurpose={workflow.purpose}
+                    steps={workflow.steps}
+                    events={events}
+                />
+            )}
 
             {error && (
                 <div className="mt-4 p-4 bg-destructive/10 rounded-lg">

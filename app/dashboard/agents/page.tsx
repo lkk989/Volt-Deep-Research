@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {
     Card,
     CardContent,
@@ -9,122 +10,25 @@ import {
 } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
     BotIcon,
     ActivityIcon,
     MemoryStickIcon,
-    ZapIcon,
     Settings2Icon,
     CheckCircleIcon,
-    XCircleIcon,
     ClockIcon,
 } from 'lucide-react'
-
-const mockAgents = [
-    {
-        id: 'plan-agent',
-        name: 'Deep Research Agent',
-        description: 'Orchestrates multi-agent research workflows',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '2.3 MB',
-        uptime: '99.9%',
-        role: 'orchestrator',
-    },
-    {
-        id: 'assistant',
-        name: 'Assistant',
-        description: 'Query generation and search coordination',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '1.8 MB',
-        uptime: '99.7%',
-        role: 'researcher',
-    },
-    {
-        id: 'writer',
-        name: 'Writer',
-        description: 'Report synthesis and composition',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '3.1 MB',
-        uptime: '99.8%',
-        role: 'composer',
-    },
-    {
-        id: 'scrapper',
-        name: 'Scrapper',
-        description: 'Web data extraction and collection',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '1.5 MB',
-        uptime: '98.5%',
-        role: 'collector',
-    },
-    {
-        id: 'data-analyzer',
-        name: 'Data Analyzer',
-        description: 'Pattern analysis and insight extraction',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '2.7 MB',
-        uptime: '99.6%',
-        role: 'analyst',
-    },
-    {
-        id: 'fact-checker',
-        name: 'Fact Checker',
-        description: 'Verification and bias detection',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '1.9 MB',
-        uptime: '99.9%',
-        role: 'verifier',
-    },
-    {
-        id: 'synthesizer',
-        name: 'Synthesizer',
-        description: 'Multi-source information synthesis',
-        status: 'idle',
-        model: 'gemini-2.0-flash-exp',
-        memory: '2.1 MB',
-        uptime: '99.5%',
-        role: 'synthesizer',
-    },
-    {
-        id: 'coding',
-        name: 'Coding Agent',
-        description: 'Code implementation and bug fixes',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '3.5 MB',
-        uptime: '99.3%',
-        role: 'developer',
-    },
-    {
-        id: 'data-scientist',
-        name: 'Data Scientist',
-        description: 'Statistical analysis and modeling',
-        status: 'active',
-        model: 'gemini-2.0-flash-exp',
-        memory: '4.2 MB',
-        uptime: '99.4%',
-        role: 'scientist',
-    },
-    {
-        id: 'judge',
-        name: 'Judge',
-        description: 'Quality evaluation and scoring',
-        status: 'idle',
-        model: 'gemini-2.0-flash-exp',
-        memory: '1.2 MB',
-        uptime: '99.9%',
-        role: 'evaluator',
-    },
-]
+import { useVoltAgentList } from '@/hooks/use-voltagent'
 
 export default function AgentsPage() {
+    const { data: agents = [] } = useVoltAgentList()
+
+    const activeAgents = agents.filter((agent) => agent.status === 'active')
+    const memoryEnabledAgents = agents.filter((agent) => agent.memory != null)
+    const telemetryEnabledAgents = agents.filter(
+        (agent) => agent.isTelemetryEnabled
+    )
+
     return (
         <div className="flex h-full flex-col gap-6 p-8">
             <div className="flex items-center justify-between">
@@ -133,13 +37,14 @@ export default function AgentsPage() {
                         Agents
                     </h1>
                     <p className="text-muted-foreground">
-                        Manage and monitor your specialized AI agents.
+                        Browse registered VoltAgent agents and open a dedicated
+                        chat session for the one you want to work with.
                     </p>
                 </div>
-                <Button className="gap-2" variant="outline">
+                <div className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm text-muted-foreground">
                     <Settings2Icon className="h-4 w-4" />
-                    Configure
-                </Button>
+                    Runtime registry
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -151,12 +56,13 @@ export default function AgentsPage() {
                         <BotIcon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">14</div>
+                        <div className="text-2xl font-bold">{agents.length}</div>
                         <p className="text-xs text-muted-foreground">
-                            10 specialized agents
+                            Registered VoltAgent agents
                         </p>
                     </CardContent>
                 </Card>
+
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
@@ -166,38 +72,44 @@ export default function AgentsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-500">
-                            8
+                            {activeAgents.length}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            Currently processing
+                            Agents currently marked active
                         </p>
                     </CardContent>
                 </Card>
+
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
-                            Memory Usage
+                            Memory Enabled
                         </CardTitle>
                         <MemoryStickIcon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">28.3 MB</div>
+                        <div className="text-2xl font-bold">
+                            {memoryEnabledAgents.length}
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                            Across all agents
+                            Agents with memory configured
                         </p>
                     </CardContent>
                 </Card>
+
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
-                            Avg Uptime
+                            Telemetry Enabled
                         </CardTitle>
                         <ActivityIcon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">99.6%</div>
+                        <div className="text-2xl font-bold">
+                            {telemetryEnabledAgents.length}
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                            Last 30 days
+                            Agents emitting observability data
                         </p>
                     </CardContent>
                 </Card>
@@ -205,95 +117,104 @@ export default function AgentsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Agent Status</CardTitle>
+                    <CardTitle>Agent Registry</CardTitle>
                     <CardDescription>
-                        Real-time status of all specialized agents
+                        Select an agent to open a chat that is bound to that
+                        exact runtime agent.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ScrollArea className="h-[600px]">
+                    <ScrollArea className="h-150">
                         <div className="grid gap-4 md:grid-cols-2">
-                            {mockAgents.map((agent) => (
-                                <Card
+                            {agents.map((agent) => (
+                                <Link
                                     key={agent.id}
-                                    className="border-2 transition-colors hover:bg-accent"
+                                    href={`/dashboard/chat/${encodeURIComponent(agent.id)}`}
                                 >
-                                    <CardContent className="p-6">
-                                        <div className="space-y-3">
-                                            <div className="flex items-start justify-between">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <BotIcon className="h-5 w-5 text-primary" />
-                                                        <h3 className="font-semibold text-lg">
-                                                            {agent.name}
-                                                        </h3>
+                                    <Card className="border-2 transition-colors hover:bg-accent">
+                                        <CardContent className="p-6">
+                                            <div className="space-y-3">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <BotIcon className="h-5 w-5 text-primary" />
+                                                            <h3 className="font-semibold text-lg">
+                                                                {agent.name}
+                                                            </h3>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {agent.description ??
+                                                                'No description available'}
+                                                        </p>
                                                     </div>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {agent.description}
-                                                    </p>
-                                                </div>
-                                                <Badge
-                                                    variant={
-                                                        agent.status ===
-                                                        'active'
-                                                            ? 'default'
-                                                            : 'secondary'
-                                                    }
-                                                    className="flex items-center gap-1"
-                                                >
-                                                    {agent.status ===
-                                                    'active' ? (
-                                                        <ActivityIcon className="h-3 w-3" />
-                                                    ) : (
-                                                        <ClockIcon className="h-3 w-3" />
-                                                    )}
-                                                    {agent.status
-                                                        .charAt(0)
-                                                        .toUpperCase() +
-                                                        agent.status.slice(1)}
-                                                </Badge>
-                                            </div>
 
-                                            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                                                <div className="space-y-1">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Model
-                                                    </p>
-                                                    <p className="text-sm font-medium">
-                                                        {agent.model}
-                                                    </p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Role
-                                                    </p>
                                                     <Badge
-                                                        variant="outline"
-                                                        className="text-xs"
+                                                        variant={
+                                                            agent.status ===
+                                                            'active'
+                                                                ? 'default'
+                                                                : 'secondary'
+                                                        }
+                                                        className="flex items-center gap-1"
                                                     >
-                                                        {agent.role}
+                                                        {agent.status ===
+                                                        'active' ? (
+                                                            <ActivityIcon className="h-3 w-3" />
+                                                        ) : (
+                                                            <ClockIcon className="h-3 w-3" />
+                                                        )}
+                                                        {agent.status
+                                                            .charAt(0)
+                                                            .toUpperCase() +
+                                                            agent.status.slice(1)}
                                                     </Badge>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Memory
-                                                    </p>
-                                                    <p className="text-sm font-medium">
-                                                        {agent.memory}
-                                                    </p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Uptime
-                                                    </p>
-                                                    <p className="text-sm font-medium">
-                                                        {agent.uptime}
-                                                    </p>
+
+                                                <div className="grid grid-cols-2 gap-4 border-t pt-2">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Model
+                                                        </p>
+                                                        <p className="text-sm font-medium break-all">
+                                                            {agent.model}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Tools
+                                                        </p>
+                                                        <p className="text-sm font-medium">
+                                                            {agent.tools.length}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Memory
+                                                        </p>
+                                                        <p className="text-sm font-medium">
+                                                            {agent.memory
+                                                                ? 'Enabled'
+                                                                : 'Disabled'}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Telemetry
+                                                        </p>
+                                                        <p className="text-sm font-medium">
+                                                            {agent.isTelemetryEnabled
+                                                                ? 'Enabled'
+                                                                : 'Disabled'}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
                             ))}
                         </div>
                     </ScrollArea>

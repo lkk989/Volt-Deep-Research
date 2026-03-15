@@ -27,7 +27,7 @@ class WorkspaceSearchIndex {
 
     private readonly vector = new InMemoryVectorAdapter();
     private readonly embedding = new AiSdkEmbeddingAdapter(
-        google.textEmbedding("gemini-embedding-001")
+        google.textEmbedding("gemini-embedding-2-preview")
     );
 
     public async upsert(doc: IndexedDoc): Promise<void> {

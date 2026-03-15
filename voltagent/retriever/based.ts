@@ -150,7 +150,7 @@ const toSearchText = (input: string | BaseMessage[]): string => {
     return ''
 }
 
-const EMBEDDING_MODEL = 'gemini-embedding-001' as const
+const EMBEDDING_MODEL = 'gemini-embedding-2-preview' as const
 
 class SimpleRetriever extends BaseRetriever {
     private documents: StaticDocument[]

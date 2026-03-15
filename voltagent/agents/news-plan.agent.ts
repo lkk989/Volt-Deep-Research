@@ -80,12 +80,12 @@ export const newsPlanAgent = new PlanAgent({
     model: [
         {
             id: 'primary',
-            model: google('gemini-2.5-flash-lite-preview-09-2025'),
+            model: google('gemini-3.1-flash-lite-preview'),
             maxRetries: 3,
         },
         {
             id: 'secondary',
-            model: google('gemini-2.0-flash-exp'),
+            model: google('gemini-3.1-flash-preview'),
             maxRetries: 2,
         },
     ],
@@ -105,11 +105,11 @@ export const newsPlanAgent = new PlanAgent({
         compareSentimentTool,
     ],
 
-    toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+    toolkits: [],
 
     toolRouting: {
         embedding: {
-            model: 'google/gemini-embedding-001',
+            model: 'google/gemini-embedding-2-preview',
             normalize: true,
             maxBatchSize: 200,
             topK: 3,
@@ -130,15 +130,6 @@ export const newsPlanAgent = new PlanAgent({
 
     hooks: {
         ...defaultAgentHooks,
-        onStart: async ({ agent, context }) => {
-            voltlogger.info(
-                `[News PlanAgent] Starting news monitoring operation`,
-                {
-                    agent: agent.name,
-                    operationId: context.operationId,
-                }
-            )
-        },
         onRetry: async (args) => {
             if (args.source === 'llm') {
                 voltlogger.warn(
@@ -159,7 +150,7 @@ export const newsPlanAgent = new PlanAgent({
 
     subagents: [dataAnalyzerAgent, dataScientistAgent],
 
-    generalPurposeAgent: true,
+    generalPurposeAgent: false,
 
     task: {
         systemPrompt:
@@ -171,12 +162,30 @@ export const newsPlanAgent = new PlanAgent({
             includeAgentsMemory: true,
             fullStreamEventForwarding: {
                 types: [
-                    'tool-call',
-                    'tool-result',
-                    'text-delta',
-                    'start-step',
-                    'finish-step',
-                ],
+                                    'file',
+                                    'error',
+                                    'abort',
+                                    'source',
+                                    'tool-call',
+                                    'tool-result',
+                                    'tool-error',
+                                    'tool-approval-request',
+                                    'tool-output-denied',
+                                    'text-start',
+                                    'text-delta',
+                                    'text-end',
+                                    'reasoning-start',
+                                    'reasoning-delta',
+                                    'reasoning-end',
+                                    'tool-input-start',
+                                    'tool-input-delta',
+                                    'tool-input-end',
+                                    'start-step',
+                                    'finish-step',
+                                    'start',
+                                    'finish',
+                                    'raw',
+                                ],
             },
         },
     },
@@ -188,7 +197,7 @@ export const newsPlanAgent = new PlanAgent({
         systemPrompt:
             'Summarize the news monitoring session, highlighting key stories, sentiment trends, and important developments.',
         enabled: true,
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-3.1-flash-lite-preview',
     },
 
     filesystem: {

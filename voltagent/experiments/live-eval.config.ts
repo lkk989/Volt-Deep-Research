@@ -18,7 +18,7 @@ Response: ${String(payload.output)}
 Provide score and reason.`
 
     const response = await generateObject({
-      model: google("gemini-2.5-flash-lite-preview-09-2025"),
+      model: google("gemini-3.1-flash-lite-preview"),
       prompt,
       schema: GOOGLE_QUALITY_SCHEMA,
     })
@@ -54,7 +54,7 @@ Response: ${String(payload.output)}
 Provide score and reason.`
 
     const response = await generateObject({
-      model: google("gemini-2.5-flash-lite-preview-09-2025"),
+      model: google("gemini-3.1-flash-lite-preview"),
       prompt,
       schema: GOOGLE_RELEVANCE_SCHEMA,
     })

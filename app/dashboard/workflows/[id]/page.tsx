@@ -1,14 +1,15 @@
 'use client'
 
-import { use, useEffect, useState } from "react"
-import { WorkflowCanvas } from "../../_components/workflow-canvas"
-import { WorkflowExecution } from "../../_components/workflow-execution"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Play } from "lucide-react"
+import { use, useState } from 'react'
+import { ArrowLeft, Play } from 'lucide-react'
 import Link from "next/link"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { WorkflowCanvas } from '../../_components/workflow-canvas'
+import { WorkflowExecution } from '../../_components/workflow-execution'
+import { useVoltAgentWorkflow } from '@/hooks/use-voltagent'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface WorkflowDetailPageProps {
     params: Promise<{ id: string }>
@@ -16,31 +17,14 @@ interface WorkflowDetailPageProps {
 
 export default function WorkflowDetailPage({ params }: WorkflowDetailPageProps) {
     const resolvedParams = use(params)
-    const [workflow, setWorkflow] = useState<any>(null)
     const [executing, setExecuting] = useState(false)
-    const [loading, setLoading] = useState(true)
+    const {
+        data: workflow,
+        isError,
+        isLoading,
+    } = useVoltAgentWorkflow(resolvedParams.id)
 
-    useEffect(() => {
-        fetchWorkflow()
-    }, [resolvedParams.id])
-
-    const fetchWorkflow = async () => {
-        try {
-            setLoading(true)
-            const response = await fetch(`/api/workflows/${resolvedParams.id}`)
-            const result = await response.json()
-
-            if (result.success) {
-                setWorkflow(result.data)
-            }
-        } catch (error) {
-            console.error("Failed to fetch workflow:", error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <div className="text-muted-foreground">Loading workflow...</div>
@@ -48,7 +32,7 @@ export default function WorkflowDetailPage({ params }: WorkflowDetailPageProps) 
         )
     }
 
-    if (!workflow) {
+    if (isError || !workflow) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <div className="text-center">
@@ -102,7 +86,7 @@ export default function WorkflowDetailPage({ params }: WorkflowDetailPageProps) 
                     <Card className="p-6">
                         <h3 className="font-semibold mb-4">Workflow Steps</h3>
                         <div className="space-y-3">
-                            {workflow.steps?.map((step: any, index: number) => (
+                            {workflow.steps.map((step, index) => (
                                 <div
                                     key={step.id}
                                     className="flex items-start gap-3 p-3 border rounded-lg"
@@ -137,25 +121,37 @@ export default function WorkflowDetailPage({ params }: WorkflowDetailPageProps) 
                             <div>
                                 <h3 className="font-semibold mb-2">Input Schema</h3>
                                 <pre className="text-xs p-4 bg-muted rounded-lg overflow-auto">
-                                    {JSON.stringify(workflow.inputSchema, null, 2)}
+                                    {JSON.stringify(
+                                        workflow.inputSchema ?? {},
+                                        null,
+                                        2
+                                    )}
                                 </pre>
                             </div>
-                            {workflow.suspendSchema && (
+                            {workflow.suspendSchema !== undefined ? (
                                 <div>
                                     <h3 className="font-semibold mb-2">Suspend Schema</h3>
                                     <pre className="text-xs p-4 bg-muted rounded-lg overflow-auto">
-                                        {JSON.stringify(workflow.suspendSchema, null, 2)}
+                                        {JSON.stringify(
+                                            workflow.suspendSchema,
+                                            null,
+                                            2
+                                        )}
                                     </pre>
                                 </div>
-                            )}
-                            {workflow.resumeSchema && (
+                            ) : null}
+                            {workflow.resumeSchema !== undefined ? (
                                 <div>
                                     <h3 className="font-semibold mb-2">Resume Schema</h3>
                                     <pre className="text-xs p-4 bg-muted rounded-lg overflow-auto">
-                                        {JSON.stringify(workflow.resumeSchema, null, 2)}
+                                        {JSON.stringify(
+                                            workflow.resumeSchema,
+                                            null,
+                                            2
+                                        )}
                                     </pre>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
                     </Card>
                 </TabsContent>

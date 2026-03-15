@@ -18,6 +18,7 @@ import {
     sharedWorkspaceSkillsToolkit,
 } from '../workspaces/index.js'
 import { assistantPrompt } from './prompts.js'
+import { hackernewsSearchTool, hackernewsTopStoriesTool, } from '../tools/news-aggregator-toolkit.js'
 
 export const assistantAgent = new Agent({
     id: 'assistant',
@@ -28,7 +29,7 @@ export const assistantAgent = new Agent({
         const provider = (context.get('provider') as string) || 'google'
         const model =
             (context.get('model') as string) ||
-            'gemini-2.5-flash-lite-preview-09-2025'
+            'gemini-3.1-flash-lite-preview'
         return `${provider}/${model}`
     },
     instructions: assistantPrompt({
@@ -41,7 +42,7 @@ export const assistantAgent = new Agent({
         queryFormat:
             'one-per-line with optional tags [intent|source-type|time-range]',
     }),
-    tools: [getWeatherTool, getForecastOpenMeteo],
+    tools: [getWeatherTool, getForecastOpenMeteo, hackernewsTopStoriesTool, hackernewsSearchTool],
     toolkits: [
         thinkOnlyToolkit,
         arxivToolkit,
@@ -156,7 +157,7 @@ export const assistantAgent = new Agent({
     workspaceSkillsPrompt: true,
     toolRouting: {
         embedding: {
-            model: 'google/gemini-embedding-001',
+            model: 'google/gemini-embedding-2-preview',
             topK: 3,
             toolText: (tool) => {
                 const tags = tool.tags?.join(', ') ?? ''
@@ -190,13 +191,13 @@ export const assistantAgent = new Agent({
             context.context.set('opId', opId)
             voltlogger.info(`[${opId}] Assistant starting`)
             await Promise.resolve()
-            return undefined
+            return
         },
         onToolStart: async ({ tool, context }) => {
             const opId = String(context.context.get('opId'))
             voltlogger.info(`[${opId}] tool: ${String(tool.name)} starting`)
             await Promise.resolve()
-            return undefined
+            return
         },
         onToolEnd: async ({ tool, error, context }) => {
             const opId = String(context.context.get('opId'))
@@ -212,7 +213,7 @@ export const assistantAgent = new Agent({
                 voltlogger.info(`[${opId}] tool ${String(tool.name)} completed`)
             }
             await Promise.resolve()
-            return undefined
+            return
         },
         onPrepareMessages: async ({ messages, context }) => {
             const opId = context?.context.get('opId')
@@ -238,7 +239,7 @@ export const assistantAgent = new Agent({
                 voltlogger.info(`[${opId}] Assistant ended without output`)
             }
             await Promise.resolve()
-            return undefined
+            return
         },
     },
     inputGuardrails: researchAgentGuardrails.input,
@@ -250,14 +251,14 @@ export const assistantAgent = new Agent({
     maxOutputTokens: 64000,
     maxSteps: 25,
     maxRetries: 3,
-    feedback: false,
+    feedback: true,
     stopWhen: undefined,
     markdown: false,
     inheritParentSpan: true,
     voice: undefined,
     context: {
         provider: 'google',
-        model: 'gemini-2.5-flash-lite-preview-09-2025',
+        model: 'gemini-3.1-flash-lite-preview',
     },
     eval: {
         scorers: {},

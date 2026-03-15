@@ -10,7 +10,7 @@ export const scorer = createAnswerCorrectnessScorer({
     output: context.payload.output as string,
     expected: context.params.expectedAnswer as string,
   }),
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: google("gemini-3.1-flash-lite-preview"),
 });
 
 const JUDGE_SCHEMA = z.object({
@@ -31,7 +31,7 @@ Assistant Response: ${payload.output as string}
 Provide a score from 0 to 1 with an explanation.`;
 
     const response = await generateObject({
-      model: google("gemini-2.5-flash-lite-preview-09-2025"),
+      model: google("gemini-3.1-flash-lite-preview"),
       schema: JUDGE_SCHEMA,
       prompt,
       maxOutputTokens: 1000,

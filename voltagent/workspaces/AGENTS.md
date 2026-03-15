@@ -83,7 +83,7 @@ Tools implemented:
 Notes / differences from upstream:
 
 - Upstream supports configuration like `autoIndexPaths` and opt-in direct search API. This local implementation is tool-driven: you must call `workspace_index` (or `workspace_index_content`) before `workspace_search` will return results.
-- Vector search uses `AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001"))` with `InMemoryVectorAdapter`.
+- Vector search uses `AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-2-preview"))` with `InMemoryVectorAdapter`.
 
 ## Sandbox (docs: /workspaces/sandbox)
 

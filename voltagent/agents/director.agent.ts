@@ -22,7 +22,7 @@ export const directorAgent = new Agent({
         const provider = (context.get('provider') as string) || 'google'
         const model =
             (context.get('model') as string) ||
-            'gemini-2.5-flash-lite-preview-09-2025'
+            'gemini-3.1-flash-lite-preview'
         return `${provider}/${model}`
     },
     // Use a string representation of the PromptCreator to satisfy the expected instructions type
@@ -157,7 +157,7 @@ export const directorAgent = new Agent({
     workspaceSkillsPrompt: true,
     toolRouting: {
         embedding: {
-            model: 'google/gemini-embedding-001',
+            model: 'google/gemini-embedding-2-preview',
             topK: 3,
             toolText: (tool) => {
                 const tags = tool.tags?.join(', ') ?? ''

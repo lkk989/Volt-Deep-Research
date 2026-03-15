@@ -18,7 +18,6 @@ export const sharedVectorAdapter = new LibSQLVectorAdapter({
 });
 
 export const sharedMemory = new Memory({
-  // @ts-ignore TS2739 This is working as intended despite the error. Tested 1/22/2026
   storage: new LibSQLMemoryAdapter({
     url: process.env.TURSO_URL ?? "",
     authToken: process.env.TURSO_AUTH_TOKEN ?? "",
@@ -50,7 +49,7 @@ export const sharedMemory = new Memory({
       }).optional(),
     }),
   },
-  embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-001",)),
+  embedding: new AiSdkEmbeddingAdapter(google.embedding("gemini-embedding-2-preview",)),
   vector: sharedVectorAdapter,
   enableCache: true, // optional embedding cache
   cacheSize: 1000, // optional cache size

@@ -1,229 +1,287 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport, type UIMessage } from 'ai'
-import { ChatInput } from './chat-input'
-import { ChatMessages } from './chat-messages'
-import { Spinner } from '@/components/ui/spinner'
-import type { PromptInputMessage } from '@/components/ai-elements/prompt-input'
+import { useMemo } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Agent, AgentContent, AgentHeader } from '@/components/ai-elements/agent'
+import { Snippet, SnippetInput } from '@/components/ai-elements/snippet'
+import {
+    FileTree,
+    FileTreeFile,
+    FileTreeFolder,
+    FileTreeIcon,
+    FileTreeName,
+} from '@/components/ai-elements/file-tree'
+import { DEFAULT_VOLTAGENT_BASE_URL } from '@/lib/voltagent-client'
+import {
+    useVoltAgent,
+    useVoltAgentLogs,
+    useVoltAgentMcpPrompts,
+    useVoltAgentMcpServers,
+    useVoltAgentMcpTools,
+    useVoltAgentTools,
+    useVoltAgentWorkspaceFiles,
+    useVoltAgentWorkspaceInfo,
+    useVoltAgentWorkspaceSkills,
+    useVoltConversationWorkingMemory,
+    useVoltAgentWorkflows,
+} from '@/hooks/use-voltagent'
+import { FileIcon, FolderIcon } from 'lucide-react'
 
 interface ChatPanelProps {
+    activeAgentId: string
     chatId: string
     userId: string
-    selectedModel: string
-    onSelectedModelChange: (modelId: string) => void
-    initialMessages?: UIMessage[]
-    resume?: boolean
+    selectedModel?: string
 }
 
 export function ChatPanel({
+    activeAgentId,
     chatId,
     userId,
     selectedModel,
-    onSelectedModelChange,
-    initialMessages = [],
-    resume = true,
 }: ChatPanelProps) {
-    const [loadedMessages, setLoadedMessages] = useState<UIMessage[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [knownModels, setKnownModels] = useState<string[]>([])
-
-    // Load messages from sharedMemory on mount
-    useEffect(() => {
-        const loadMessages = async () => {
-            if (!resume) {
-                setIsLoading(false)
-                return
-            }
-
-            try {
-                setIsLoading(true)
-                const response = await fetch(
-                    `/api/messages?conversationId=${encodeURIComponent(chatId)}&userId=${encodeURIComponent(userId)}`
-                )
-
-                if (!response.ok) {
-                    throw new Error('Failed to load messages')
-                }
-
-                const data = await response.json()
-                const messages = data.data || []
-
-                if (messages.length > 0) {
-                    setLoadedMessages(messages)
-                }
-            } catch {
-                // Silently fail - user can start a new conversation
-                console.warn('Could not load previous messages')
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        void loadMessages()
-    }, [chatId, userId, resume])
-
-    // Combine initialMessages with loaded messages (loaded takes priority for resume)
-    const allMessages =
-        loadedMessages.length > 0 ? loadedMessages : initialMessages
-
-    const { messages, sendMessage, status, error } = useChat({
-        id: chatId,
-        messages: allMessages,
-        resume,
-        transport: new DefaultChatTransport({
-            api: '/api/chat',
-            prepareSendMessagesRequest: ({
-                id,
-                messages: outgoingMessages,
-            }) => {
-                const lastMessage =
-                    outgoingMessages[outgoingMessages.length - 1]
-
-                const trimmedModelId = selectedModel.trim()
-                const [provider, ...modelParts] = trimmedModelId.split('/')
-                const model = modelParts.join('/')
-
-                const hasProviderAndModel =
-                    provider.length > 0 && model.length > 0
-
-                return {
-                    body: {
-                        input: [lastMessage],
-                        options: {
-                            conversationId: id,
-                            userId,
-                            context: {
-                                timezone:
-                                    Intl.DateTimeFormat().resolvedOptions()
-                                        .timeZone,
-                                ...(trimmedModelId.length > 0 &&
-                                hasProviderAndModel
-                                    ? {
-                                          provider,
-                                          model,
-                                          modelId: trimmedModelId,
-                                      }
-                                    : {}),
-                            },
-                        },
-                    },
-                }
-            },
-            prepareReconnectToStreamRequest: ({ id }) => ({
-                api: `/api/chat/${id}/stream?userId=${encodeURIComponent(userId)}`,
-            }),
-        }),
-        onError: (err: Error) => {
-            // eslint-disable-next-line no-console
-            console.error('Chat error:', err)
-        },
-    })
-
-    const handlePromptClick = (suggestion: string) => {
-        void sendMessage({ text: suggestion })
-    }
-
-    const handleSubmit = async (message: PromptInputMessage) => {
-        if (message.text) {
-            await sendMessage({ text: message.text })
-        }
-    }
-
-    useEffect(() => {
-        const modelsFromMessages = collectModelIdsFromMessages(messages)
-        setKnownModels(uniquePreserveOrder([selectedModel, ...modelsFromMessages]))
-    }, [messages, selectedModel])
-
-    useEffect(() => {
-        if (selectedModel.trim().length > 0) {
-            return
-        }
-
-        const latestAssistantModel = findLatestAssistantModelId(messages)
-        if (latestAssistantModel) {
-            onSelectedModelChange(latestAssistantModel)
-        }
-    }, [messages, selectedModel, onSelectedModelChange])
+    const { data: workingMemory } = useVoltConversationWorkingMemory(
+        chatId,
+        activeAgentId,
+        userId
+    )
+    const { data: activeAgent } = useVoltAgent(activeAgentId)
+    const { data: workflows = [] } = useVoltAgentWorkflows()
+    const { data: tools = [] } = useVoltAgentTools()
+    const { data: logs } = useVoltAgentLogs(activeAgentId, 10)
+    const { data: mcpServers = [] } = useVoltAgentMcpServers()
+    const { data: workspaceInfo } = useVoltAgentWorkspaceInfo(activeAgentId)
+    const { data: workspaceFiles } = useVoltAgentWorkspaceFiles(activeAgentId)
+    const { data: workspaceSkills = [] } = useVoltAgentWorkspaceSkills(activeAgentId)
+    const primaryMcpServerId = useMemo(() => {
+        const firstServer = mcpServers[0]
+        return typeof firstServer?.id === 'string' ? firstServer.id : ''
+    }, [mcpServers])
+    const { data: mcpTools = [] } = useVoltAgentMcpTools(primaryMcpServerId)
+    const { data: mcpPrompts = [] } = useVoltAgentMcpPrompts(primaryMcpServerId)
 
     return (
-        <div className="flex h-screen flex-col">
-            {isLoading && (
-                <div className="flex items-center gap-2 border-b bg-muted/20 px-6 py-2 text-xs text-muted-foreground">
-                    <Spinner className="size-3" />
-                    <span>Loading conversation…</span>
-                </div>
-            )}
-            <ChatMessages
-                messages={messages}
-                status={status}
-                error={error}
-                onSuggestionClick={handlePromptClick}
-            />
-            <ChatInput
-                onSubmit={handleSubmit}
-                selectedModel={selectedModel}
-                onModelChange={onSelectedModelChange}
-                modelOptions={knownModels}
-            />
-        </div>
+        <aside className="hidden w-88 shrink-0 border-l bg-muted/20 xl:flex xl:flex-col">
+            <div className="space-y-4 overflow-y-auto p-4">
+                <Card size="sm">
+                    <CardHeader>
+                        <CardTitle>Agent</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <Agent>
+                            <AgentHeader
+                                name={activeAgent?.name ?? activeAgentId}
+                                model={activeAgent?.model}
+                            />
+                            <AgentContent className="space-y-2 text-xs text-muted-foreground">
+                                {activeAgent?.description ? (
+                                    <p>{activeAgent.description}</p>
+                                ) : null}
+                                <div className="flex flex-wrap gap-2">
+                                    <Badge variant="secondary">
+                                        {activeAgent?.status ?? 'unknown'}
+                                    </Badge>
+                                    {activeAgent?.isTelemetryEnabled ? (
+                                        <Badge variant="outline">Observability enabled</Badge>
+                                    ) : null}
+                                    {activeAgent?.memory ? (
+                                        <Badge variant="outline">Memory enabled</Badge>
+                                    ) : null}
+                                </div>
+                            </AgentContent>
+                        </Agent>
+                    </CardContent>
+                </Card>
+
+                <Card size="sm">
+                    <CardHeader>
+                        <CardTitle>Thread</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                            <span>Conversation ID</span>
+                            <span className="font-mono text-foreground">{chatId}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>User</span>
+                            <span className="font-mono text-foreground">{userId}</span>
+                        </div>
+                        {selectedModel?.trim() ? (
+                            <div className="flex items-center justify-between gap-4">
+                                <span>Selected model</span>
+                                <span className="text-right text-foreground">
+                                    {selectedModel}
+                                </span>
+                            </div>
+                        ) : null}
+                    </CardContent>
+                </Card>
+
+                <Card size="sm">
+                    <CardHeader>
+                        <CardTitle>Config</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                            <span>Agent model</span>
+                            <span className="text-right text-foreground">{activeAgent?.model ?? 'runtime-resolved'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Agent tools</span>
+                            <span className="text-foreground">{Array.isArray(activeAgent?.tools) ? activeAgent.tools.length : 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Sub-agents</span>
+                            <span className="text-foreground">{Array.isArray(activeAgent?.subAgents) ? activeAgent.subAgents.length : 0}</span>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <span>Registered workflows</span>
+                            <span className="text-foreground">{workflows.length}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Global tools</span>
+                            <span className="text-foreground">{tools.length}</span>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card size="sm">
+                    <CardHeader>
+                        <CardTitle>Memory & observation</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                            <span>Memory configured</span>
+                            <span className="text-foreground">{activeAgent?.memory ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Working memory</span>
+                            <span className="text-foreground">{workingMemory ? 'Loaded' : 'Unavailable'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Telemetry</span>
+                            <span className="text-foreground">{activeAgent?.isTelemetryEnabled ? 'On' : 'Off'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Recent log entries</span>
+                            <span className="text-foreground">{logs?.data.length ?? 0}</span>
+                        </div>
+                        {workingMemory ? (
+                            <Snippet code={JSON.stringify(workingMemory.value, null, 2)}>
+                                <SnippetInput />
+                            </Snippet>
+                        ) : null}
+                    </CardContent>
+                </Card>
+
+                <Card size="sm">
+                    <CardHeader>
+                        <CardTitle>MCP</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                            <span>Server count</span>
+                            <span className="text-foreground">{mcpServers.length}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Tool count</span>
+                            <span className="text-foreground">{mcpTools.length}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Prompt count</span>
+                            <span className="text-foreground">{mcpPrompts.length}</span>
+                        </div>
+                        <Snippet code={DEFAULT_VOLTAGENT_BASE_URL}>
+                            <SnippetInput />
+                        </Snippet>
+                    </CardContent>
+                </Card>
+
+                <Card size="sm">
+                    <CardHeader>
+                        <CardTitle>Workspace</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                            <span>Workspace ID</span>
+                            <span className="font-mono text-foreground">
+                                {workspaceInfo?.id ?? 'Unavailable'}
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {workspaceInfo?.capabilities?.filesystem ? (
+                                <Badge variant="outline">Filesystem</Badge>
+                            ) : null}
+                            {workspaceInfo?.capabilities?.search ? (
+                                <Badge variant="outline">Search</Badge>
+                            ) : null}
+                            {workspaceInfo?.capabilities?.skills ? (
+                                <Badge variant="outline">Skills</Badge>
+                            ) : null}
+                            {workspaceInfo?.capabilities?.sandbox ? (
+                                <Badge variant="outline">Sandbox</Badge>
+                            ) : null}
+                        </div>
+
+                        {workspaceFiles?.entries.length ? (
+                            <FileTree defaultExpanded={new Set(['/'])}>
+                                {workspaceFiles.entries.map((entry) =>
+                                    entry.is_dir ? (
+                                        <FileTreeFolder
+                                            key={entry.path}
+                                            path={entry.path}
+                                            name={entry.path}
+                                        >
+                                            <FileTreeIcon>
+                                                <FolderIcon className="size-4 text-muted-foreground" />
+                                            </FileTreeIcon>
+                                            <FileTreeName>{entry.path}</FileTreeName>
+                                        </FileTreeFolder>
+                                    ) : (
+                                        <FileTreeFile
+                                            key={entry.path}
+                                            path={entry.path}
+                                            name={entry.path}
+                                        >
+                                            <FileTreeIcon>
+                                                <FileIcon className="size-4 text-muted-foreground" />
+                                            </FileTreeIcon>
+                                            <FileTreeName>{entry.path}</FileTreeName>
+                                        </FileTreeFile>
+                                    )
+                                )}
+                            </FileTree>
+                        ) : (
+                            <div className="text-muted-foreground">
+                                No workspace file entries available.
+                            </div>
+                        )}
+
+                        <Separator />
+                        <div className="space-y-2">
+                            <div className="font-medium text-foreground">
+                                Skills
+                            </div>
+                            {workspaceSkills.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {workspaceSkills.map((skill) => (
+                                        <Badge key={skill.id} variant="secondary">
+                                            {skill.name}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-muted-foreground">
+                                    No workspace skills available.
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </aside>
     )
-}
-
-function uniquePreserveOrder(values: string[]): string[] {
-    const seen = new Set<string>()
-    const result: string[] = []
-    for (const v of values) {
-        const trimmed = v.trim()
-        if (trimmed.length === 0 || seen.has(trimmed)) {
-            continue
-        }
-        seen.add(trimmed)
-        result.push(trimmed)
-    }
-    return result
-}
-
-function collectModelIdsFromMessages(messages: UIMessage[]): string[] {
-    const result: string[] = []
-    for (const message of messages) {
-        if (message.role !== 'assistant') {
-            continue
-        }
-
-        const modelId = extractModelId(message.metadata)
-        if (modelId) {
-            result.push(modelId)
-        }
-    }
-    return result
-}
-
-function findLatestAssistantModelId(messages: UIMessage[]): string | undefined {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-        const message = messages[i]
-        if (message?.role !== 'assistant') {
-            continue
-        }
-        const modelId = extractModelId(message.metadata)
-        if (modelId) {
-            return modelId
-        }
-    }
-    return undefined
-}
-
-function extractModelId(metadata: unknown): string | undefined {
-    if (!metadata || typeof metadata !== 'object') {
-        return undefined
-    }
-    const record = metadata as Record<string, unknown>
-    const { model } = record
-    if (!model || typeof model !== 'object') {
-        return undefined
-    }
-    const modelRecord = model as Record<string, unknown>
-    const { id } = modelRecord
-    return typeof id === 'string' && id.trim().length > 0 ? id : undefined
 }

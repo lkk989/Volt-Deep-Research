@@ -11,7 +11,7 @@ description: 'Detailed configuration and integration guidelines for Mastervolt p
 
 ### Google AI Models (Primary Provider)
 
-- **gemini-2.5-flash-lite-preview-09-2025**: Primary model for 6 agents
+- **gemini-3.1-flash-lite-preview**: Primary model for the main research agent fleet
   - Used by: assistant, director, dataAnalyzer, factChecker, synthesizer, scrapper
   - Context: 64k tokens, grounding enabled
   - Cost-effective for production workloads
@@ -20,7 +20,7 @@ description: 'Detailed configuration and integration guidelines for Mastervolt p
   - Higher capability model for complex report generation
   - Extended context and reasoning capabilities
 
-- **text-embedding-004**: Embedding model for all agents
+- **gemini-embedding-2-preview**: Embedding model for all agents
   - Semantic search and memory operations
   - Shared across all agent memory systems
 

@@ -1,0 +1,5 @@
+components/ai-elements/schema-display.tsx(110,34): error TS2322: Type 'string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...>' is not assignable to type 'string | TrustedHTML'.
+  Type 'number' is not assignable to type 'string | TrustedHTML'.
+voltagent/tools/github-toolkit.ts(46,25): error TS2345: Argument of type '{ toolName: string; operationId: string | undefined; toolCallId: string | undefined; args: unknown; }' is not assignable to parameter of type 'string'.
+voltagent/tools/github-toolkit.ts(55,30): error TS2345: Argument of type '{ toolName: string; operationId: string | undefined; toolCallId: string | undefined; error: string; }' is not assignable to parameter of type 'string'.
+voltagent/tools/github-toolkit.ts(63,25): error TS2345: Argument of type '{ toolName: string; operationId: string | undefined; toolCallId: string | undefined; }' is not assignable to parameter of type 'string'.

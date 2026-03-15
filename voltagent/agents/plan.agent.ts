@@ -81,27 +81,23 @@ export const deepAgent = new PlanAgent({
     model: [
         {
             id: 'primary',
-            model: google('gemini-2.5-flash-lite-preview-09-2025'),
+            model: 'google/gemini-3.1-flash-lite-preview',
             maxRetries: 3,
         },
         {
             id: 'secondary',
-            model: "google/",
+            model: "opencode/minimax-m2.5-free",
             maxRetries: 2,
         },
     ],
     tools: [countTokensTool, estimateCostTool, truncateTextTool],
     toolkits: [
         thinkOnlyToolkit,
-        sharedWorkspaceSearchToolkit,
-        sharedWorkspaceSkillsToolkit,
-        sharedWorkspaceFilesystemToolkit,
     ],
     toolRouting: {
         embedding: {
-            model: 'google/gemini-embedding-001',
+            model: 'google/gemini-embedding-2-preview',
             normalize: true,
-            maxBatchSize: 200,
             topK: 5,
             toolText: (tool) => {
                 const tags = tool.tags?.join(', ') ?? ''
@@ -157,6 +153,7 @@ export const deepAgent = new PlanAgent({
         newsPlanAgent,
     ],
     generalPurposeAgent: true,
+    feedback: true,
     task: {
         systemPrompt:
             'You are a strategic task manager. Break down complex objectives into atomic, delegatable tasks. Monitor progress and adjust the plan as needed.',

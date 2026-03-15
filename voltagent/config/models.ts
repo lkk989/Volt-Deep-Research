@@ -2,6 +2,7 @@
 export const googleModels = [
     'google/gemini-3-pro-preview',
     'google/gemini-3-flash-preview',
+    'google/gemini-3.1-flash-lite-preview',
     'google/gemini-live-2.5-flash-preview-native-audio',
     'google/gemini-live-2.5-flash',
     'google/gemini-2.5-pro-preview-tts',
@@ -12,9 +13,6 @@ export const googleModels = [
     'google/gemini-2.5-flash-preview-09-2025',
     'google/gemini-2.5-flash-preview-05-20',
     'google/gemini-2.5-flash-preview-04-17',
-    'google/gemini-2.5-flash-lite-preview-09-2025',
-    'google/gemini-2.5-flash-lite-preview-06-17',
-    'google/gemini-2.5-flash-lite',
     'google/gemini-2.5-flash-image-preview',
     'google/gemini-2.5-flash-image',
     'google/gemini-2.5-flash',
@@ -25,7 +23,7 @@ export const googleModels = [
     'google/gemini-1.5-flash-8b',
     'google/gemini-1.5-flash',
     'google/gemini-1.5-pro',
-    'google/gemini-embedding-001',
+    'google/gemini-embedding-2-preview',
 ]
 
 // OpenAI models (GPT latest at top, then o1-o4, then 4o)

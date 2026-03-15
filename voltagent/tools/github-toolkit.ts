@@ -10,10 +10,36 @@ import { z } from 'zod'
 import { voltlogger } from '../config/logger.js'
 
 const ensureActive = (context?: ToolExecuteOptions) => {
-    if (!context?.isActive) {
+    if (context?.isActive !== true) {
         throw new Error('Operation has been cancelled')
     }
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null
+
+const describeUnknownError = (error: unknown): string => {
+    if (error instanceof Error) {
+        return error.message
+    }
+
+    if (typeof error === 'string') {
+        return error
+    }
+
+    if (isRecord(error)) {
+        try {
+            return JSON.stringify(error)
+        } catch {
+            return 'Unknown object error'
+        }
+    }
+
+    return String(error)
+}
+
+const hasNumericStatus = (error: unknown): error is { status: number } =>
+    isRecord(error) && typeof error.status === 'number'
 
 const hooksFor = (name: string) => ({
     onStart: ({ tool, args, options }: ToolHookOnStartArgs) => {
@@ -25,12 +51,15 @@ const hooksFor = (name: string) => ({
         })
     },
     onEnd: ({ tool, error, options }: ToolHookOnEndArgs) => {
-        if (error) {
+        if (error !== undefined && error !== null) {
             voltlogger.error(`${name}: error`, {
                 tool: tool.name,
                 operationId: options?.operationId,
                 toolCallId: options?.toolContext?.callId,
-                error: error instanceof Error ? error.message : String(error),
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : describeUnknownError(error),
             })
             return undefined
         }
@@ -53,7 +82,7 @@ const getOctokit = () => {
         _octokit = new MyOctokit({
             auth,
             retry: {
-                doNotRetry: ['429'],
+                doNotRetry: [429],
             },
         })
     }
@@ -296,7 +325,10 @@ export const githubListIssuesTool = createTool({
                 createdAt: issue.created_at ?? null,
                 updatedAt: issue.updated_at ?? null,
                 isPullRequest: !!issue.pull_request,
-                body: issue.body ? issue.body.slice(0, 500) : null,
+                body:
+                    typeof issue.body === 'string' && issue.body.length > 0
+                        ? issue.body.slice(0, 500)
+                        : null,
             })),
         }
     },
@@ -429,8 +461,8 @@ export const githubGetFileContentsTool = createTool({
                 htmlUrl: data.html_url ?? '',
                 sha: data.sha,
             }
-        } catch (error: any) {
-            if (error.status === 404) {
+        } catch (error: unknown) {
+            if (hasNumericStatus(error) && error.status === 404) {
                 throw new Error(
                     `File not found: ${args.path} in ${args.owner}/${args.repo}`
                 )
@@ -476,9 +508,10 @@ export const githubGetTreeTool = createTool({
         ensureActive(context)
 
         const octokit = getOctokit()
+        const { treeSha: initialTreeSha } = args
 
-        let treeSha = args.treeSha
-        if (!treeSha) {
+        let treeSha = initialTreeSha
+        if (typeof treeSha !== 'string' || treeSha.length === 0) {
             // Get default branch SHA
             const { data: repoData } = await octokit.rest.repos.get({
                 owner: args.owner,

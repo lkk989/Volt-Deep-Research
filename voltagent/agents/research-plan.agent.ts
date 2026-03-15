@@ -60,22 +60,21 @@ export const researchPlanAgent = new PlanAgent({
     model: [
         {
             id: 'primary',
-            model: google('gemini-2.5-flash-lite-preview-09-2025'),
+            model: 'google/gemini-3.1-flash-lite-preview',
             maxRetries: 3,
         },
         {
             id: 'secondary',
-            model: google('gemini-2.0-flash-exp'),
+            model: "github-copilot/gpt-5-mini",
             maxRetries: 2,
         },
     ],
 
     tools: [],
     toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
-
     toolRouting: {
         embedding: {
-            model: 'google/gemini-embedding-001',
+            model: 'google/gemini-embedding-2-preview',
             normalize: true,
             maxBatchSize: 200,
             topK: 3,
@@ -144,11 +143,29 @@ export const researchPlanAgent = new PlanAgent({
             includeAgentsMemory: true,
             fullStreamEventForwarding: {
                 types: [
+                    'file',
+                    'error',
+                    'abort',
+                    'source',
                     'tool-call',
                     'tool-result',
+                    'tool-error',
+                    'tool-approval-request',
+                    'tool-output-denied',
+                    'text-start',
                     'text-delta',
+                    'text-end',
+                    'reasoning-start',
+                    'reasoning-delta',
+                    'reasoning-end',
+                    'tool-input-start',
+                    'tool-input-delta',
+                    'tool-input-end',
                     'start-step',
                     'finish-step',
+                    'start',
+                    'finish',
+                    'raw',
                 ],
             },
         },
@@ -161,7 +178,7 @@ export const researchPlanAgent = new PlanAgent({
         systemPrompt:
             'Summarize the research progress, maintaining key findings, sources, and next steps. Preserve all citation information.',
         enabled: true,
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-3.1-flash-lite-preview',
     },
 
     filesystem: {

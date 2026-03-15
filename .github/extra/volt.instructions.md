@@ -34,7 +34,7 @@ const assistantMemory = new Memory({
       goals: z.array(z.string()).optional()
     })
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-2-preview")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true
 });
@@ -43,7 +43,7 @@ export const assistantAgent = new Agent({
   id: "assistant",
   name: "Assistant",
   purpose: "Generate search queries for research topics",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: google("gemini-3.1-flash-lite-preview"),
   instructions: `You are an expert query generator. Given a topic, generate 3-5 distinct search queries for comprehensive research coverage. Each query should be on a new line. Do not include numbering or formatting.`,
   tools: await mcpConfig.getTools(),  // MCP-provided tools (e.g., Exa search)
   toolkits: [thinkOnlyToolkit],  // Custom reasoning toolkit
@@ -88,7 +88,7 @@ const memory = new Memory({
       recentSearches: z.array(z.string()).optional()
     })
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-2-preview")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true
 });
@@ -299,7 +299,7 @@ export const directorAgent = new Agent({
   id: "director",
   name: "Director",
   purpose: "Orchestrate research assistant workflow",
-  model: google("gemini-2.5-flash-lite-preview-09-2025"),
+  model: google("gemini-3.1-flash-lite-preview"),
   subAgents: [assistantAgent, writerAgent],  // Director can delegate to these
   supervisorConfig: {
     customGuidelines: [
@@ -448,7 +448,7 @@ const writerMemory = new Memory({
       goals: z.array(z.string()).optional()
     })
   },
-  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-001")),
+  embedding: new AiSdkEmbeddingAdapter(google.textEmbedding("gemini-embedding-2-preview")),
   vector: new LibSQLVectorAdapter({ url: "file:./.voltagent/memory.db" }),
   enableCache: true
 });

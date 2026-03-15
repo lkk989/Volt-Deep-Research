@@ -10,6 +10,18 @@
 - [x] **Visual Orchestration** - `DomainSwitcher` using `@xyflow/react` to demonstrate multi-domain agent flows.
 - [x] **Interactive Primitives** - Shared hooks like `use-magnetic` for UI polish.
 - [x] **Tailwind v4** - Standardized styling and theme system.
+- [x] **Dashboard Chat Transport** - Dashboard chat uses `@ai-sdk/react` `useChat` with `DefaultChatTransport` and resumable stream reconnect support.
+- [x] **UI Message Validation** - Restored chat history is validated with `safeValidateUIMessages` before being injected into the frontend chat state.
+- [x] **Rich ai-elements Rendering** - `chat-messages.tsx` now supports persona display, reasoning, sources, tool outputs, and structured `DataUIPart` payloads for plan/task/queue/chain-of-thought style content.
+- [x] **Workspace Output Adaptation** - Chat rendering now recognizes raw workspace toolkit outputs (`execute_command`, filesystem listings, `read_file`, `workspace_search`) and presents them as sandbox, terminal, file tree, code artifact, and search result UI instead of raw JSON.
+- [x] **Direct VoltAgent Queries** - Dashboard chat metadata now loads through TanStack hooks backed by built-in VoltAgent routes for agents, tools, workflows, logs, MCP servers/tools/prompts, and memory conversation data.
+- [x] **Real Agent Picker Flow** - Agents page uses live VoltAgent agent data and navigates into chat by selected `agentId` instead of a hardcoded chat target.
+- [x] **Chat Page Composition Restored** - `app/dashboard/chat/[agentId]/page.tsx` now renders the actual conversation via `ChatMessages` and `ChatInput`, and `chat-panel.tsx` is limited to the right-side sidebar role.
+- [x] **Dynamic Agent Chat Navigation** - Agent cards and header agent switching now open `/dashboard/chat/[agentId]`, and the live chat UI is rendered from the dynamic route page rather than query-string state.
+- [x] **Attachment-Safe Prompt Submission** - Chat routes now submit text/file combinations through the AI SDK `sendMessage` overloads in a type-safe way, avoiding invalid mixed object shapes.
+- [x] **Shared Workflow Visualizer** - Workflow canvas and workflow execution now render through one typed ai-elements xyflow visualizer with consolidated node/edge/status logic and normalized workflow data fetching.
+- [x] **Expanded VoltAgent API Client/Hooks** - `voltagent-client.ts` and `use-voltagent.ts` now cover a larger portion of the built-in VoltAgent read API surface, including workflow execution state, workspace reads/skill detail, MCP detail/resource routes, generic memory queries, observability endpoints, and corrected nested MCP list responses.
+- [x] **TanStack Mutation Layer** - `use-voltagent.ts` now includes typed React Query mutation hooks for supported non-streaming VoltAgent operations, with companion client helpers in `voltagent-client.ts` and cache invalidation for workflow/memory-heavy flows.
 
 ### Core Infrastructure
 
@@ -18,6 +30,8 @@
 - [x] OpenTelemetry observability
 - [x] VoltOps platform integration
 - [x] LibSQL memory adapters
+- [x] Gemini 3.1 Flash Lite Preview rollout across agent defaults, evals, and UI settings
+- [x] Gemini Embedding 2 Preview rollout across routing, memory, retrievers, and RAG indexing
 - [x] **VoltAgent v2 Guardrails** - Built-in security
 
 ### Agents (14+ Active)
@@ -81,6 +95,7 @@
 - [x] Vector store with embeddings
 - [x] Working memory with Zod schemas
 - [x] Embedding cache (1000 entries, 1hr TTL)
+- [ ] Rebuild existing vector indexes after embedding-space migration
 
 ### A2A Communication
 
@@ -120,16 +135,29 @@
 
 ## Current Status
 
-| Area       | Status         | Notes                 | Refernces             |
-| ---------- | -------------  | --------------------- | --------------------- |
-| Agents     | ✅ Complete     | 14+ agents active     |                       |
-| Tools      | ✅ Complete     | 28 toolkits active    |                       |
-| Workflows  | ✅ Complete     | 5 workflows defined   |                       |
-| Memory     | ✅ Complete     | LibSQL + Vector       |                       |
-| Guardrails | ✅ Complete     | VoltAgent v2 built-in |                       |
-| Tests      | 🔄 In Progress | Need more coverage    |                       |
-| Evaluation | 🔄 In Progress | Experiments pending   |                       |
-| A2A        | 🔄 In Progress | Basic communication   | Needs to be expanded  |
+| Area       | Status         | Notes                                             | References                                                    |
+| ---------- | -------------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| Agents     | ✅ Complete    | 14+ agents active                                 |                                                               |
+| Tools      | ✅ Complete    | 28 toolkits active                                |                                                               |
+| Workflows  | ✅ Complete    | 5 workflows defined                               |                                                               |
+| Memory     | ✅ Complete    | LibSQL + Vector                                   |                                                               |
+| Guardrails | ✅ Complete    | VoltAgent v2 built-in                             |                                                               |
+| Tests      | 🔄 In Progress | Need more coverage                                |                                                               |
+| Evaluation | 🔄 In Progress | Experiments pending                               |                                                               |
+| A2A        | 🔄 In Progress | Basic communication                               | Needs to be expanded                                          |
+
+### Chat UI Status
+
+- 🔄 In Progress: Rich frontend renderer wired in `app/dashboard/_components/chat-panel.tsx` and `app/dashboard/_components/chat-messages.tsx`, including workspace toolkit output adaptation; dedicated test coverage is still needed.
+
+### Workflow UI Status
+
+- 🔄 In Progress: Workflow pages now share a typed `WorkflowVisualizer`; dedicated tests for stream-event status transitions and workflow normalization are still needed.
+
+### VoltAgent API Client Status
+
+- 🔄 In Progress: The client/hook layer now mirrors the broader built-in GET route surface from installed VoltAgent packages; dedicated tests are still needed for route normalization and nested response unwrapping.
+- 🔄 In Progress: Mutation coverage has been added for the built-in non-streaming route surface; dedicated tests are still needed for mutation payload validation, invalidation semantics, and error mapping.
 
 ## Metrics
 
@@ -140,6 +168,11 @@
 | Workflow Success Rate | 85%     | 99%    |
 | Memory Cache Hit Rate | 70%     | 90%    |
 
+## Migration Notes
+
+- `gemini-embedding-2-preview` is not compatible with `gemini-embedding-001` vectors.
+- Existing LibSQL, Chroma, and in-memory indexes need re-embedding or reindexing after deployment.
+
 ---
 
-\*Last Updated: 2026-02-14
+\*Last Updated: 2026-03-15

@@ -27,7 +27,7 @@ const chromaClient = new CloudClient({
 // Configure embeddings
 const embeddingFunction = new GoogleGeminiEmbeddingFunction({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-  modelName: "gemini-embedding-001", // Efficient and cost-effective
+  modelName: "gemini-embedding-2-preview", // Re-embed existing Chroma content when migrating embedding spaces
   taskType: "RETRIEVAL_QUERY"
 });
 

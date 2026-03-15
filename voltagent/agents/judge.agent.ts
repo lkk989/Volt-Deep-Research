@@ -4,7 +4,7 @@ import { sharedMemory } from "../config/libsql.js";
 import { voltlogger } from "../config/logger.js";
 import { voltObservability } from "../config/observability.js";
 import { basedRetriever } from "../retriever/based.js";
-import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
+import { sharedWorkspaceFilesystemToolkit, sharedWorkspaceRuntime, sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit } from "../workspaces/index.js";
 import { judgePrompt, supportPrompt } from "./prompts.js";
 
 export const judgeAgent = new Agent({
@@ -15,14 +15,14 @@ export const judgeAgent = new Agent({
     task: "Return strict JSON score/label/reason for satisfaction judgment.",
   }),
   model: ({ context }) => {
-    const provider = (context.get("provider") as string) || "github-copilot";
-    const model = (context.get("model") as string) || "grok-code-fast-1";
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-3.1-flash-lite-preview";
     return `${provider}/${model}`;
   },
   tools: [],
   toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
   toolRouting: undefined,
-  workspace: sharedWorkspaceFilesystemToolkit,
+  workspace: sharedWorkspaceRuntime,
   workspaceToolkits: {},
   workspaceSkillsPrompt: true,
   memory: sharedMemory,
@@ -55,8 +55,8 @@ export const judgeAgent = new Agent({
   voltOpsClient: undefined,
   observability: voltObservability,
   context: {
-    provider: "github-copilot",
-    model: "grok-code-fast-1",
+    provider: "google",
+    model: "gemini-3.1-flash-lite-preview",
   },
   eval: {
     scorers: {},
@@ -99,14 +99,14 @@ export const supportAgent = new Agent({
     task: "Help users resolve issues quickly with concrete next steps.",
   }),
   model: ({ context }) => {
-    const provider = (context.get("provider") as string) || "github-copilot";
-    const model = (context.get("model") as string) || "grok-code-fast-1";
+    const provider = (context.get("provider") as string) || "google";
+    const model = (context.get("model") as string) || "gemini-3.1-flash-lite-preview";
     return `${provider}/${model}`;
   },
   tools: [],
-  toolkits: [sharedWorkspaceSearchToolkit, sharedWorkspaceSkillsToolkit],
+  toolkits: [],
   toolRouting: undefined,
-  workspace: sharedWorkspaceFilesystemToolkit,
+  workspace: sharedWorkspaceRuntime,
   workspaceToolkits: {
       "sandbox": {
         "customToolDescription": "A secure, ephemeral sandbox environment for executing code and commands. Use this for tasks that require code execution, file manipulation, or any operations that should be isolated from the main system. The sandbox provides a safe space to run potentially unsafe operations without risking the integrity of the main environment.",
@@ -230,8 +230,8 @@ export const supportAgent = new Agent({
   inputGuardrails: [],
   outputGuardrails: [],
   context: {
-    provider: "github-copilot",
-    model: "grok-code-fast-1",
+    provider: "google",
+    model: "gemini-3.1-flash-lite-preview",
   },
   eval: {
     scorers: {

@@ -1,10 +1,15 @@
 import type { TaskRecord, TaskStore } from "@voltagent/a2a-server";
 import { SupabaseMemoryAdapter } from "@voltagent/supabase";
+import { LibSQLMemoryAdapter } from "@voltagent/libsql";
 
-export class SupaTaskStore implements TaskStore {
-  private adapter = new SupabaseMemoryAdapter({
-    supabaseUrl: process.env.SUPABASE_URL!,
-    supabaseKey: process.env.SUPABASE_KEY!,
+
+export class LibTaskStore implements TaskStore {
+  private adapter = new LibSQLMemoryAdapter({
+    url: process.env.TURSO_URL ?? "",
+    authToken: process.env.TURSO_AUTH_TOKEN ?? "",
+    tablePrefix: "voltagent_tasks",
+    maxRetries: 3,
+    retryDelayMs: 100,
   });
 
   async load({ agentId, taskId }: { agentId: string; taskId: string }): Promise<TaskRecord | null> {

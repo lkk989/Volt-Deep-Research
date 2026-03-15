@@ -97,7 +97,7 @@ export const extractInsightsTool = createTool({
       throw new Error("Operation has been cancelled");
     }
 
-    voltlogger.info(`Extracting insights${focus ? ` with focus on ${focus}` : ""}`);
+    voltlogger.info(`Extracting insights${(focus !== null) ? ` with focus on ${focus}` : ""}`);
 
     // Extract insights from the data
     const lines = data.split('\n').filter(line => line.trim());
